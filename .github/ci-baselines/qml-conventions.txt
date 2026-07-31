@@ -9,6 +9,7 @@ blank-before-close-brace	modules/launcher/WindowSwitcherList.qml	no blank line e
 blank-before-close-brace	modules/nexus/pages/wallandstyle/KMYCSettings.qml	no blank line expected before closing brace
 blank-before-close-brace	modules/screenshot/regionSelector/CircleSelectionDetails.qml	no blank line expected before closing brace
 blank-before-close-brace	modules/screenshot/regionSelector/RegionSelection.qml	no blank line expected before closing brace
+blank-before-close-brace	modules/sidebar/AiAssistant.qml	no blank line expected before closing brace
 blank-before-close-brace	services/Audio.qml	no blank line expected before closing brace
 blank-before-close-brace	services/DiscordRPC.qml	no blank line expected before closing brace
 file-structure	modules/nexus/PageCompRegistry.qml	no blank lines expected within imports
@@ -382,6 +383,8 @@ section-order	modules/bar/popouts/TrayMenu.qml	property declarations should appe
 section-order	modules/bar/popouts/WirelessPassword.qml	property declarations should appear before functions (seen at line N)
 section-order	modules/bar/popouts/kblayout/KbLayout.qml	property declarations should appear before functions (seen at line N)
 section-order	modules/dashboard/Content.qml	property declarations should appear before bindings (seen at line N)
+section-order	modules/dashboard/TerminalTab.qml	bindings should appear before child objects (seen at line N)
+section-order	modules/dashboard/TerminalTab.qml	property declarations should appear before functions (seen at line N)
 section-order	modules/dashboard/dash/MediaShapes.qml	functions should appear before bindings (seen at line N)
 section-order	modules/dashboard/dash/MediaShapes.qml	functions should appear before child objects (seen at line N)
 section-order	modules/dashboard/dash/MediaShapes.qml	property declarations should appear before child objects (seen at line N)
@@ -506,6 +509,11 @@ section-order	modules/screenshot/regionSelector/TargetRegion.qml	bindings should
 section-order	modules/screenshot/regionSelector/Toolbar.qml	property declarations should appear before bindings (seen at line N)
 section-order	modules/session/Content.qml	bindings should appear before child objects (seen at line N)
 section-order	modules/shimeji/Shimeji.qml	bindings should appear before child objects (seen at line N)
+section-order	modules/sidebar/AiAssistant.qml	bindings should appear before child objects (seen at line N)
+section-order	modules/sidebar/AiAssistant.qml	functions should appear before bindings (seen at line N)
+section-order	modules/sidebar/AiAssistant.qml	functions should appear before child objects (seen at line N)
+section-order	modules/sidebar/AiAssistant.qml	property declarations should appear before bindings (seen at line N)
+section-order	modules/sidebar/AiAssistant.qml	property declarations should appear before child objects (seen at line N)
 section-order	modules/sidebar/Content.qml	bindings should appear before child objects (seen at line N)
 section-order	modules/sidebar/Content.qml	functions should appear before bindings (seen at line N)
 section-order	modules/sidebar/Content.qml	functions should appear before child objects (seen at line N)
