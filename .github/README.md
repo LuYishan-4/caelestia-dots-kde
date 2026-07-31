@@ -123,7 +123,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | PRs |
 | --- | ---: |
-| [WinTone01](https://github.com/WinTone01) | 25 |
+| [WinTone01](https://github.com/WinTone01) | 26 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
@@ -139,10 +139,10 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | Issues |
 | --- | ---: |
-| [0x0nYx](https://github.com/0x0nYx) | 63 |
+| [0x0nYx](https://github.com/0x0nYx) | 87 |
+| [bubbleo0](https://github.com/bubbleo0) | 10 |
 | [Utkarsh-tiwari27](https://github.com/Utkarsh-tiwari27) | 10 |
-| [bubbleo0](https://github.com/bubbleo0) | 9 |
-| [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 8 |
+| [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
 | [RealNath](https://github.com/RealNath) | 6 |
 | [Chiku-09](https://github.com/Chiku-09) | 5 |
 | [26heij](https://github.com/26heij) | 5 |
