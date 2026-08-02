@@ -10,6 +10,8 @@ import qs.components
 import qs.components.controls
 import qs.components.images
 import qs.services
+import qs.utils
+import qs.modules.launcher.services
 
 Item {
     id: root
@@ -21,6 +23,25 @@ Item {
     function clicked(): void {
         KWinActiveWindowBridge.focusWindow(root.modelData.address);
         root.list.visibilities.launcher = false;
+    }
+
+    // Unlike clicked(), stays in the switcher rather than closing the launcher —
+    // the point is closing several windows in a row without re-opening it each time.
+    function closeWindow(): void {
+        Windows.closeWindow(root.modelData.address);
+    }
+
+    Connections {
+        target: Windows
+        function onSelectedIndexChanged() {
+            root._skipOpenAnim = false;
+        }
+    }
+
+    Timer {
+        interval: 400
+        running: true
+        onTriggered: root._skipOpenAnim = false
     }
 
     Component.onCompleted: {
@@ -44,18 +65,10 @@ Item {
     implicitHeight: previewBox.height + label.height + Tokens.spacing.small / 2 + Tokens.padding.large + Tokens.padding.medium
     width: list.itemWidth
 
-    Connections {
-        function onSelectedIndexChanged() {
-            root._skipOpenAnim = false;
-        }
+    HoverHandler {
+        id: tileHover
+    }
 
-        target: Windows
-    }
-    Timer {
-        interval: 400
-        running: true
-        onTriggered: root._skipOpenAnim = false
-    }
     StateLayer {
         radius: Tokens.rounding.medium
         onClicked: root.clicked()
@@ -124,6 +137,36 @@ Item {
             height: Math.min(parent.height, parent.width / previewBox.windowAspect)
             visible: previewBox.serial !== 0
             objectSerial: previewBox.serial
+        }
+
+        // Close button — only revealed while hovering this tile, same convention as
+        // the taskbar's own preview popup (DockHover.qml).
+        StyledRect {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: Tokens.padding.small
+            implicitWidth: closeIcon.implicitHeight + Tokens.padding.small * 2
+            implicitHeight: closeIcon.implicitHeight + Tokens.padding.small * 2
+            radius: Tokens.rounding.small
+            color: Colours.tPalette.m3surfaceVariant
+            opacity: tileHover.hovered ? 1 : 0
+            visible: opacity > 0.01
+
+            Behavior on opacity {
+                Anim {}
+            }
+
+            StateLayer {
+                anchors.fill: parent
+                radius: Tokens.rounding.small
+                onClicked: root.closeWindow()
+            }
+
+            MaterialIcon {
+                id: closeIcon
+                anchors.centerIn: parent
+                text: "close"
+            }
         }
     }
     StyledText {

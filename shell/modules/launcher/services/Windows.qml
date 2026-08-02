@@ -87,6 +87,12 @@ QtObject {
         }
         
         items = currentItems;
+
+        // A window closing (e.g. from the switcher's own close button) can leave
+        // selectedIndex pointing past the end of the shrunk array — clamp it back
+        // onto the last item rather than leaving ListView.currentIndex invalid.
+        if (root.selectedIndex >= currentItems.length)
+            root.selectedIndex = Math.max(0, currentItems.length - 1);
     }
 
     function query(search: string): var {
@@ -98,6 +104,10 @@ QtObject {
 
     function focusWindow(address: string): void {
         KWinActiveWindowBridge.focusWindow(address);
+    }
+
+    function closeWindow(address: string): void {
+        KWinActiveWindowBridge.closeWindow(address);
     }
 
     Component.onCompleted: {
