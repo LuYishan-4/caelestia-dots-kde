@@ -119,8 +119,10 @@ Singleton {
                 continue;
 
             const iface = parts[0].replace(":", "");
-            // Skip loopback interface
-            if (iface === "lo")
+            // Skip loopback and virtual/tunnel/container interfaces
+            // to avoid double-counting VPN/container/VM traffic.
+            const VIRTUAL = /^(lo|veth|docker\d*|br-|virbr|vnet|tun|tap|wg\d*|ppp|lxc|cali|flannel|kube|cni)/;
+            if (VIRTUAL.test(iface))
                 continue;
 
             const rxBytes = parseFloat(parts[1]) || 0;
