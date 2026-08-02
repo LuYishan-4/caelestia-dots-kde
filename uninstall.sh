@@ -330,7 +330,7 @@ fi
 
 section "Step 5 - Restore or Remove Config Directories"
 
-for cfg in btop fastfetch fish foot hypr kitty micro nvim rofi thunar uwsm zed zen vscode; do
+for cfg in btop fastfetch fish foot hypr kitty micro thunar; do
     if [[ -e "$HOME/.config/$cfg" ]]; then
         restore_or_remove "$cfg" "$HOME/.config/$cfg" ".config"
     fi
