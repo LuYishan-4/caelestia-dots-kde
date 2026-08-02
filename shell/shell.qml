@@ -25,6 +25,7 @@ import "modules/areapicker"
 import "modules/lock"
 import "modules/polkit"
 import "modules/screenshot/regionSelector"
+import "modules/overview"
 
 ShellRoot {
     settings.watchFiles: false

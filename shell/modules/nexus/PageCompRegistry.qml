@@ -10,16 +10,18 @@ import qs.modules.nexus.pages
 import qs.modules.nexus.pages.apps
 import qs.modules.nexus.pages.audio
 import qs.modules.nexus.pages.bluetooth
+import qs.modules.nexus.pages.desktop
 import qs.modules.nexus.pages.panels
 import qs.modules.nexus.pages.services
 import qs.modules.nexus.pages.wallandstyle
 import qs.modules.nexus.pages.panels.taskbar
 
-import qs.modules.nexus.pages.desktop
-
 QtObject {
     id: root
 
+    readonly property Component placeholderComp: Component {
+        PlaceholderComp {}
+    }
     readonly property list<Component> pageComps: [
         // Personalization
         Component {
@@ -95,7 +97,6 @@ QtObject {
                 Component {
                     UtilitiesPanel {}
                 }
-
                 // Taskbar component sub-pages
                 Component {
                     BarComponents {}
@@ -127,9 +128,11 @@ QtObject {
                 Component {
                     TaskbarElements {}
                 }
+                Component {
+                    OverviewPanel {}
+                }
             }
         },
-
         // Connectivity
         Component {
             // Network
@@ -164,7 +167,6 @@ QtObject {
                 }
             }
         },
-
         // Controls
         Component {
             // Notifications
@@ -204,7 +206,6 @@ QtObject {
                 }
             }
         },
-
         // Shell
         Component {
             // Apps
@@ -239,7 +240,6 @@ QtObject {
                 }
             }
         },
-
         // System
         Component {
             // Updates
@@ -273,10 +273,6 @@ QtObject {
         }
     ]
 
-    readonly property Component placeholderComp: Component {
-        PlaceholderComp {}
-    }
-
     component PlaceholderComp: Item {
         property NexusState nState // To avoid the warning from non-existent property
 
@@ -285,24 +281,22 @@ QtObject {
             spacing: Tokens.padding.extraSmall
 
             MaterialIcon {
-                Layout.alignment: Qt.AlignHCenter
                 text: "handyman"
                 color: Colours.palette.m3onSurfaceVariant
                 fontStyle: Tokens.font.icon.extraLarge
-            }
-
-            StyledText {
                 Layout.alignment: Qt.AlignHCenter
+            }
+            StyledText {
                 text: qsTr("Page under construction")
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.title.large
-            }
-
-            StyledText {
                 Layout.alignment: Qt.AlignHCenter
+            }
+            StyledText {
                 text: qsTr("This page will be available in a future update.")
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.body.large
+                Layout.alignment: Qt.AlignHCenter
             }
         }
     }

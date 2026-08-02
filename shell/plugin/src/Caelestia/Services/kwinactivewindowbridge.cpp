@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QTemporaryFile>
+#include <QTimer>
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusMessage>
 #include <QtDBus/QDBusReply>
@@ -123,38 +124,43 @@ function notifyWindowList() {
     let wins = workspace.windowList();
     if (!wins) return;
     for (let i = 0; i < wins.length; ++i) {
-        let w = wins[i];
-        if (w.normalWindow) {
-            if (w.resourceClass === "quickshell") continue;
-            let deskId = -1;
-            if (w.desktops && w.desktops.length > 0) {
-                let d = w.desktops[0];
-                if (d) {
-                    let allD = workspace.desktops;
-                    if (allD) {
-                        for (let j = 0; j < allD.length; ++j) {
-                            if (allD[j].id === d.id || allD[j] === d) {
-                                deskId = j + 1;
-                                break;
+        try {
+            let w = wins[i];
+            if (w.normalWindow) {
+                if (w.resourceClass === "quickshell") continue;
+                let deskId = -1;
+                if (w.desktops && w.desktops.length > 0) {
+                    let d = w.desktops[0];
+                    if (d) {
+                        let allD = workspace.desktops;
+                        if (allD) {
+                            for (let j = 0; j < allD.length; ++j) {
+                                if (allD[j].id === d.id || allD[j] === d) {
+                                    deskId = j + 1;
+                                    break;
+                                }
                             }
                         }
                     }
                 }
+                arr.push({
+                    address: w.internalId ? String(w.internalId) : "",
+                    pid: w.pid || 0,
+                    title: w.caption || "",
+                    class: w.resourceClass || "",
+                    x: w.frameGeometry ? w.frameGeometry.x : (w.x || 0),
+                    y: w.frameGeometry ? w.frameGeometry.y : (w.y || 0),
+                    width: w.frameGeometry ? w.frameGeometry.width : (w.width || 0),
+                    height: w.frameGeometry ? w.frameGeometry.height : (w.height || 0),
+                    fullscreen: w.fullScreen ? true : false,
+                    maximized: (w.maximizeMode === 3) ? true : false,
+                    minimized: w.minimized ? true : false,
+                    floating: !w.tile,
+                    workspace: { id: deskId }
+                });
             }
-            arr.push({
-                address: w.internalId ? String(w.internalId) : "",
-                pid: w.pid || 0,
-                title: w.caption || "",
-                class: w.resourceClass || "",
-                x: w.frameGeometry ? w.frameGeometry.x : w.x,
-                y: w.frameGeometry ? w.frameGeometry.y : w.y,
-                width: w.frameGeometry ? w.frameGeometry.width : w.width,
-                height: w.frameGeometry ? w.frameGeometry.height : w.height,
-                fullscreen: w.fullScreen ? true : false,
-                minimized: w.minimized ? true : false,
-                floating: !w.tile,
-                workspace: { id: deskId }
-            });
+        } catch (e) {
+            console.info("Caelestia: Error processing window: " + e);
         }
     }
     callDBus(BUS, PATH, IFACE, "notifyWindowList", JSON.stringify(arr));
@@ -163,9 +169,15 @@ function notifyWindowList() {
 workspace.windowActivated.connect(onActiveWindowChanged);
 
 function onWindowAdded(window) {
-    if (window && window.normalWindow) {
-        try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
-        try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
+    console.info("Caelestia: windowAdded fired");
+    try {
+        if (window && window.normalWindow) {
+            try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
+            try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
+            try { window.frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+        }
+    } catch (e) {
+        console.info("Caelestia: Error in onWindowAdded: " + e);
     }
     notifyWindowList();
 }
@@ -187,15 +199,23 @@ function onCurrentDesktopChanged() {
 
 workspace.currentDesktopChanged.connect(onCurrentDesktopChanged);
 workspace.windowAdded.connect(onWindowAdded);
-workspace.windowRemoved.connect(notifyWindowList);
+workspace.windowRemoved.connect(function(w) {
+    console.info("Caelestia: windowRemoved fired");
+    notifyWindowList();
+});
 workspace.desktopsChanged.connect(notifyWindowList);
 
 // Initial push
 let initialWins = workspace.windowList();
 for (let i = 0; i < initialWins.length; ++i) {
-    if (initialWins[i].normalWindow) {
-        try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
-        try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
+    try {
+        if (initialWins[i].normalWindow) {
+            try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
+            try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
+            try { initialWins[i].frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+        }
+    } catch (e) {
+        console.info("Caelestia: Error initializing window: " + e);
     }
 }
 onActiveWindowChanged();
@@ -208,6 +228,31 @@ if (workspace.currentDesktop) {
 KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
     : QObject(parent) {
     new KWinActiveWindowBridgeAdaptor(this);
+
+    m_windowListDebounce = new QTimer(this);
+    m_windowListDebounce->setInterval(150); // Throttle geometry updates to ~6 fps to save QML CPU
+    m_windowListDebounce->setSingleShot(true);
+    connect(m_windowListDebounce, &QTimer::timeout, this, [this]() {
+        qDebug() << "Caelestia: windowListDebounce timer fired, pending JSON empty?" << m_pendingWindowListJson.isEmpty();
+        if (!m_pendingWindowListJson.isEmpty()) {
+            QJsonDocument doc = QJsonDocument::fromJson(m_pendingWindowListJson.toUtf8());
+            if (doc.isArray()) {
+                m_windowList = doc.array().toVariantList();
+                qDebug() << "Caelestia: emitting windowListChanged(), items count:" << m_windowList.size();
+                emit windowListChanged();
+            } else {
+                qDebug() << "Caelestia: doc is not an array!";
+            }
+
+            QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
+            QFile f(runtimeDir + "/qs_kwin_windows.json");
+            if (f.open(QIODevice::WriteOnly)) {
+                f.write(m_pendingWindowListJson.toUtf8());
+                f.close();
+            }
+            m_pendingWindowListJson.clear();
+        }
+    });
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     bus.registerObject("/dev/caelestia/KWinActiveWindow", this,
@@ -542,6 +587,10 @@ void KWinActiveWindowBridge::refreshWindows() {
                         pid: w.pid || 0,
                         title: w.caption || "",
                         class: w.resourceClass || "",
+                        x: w.frameGeometry ? w.frameGeometry.x : w.x,
+                        y: w.frameGeometry ? w.frameGeometry.y : w.y,
+                        width: w.frameGeometry ? w.frameGeometry.width : w.width,
+                        height: w.frameGeometry ? w.frameGeometry.height : w.height,
                         fullscreen: w.fullScreen ? true : false,
                         maximized: w.maximized ? true : false,
                         minimized: w.minimized ? true : false,
@@ -587,18 +636,11 @@ void KWinActiveWindowBridge::previousDesktop() {
 }
 
 void KWinActiveWindowBridge::updateWindowList(const QString& windowsJson) {
-    QJsonDocument doc = QJsonDocument::fromJson(windowsJson.toUtf8());
-    if (doc.isArray()) {
-        m_windowList = doc.array().toVariantList();
-        emit windowListChanged();
-    }
-
-    // Optionally update a file for backwards compatibility with hyprlandstate.cpp
-    QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
-    QFile f(runtimeDir + "/qs_kwin_windows.json");
-    if (f.open(QIODevice::WriteOnly)) {
-        f.write(windowsJson.toUtf8());
-        f.close();
+    qDebug() << "Caelestia: updateWindowList called, length:" << windowsJson.length();
+    m_pendingWindowListJson = windowsJson;
+    if (!m_windowListDebounce->isActive()) {
+        m_windowListDebounce->start();
+        qDebug() << "Caelestia: started windowListDebounce timer";
     }
 }
 

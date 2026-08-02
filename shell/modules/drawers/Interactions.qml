@@ -11,7 +11,6 @@ CustomMouseArea {
     id: root
 
     required property ShellScreen screen
-    Config.screen: screen.name
     required property BarPopouts.Wrapper popouts
     required property DrawerVisibilities visibilities
     required property Panels panels
@@ -19,27 +18,14 @@ CustomMouseArea {
     required property real borderThickness
     required property bool fullscreen
     property var focusGrab: null
-
     property point dragStart
     property bool dashboardShortcutActive
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
-
-    Timer {
-        id: popoutHideTimer
-        interval: 150
-        onTriggered: {
-            if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
-                popouts.hasCurrent = false;
-                bar.closeTray();
-            }
-        }
-    }
-
     readonly property bool isBarHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
-
     // Uses clampedThickness rather than the raw implicit size so the bar stays
     // reachable when the border thickness is set to 0 (the collapsed bar is 0px wide).
+
     function inBarArea(x: real, y: real): bool {
         if (Config.bar.position === "left")
             return x < bar.x + bar.clampedThickness;
@@ -51,7 +37,6 @@ CustomMouseArea {
             return y > bar.y + bar.height - bar.clampedThickness;
         return false;
     }
-
     // `span` is how much of the panel's own extent along the edge counts, as a
     // percentage, kept centred on the panel. 100 is the panel's full extent, which
     // is what every caller wants once the panel is open — the narrowing exists so
@@ -63,21 +48,18 @@ CustomMouseArea {
         const centre = (near + far) / 2;
         return Qt.point(centre - half, centre + half);
     }
-
     function withinPanelHeight(panel: Item, x: real, y: real, span = 100): bool {
         const panelY = panels.topMargin + panel.y;
         const panelHeight = panel.content ? panel.content.nonAnimHeight : panel.height;
         const b = spanBounds(panelY - Config.border.rounding - panels.topMargin, panelY + panelHeight + Config.border.rounding + panels.bottomMargin, span);
         return y >= b.x && y <= b.y;
     }
-
     function withinPanelWidth(panel: Item, x: real, y: real, span = 100): bool {
         const panelX = panels.leftMargin + panel.x;
         const panelWidth = panel.content ? panel.content.nonAnimWidth : panel.width;
         const b = spanBounds(panelX - Config.border.rounding - panels.leftMargin, panelX + panelWidth + Config.border.rounding + panels.rightMargin, span);
         return x >= b.x && x <= b.y;
     }
-
     function inLeftPanel(panel: Item, x: real, y: real): bool {
         const panelWidth = panel.content ? panel.content.nonAnimWidth : panel.width;
         const panelHeight = panel.content ? panel.content.nonAnimHeight : panel.height;
@@ -92,7 +74,6 @@ CustomMouseArea {
             return y > screen.height - panels.bottomMargin - panelHeight && withinPanelWidth(panel, x, y);
         return false;
     }
-
     // Two independent measurements of the trigger area, both of which used to be
     // fixed. `edge` is its depth — how far in from the screen edge counts — and
     // defaults to the border thickness, the pre-configurable behaviour. `span` is
@@ -113,17 +94,22 @@ CustomMouseArea {
         const shown = screen.width - (panels.leftMargin + panel.x);
         return x > screen.width - (closed ? strip : Math.max(strip, shown)) && withinPanelHeight(panel, x, y, closed ? span : 100);
     }
-
     function inTopPanel(panel: Item, x: real, y: real, edge = Config.border.thickness, span = 100): bool {
         const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
         return y < Math.max(Config.border.minThickness, edge + panelHeight) && withinPanelWidth(panel, x, y, panelHeight > 0 ? 100 : span);
     }
-
     function inBottomPanel(panel: Item, x: real, y: real, isCorner = false, edge = Config.border.thickness, span = 100): bool {
         const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
         return y > screen.height - Math.max(Config.border.minThickness, edge + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y, panelHeight > 0 ? 100 : span);
     }
-
+    function inOverviewCorner(x: real, y: real): string {
+        const thickness = Config.overview.hoverThickness;
+        if (Config.overview.hoverTopLeft && x <= thickness && y <= thickness) return "TopLeft";
+        if (Config.overview.hoverTopRight && x >= screen.width - thickness && y <= thickness) return "TopRight";
+        if (Config.overview.hoverBottomLeft && x <= thickness && y >= screen.height - thickness) return "BottomLeft";
+        if (Config.overview.hoverBottomRight && x >= screen.width - thickness && y >= screen.height - thickness) return "BottomRight";
+        return "";
+    }
     function onWheel(event: WheelEvent): void {
         if (fullscreen)
             return;
@@ -135,7 +121,6 @@ CustomMouseArea {
     anchors.fill: parent
     acceptedButtons: fullscreen ? Qt.NoButton : Qt.AllButtons
     hoverEnabled: true
-
     onPressed: event => {
         dragStart = Qt.point(event.x, event.y);
 
@@ -178,7 +163,6 @@ CustomMouseArea {
             popoutHideTimer.stop();
         }
     }
-
     onPositionChanged: event => {
         if (popouts.isDetached)
             return;
@@ -383,8 +367,33 @@ CustomMouseArea {
                 utilitiesShortcutActive = false;
             }
         }
-    }
 
+        // Show overview on hover or drag
+        if (Config.overview.enabled && !visibilities.overview) {
+            if (Config.overview.showOnHover) {
+                if (inOverviewCorner(x, y) !== "") {
+                    visibilities.overview = true;
+                }
+            } else if (pressed) {
+                if (inOverviewCorner(dragStart.x, dragStart.y) !== "") {
+                    if (Math.hypot(dragX, dragY) > Config.overview.dragThreshold) {
+                        visibilities.overview = true;
+                    }
+                }
+            }
+        }
+    }
+    Timer {
+        id: popoutHideTimer
+
+        interval: 150
+        onTriggered: {
+            if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
+                popouts.hasCurrent = false;
+                bar.closeTray();
+            }
+        }
+    }
     // Monitor individual visibility changes
     Connections {
         function onLauncherChanged() {
@@ -407,7 +416,6 @@ CustomMouseArea {
                 }
             }
         }
-
         function onDashboardChanged() {
             if (root.visibilities.dashboard) {
                 // Dashboard became visible, immediately check if this should be shortcut mode
@@ -420,7 +428,6 @@ CustomMouseArea {
                 root.dashboardShortcutActive = false;
             }
         }
-
         function onOsdChanged() {
             if (root.visibilities.osd) {
                 // OSD became visible, immediately check if this should be shortcut mode
@@ -433,7 +440,6 @@ CustomMouseArea {
                 root.osdShortcutActive = false;
             }
         }
-
         function onUtilitiesChanged() {
             if (root.visibilities.utilities) {
                 // Utilities became visible, immediately check if this should be shortcut mode
@@ -450,4 +456,5 @@ CustomMouseArea {
 
         target: root.visibilities
     }
+    Config.screen: screen.name
 }
