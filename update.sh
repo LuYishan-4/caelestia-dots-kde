@@ -177,6 +177,11 @@ bash "$BUNDLE_DIR/scripts/03-deploy-configs.sh" || die "Config deployment failed
 info "Building Caelestia Shell UI..."
 bash "$BUNDLE_DIR/scripts/08-build-shell.sh" || die "Shell build failed."
 
+# Re-apply idempotent system tweaks (KDE settings, CLI patches, etc.)
+# so they survive package upgrades that may have overwritten patches.
+info "Re-applying system tweaks..."
+bash "$BUNDLE_DIR/scripts/09-system-tweaks.sh" || warn "System tweaks step reported errors (non-fatal)."
+
 # Kill the keepalive background process now that sudo is no longer needed
 if [ -n "${SUDO_KEEPER_PID:-}" ] && kill -0 "$SUDO_KEEPER_PID" 2>/dev/null; then
     kill "$SUDO_KEEPER_PID" 2>/dev/null || true
