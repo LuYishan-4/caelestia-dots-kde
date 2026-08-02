@@ -51,7 +51,7 @@ echo "  Backing up pre-install configs..."
 mkdir -p "$BACKUP_DIR/shellrc" "$BACKUP_DIR/.config" "$BACKUP_DIR/local"
 
 # Backup selected config dirs that may be overwritten/removed during install/uninstall
-for cfg in btop fastfetch fish foot hypr kitty micro thunar; do
+for cfg in btop fastfetch fish foot kitty micro thunar; do
     if [[ -e "$HOME/.config/$cfg" ]]; then
         cp -a "$HOME/.config/$cfg" "$BACKUP_DIR/.config/$cfg" 2>/dev/null || true
     fi
@@ -81,7 +81,7 @@ backup_shell_rc "$HOME/.zshrc" "zshrc"
 backup_shell_rc "$HOME/.config/fish/config.fish" "fish_config"
 
 echo "  Deploying Caelestia configs..."
-for config in btop fastfetch foot hypr kitty micro thunar; do
+for config in btop fastfetch foot kitty micro thunar; do
     if [[ -d "$DOTS_DIR/$config" ]]; then
         # Remove
         rm -rf "$HOME/.config/$config"
