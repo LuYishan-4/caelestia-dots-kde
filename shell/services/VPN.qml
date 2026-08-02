@@ -237,7 +237,11 @@ Singleton {
         if (iface) {
             const escaped = iface.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             const lineRe = new RegExp("^\\d+:\\s*" + escaped + ":");
-            status.connected = output.split("\n").some(line => lineRe.test(line.trim()) && line.includes("state UP"));
+            const upFlagRe = /[<,]UP(,|>)/;
+            status.connected = output.split("\n").some(line => {
+                const trimmed = line.trim();
+                return lineRe.test(trimmed) && (trimmed.includes("state UP") || upFlagRe.test(trimmed));
+            });
         }
         if (status.connected)
             status.state = "connected";
