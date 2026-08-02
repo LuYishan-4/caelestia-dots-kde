@@ -155,8 +155,6 @@ sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
 USER_HOME="$1"
 USER_CACHE="$2"
 
-# Resolve the real opencv library path via ldconfig instead of
-# hardcoding /usr/lib (Fedora uses /usr/lib64 for 64-bit libs).
 OPENCV_IMGPROC=$(ldconfig -p 2>/dev/null | awk '/libopencv_imgproc\.so\.5/ {print $NF; exit}')
 OPENCV_CORE=$(ldconfig -p 2>/dev/null | awk '/libopencv_core\.so\.5/ {print $NF; exit}')
 if [ -n "$OPENCV_IMGPROC" ]; then
