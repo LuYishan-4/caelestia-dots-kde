@@ -86,16 +86,26 @@ chmod +x "$HOME/.local/bin/ydotoold-wrapper"
 echo "  [OK]  ydotoold-wrapper deployed to ~/.local/bin."
 
 # Deploy and enable ydotoold systemd user service
-if [[ -f "${BUNDLE_DIR:-$(dirname "$(dirname "$0")")}/src/systemd/ydotoold.service" ]]; then
-    SVCFILE="${BUNDLE_DIR:-$(dirname "$(dirname "$0")")}/src/systemd/ydotoold.service"
-    mkdir -p "$HOME/.config/systemd/user"
-    cp "$SVCFILE" "$HOME/.config/systemd/user/"
-    systemctl --user daemon-reload
-    systemctl --user enable ydotoold.service 2>/dev/null || true
-    # Try to start it now (the user is in the 'input' group via the udev rule above)
-    systemctl --user start ydotoold.service 2>/dev/null || \
-        echo "  [INFO] ydotoold will start on next login."
-    echo "  [OK]  ydotoold service configured."
-fi
+mkdir -p "$HOME/.config/systemd/user"
+cat > "$HOME/.config/systemd/user/ydotoold.service" << 'UNIT'
+[Unit]
+Description=ydotoold key injection daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/ydotoold-wrapper
+Restart=on-failure
+Environment=YDOTOOL_SOCKET=/run/user/%U/.ydotool_socket
+
+[Install]
+WantedBy=graphical-session.target
+UNIT
+systemctl --user daemon-reload
+systemctl --user enable ydotoold.service 2>/dev/null || true
+systemctl --user start ydotoold.service 2>/dev/null || \
+    echo "  [INFO] ydotoold will start on next login."
+echo "  [OK]  ydotoold service configured."
 
 echo "[OK]  Services configured."

@@ -39,7 +39,7 @@ echo ""
 
 mkdir -p "$BACKUP_DIR"
 
-if [[ ! -d "$DOTS_DIR/fish" && ! -d "$DOTS_DIR/hypr" ]]; then
+if [[ ! -d "$DOTS_DIR" ]] || [[ -z "$(ls -A "$DOTS_DIR" 2>/dev/null)" ]]; then
     echo "  [ERR] Missing src/dots content. Run: git submodule update --init --recursive src/dots"
     exit 1
 fi

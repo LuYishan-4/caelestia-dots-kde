@@ -189,7 +189,8 @@ fi
 
 section "Update Completed Successfully"
 echo
-info "The core shell and bridge scripts have been updated without touching your personal KDE settings."
+info "The core shell and bridge scripts have been updated."
+info "System tweaks (OSD, desktops, CLI patches) have been re-applied to keep KDE in sync."
 echo
 echo "Restarting bridge and shell to apply changes..."
 
