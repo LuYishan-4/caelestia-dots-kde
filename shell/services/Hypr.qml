@@ -130,10 +130,6 @@ Singleton {
 
     signal configReloaded
 
-    // Returns true when any window on any monitor is fullscreen (fullscreen
-    // mode > 1, i.e. exclusive/real fullscreen, not maximised).  Uses
-    // KWinActiveWindowBridge on KDE; falls back to Hyprland IPC mock data
-    // on actual Hyprland (where KWinActiveWindowBridge has empty data).
     function hasFullscreen(): bool {
         if (typeof KWinActiveWindowBridge !== "undefined") {
             const wins = KWinActiveWindowBridge.windowList || [];
@@ -143,7 +139,6 @@ Singleton {
             }
             return false;
         }
-        // Hyprland: walk the monitor mocks which are populated from IPC
         const monVals = root.monitors.values || [];
         for (let i = 0; i < monVals.length; i++) {
             const toplevels = monVals[i]?.activeWorkspace?.toplevels?.values || [];
@@ -155,11 +150,6 @@ Singleton {
         return false;
     }
 
-    // Translates Hyprland-style dispatch strings into KWin equivalents when
-    // running under KDE, and forwards to the Hyprland IPC socket otherwise.
-    // Callers that already check typeof KWinActiveWindowBridge are still
-    // preferred, but this bridge catches the unguarded paths (idle DPMS,
-    // bar workspace scroll, etc.) so they work on both compositors.
     function dispatch(request: string): void {
         const isKDE = typeof KWinActiveWindowBridge !== "undefined";
 

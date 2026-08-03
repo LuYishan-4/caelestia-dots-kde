@@ -278,9 +278,7 @@ Item {
             if (Math.abs(currentPos - startPos) > drag.threshold)
                 return;
 
-            // KDE has no special/scratchpad workspace concept; this
-            // component is gated by container.onSpecial (hardcoded false)
-            // but guard the dispatch path as defence-in-depth.
+            // KDE has no special/scratchpad workspace concept.
             if (typeof KWinActiveWindowBridge !== "undefined")
                 return;
 

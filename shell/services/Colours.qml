@@ -248,9 +248,7 @@ Singleton {
     }
 
     function reloadHyprRules(): void {
-        // Layer rules are a Hyprland-only mechanism.  On KDE the blur and
-        // transparency for drawers are controlled by KWin effects, not
-        // Hyprland IPC, so there is nothing to reload here.
+        // Layer rules are Hyprland-only; KWin handles blur via effects.
         if (typeof KWinActiveWindowBridge !== "undefined")
             return;
 

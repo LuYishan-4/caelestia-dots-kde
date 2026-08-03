@@ -615,9 +615,7 @@ PageBase {
 
         Process {
             id: backupFolderProcess
-            // Ensure the backups directory exists before opening it, so the
-            // file manager doesn't show a "does not exist" error when no
-            // backup has been created yet.
+            // Create the backups dir if missing so the file manager opens cleanly.
             command: ["sh", "-c",
                 `mkdir -p "${Paths.absolutePath("~/.config/caelestia-update/backups")}" && ` +
                 GlobalConfig.general.apps.explorer.map(a => `"${a}"`).join(" ") +

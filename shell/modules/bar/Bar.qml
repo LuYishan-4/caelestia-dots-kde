@@ -227,8 +227,6 @@ Item {
             if (specialWs?.length > 0)
                 Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
             else {
-                // Prevent scrolling past the first workspace.  On KDE read
-                // the real active desktop id; on Hyprland use the IPC value.
                 const activeId = typeof KWinWorkspaceState !== "undefined"
                     ? KWinWorkspaceState.activeId
                     : Hypr.activeWsId;

@@ -33,9 +33,6 @@ Item {
         let shouldPause = false;
 
         try {
-            // On KDE, query window state through the native bridge for
-            // fullscreen/tiled detection.  On Hyprland, use the IPC-
-            // derived monitor and toplevel data.
             if (typeof KWinActiveWindowBridge !== "undefined") {
                 const wins = KWinActiveWindowBridge.windowList || [];
                 if (pauseOnAllDisplays) {

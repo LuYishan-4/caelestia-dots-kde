@@ -74,9 +74,7 @@ Searcher {
                     list.visibilities.launcher = false;
                 }
 
-                // Animation switching is a Hyprland-only feature that
-                // modifies Lua config files and calls hyprctl reload.
-                // Neither mechanism exists on KDE.
+                // Animation switching is Hyprland-only; no-op on KDE.
                 if (typeof KWinActiveWindowBridge !== "undefined") {
                     console.log("Animations: animation switching is not supported on KDE");
                     return;

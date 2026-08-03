@@ -32,9 +32,6 @@ Item {
     readonly property int alignment: Config.background.desktopLyrics.alignment
     readonly property bool autoHide: Config.background.desktopLyrics.autoHide
     readonly property bool allWindowsFloating: {
-        // On KDE, query window state through the native bridge (same pattern
-        // used by Visualiser.qml and Shimeji.qml).  On Hyprland, fall back
-        // to the IPC-derived monitor mock data.
         if (typeof KWinActiveWindowBridge !== "undefined") {
             const wins = KWinActiveWindowBridge.windowList || [];
             for (let i = 0; i < wins.length; i++) {
