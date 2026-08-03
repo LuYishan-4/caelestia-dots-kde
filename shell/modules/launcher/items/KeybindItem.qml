@@ -17,11 +17,20 @@ Item {
             return;
         root.list.visibilities.launcher = false;
 
+        const isKDE = typeof KWinActiveWindowBridge !== "undefined";
         let actionStr = root.modelData.action;
+
         if (actionStr.startsWith("command(") && actionStr.endsWith(")")) {
+            // Shell command wrapper — execute the command directly
             actionStr = actionStr.substring(8, actionStr.length - 1);
             Quickshell.execDetached(["sh", "-c", actionStr]);
+        } else if (isKDE) {
+            // On KDE the action field is a shortcut name registered with
+            // kglobalaccel. The shortcut already responds to its key
+            // combination natively — nothing to dispatch. Just dismiss
+            // the launcher (already done above).
         } else {
+            // On Hyprland the action field is a dispatcher command string.
             Quickshell.execDetached(["sh", "-c", "hyprctl dispatch " + actionStr]);
         }
     }
