@@ -16,7 +16,10 @@ PageBase {
     isSubPage: true
     title: qsTr("Video Wallpapers")
 
-    readonly property bool isHyprland: Quickshell.env("XDG_CURRENT_DESKTOP").includes("Hyprland")
+    // HYPRLAND_INSTANCE_SIGNATURE is the canonical compositor-detection
+    // variable used elsewhere in the codebase.  XDG_CURRENT_DESKTOP is
+    // less reliable — KDE Plasma sometimes includes 'Hyprland' in it.
+    readonly property bool isHyprland: !!Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE")
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
