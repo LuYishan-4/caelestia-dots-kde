@@ -198,8 +198,12 @@ MouseArea {
         }
     }
 
+    // On Hyprland, continuously poll cursor position for client-rectangle
+    // detection.  On KDE the MouseArea's own position-tracking handles cursor
+    // movement within the picker; outside the picker the user is selecting
+    // a region manually so the process is unnecessary.
     Process {
-        running: true
+        running: typeof KWinActiveWindowBridge === "undefined"
         command: ["hyprctl", "cursorpos", "-j"]
         stdout: StdioCollector {
             onStreamFinished: {
