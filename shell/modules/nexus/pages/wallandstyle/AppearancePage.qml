@@ -51,7 +51,7 @@ PageBase {
                 first: true
                 text: qsTr("Bezel mode (Pitch black)")
                 subtext: qsTr("Make the shell pitch black to blend with display bezels")
-                checked: Config.appearance.pitchBlack
+                checked: GlobalConfig.appearance.pitchBlack
                 onToggled: GlobalConfig.appearance.pitchBlack = checked
                 Layout.fillWidth: true
             }
