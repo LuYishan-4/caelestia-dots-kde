@@ -617,10 +617,10 @@ PageBase {
             id: backupFolderProcess
             // Create the backups dir if missing so the file manager opens cleanly.
             command: ["sh", "-c",
-                `mkdir -p "${Paths.absolutePath("~/.config/caelestia-update/backups")}" && ` +
-                GlobalConfig.general.apps.explorer.map(a => `"${a}"`).join(" ") +
-                ` "${Paths.absolutePath("~/.config/caelestia-update/backups")}"`
-            ]
+                'dir="$1"; shift; mkdir -p "$dir" && exec "$@" "$dir"',
+                "--",
+                Paths.absolutePath("~/.config/caelestia-update/backups")
+            ].concat(GlobalConfig.general.apps.explorer)
         }
     }
 }

@@ -34,11 +34,7 @@ Item {
     readonly property bool allWindowsFloating: {
         if (typeof KWinActiveWindowBridge !== "undefined") {
             const wins = KWinActiveWindowBridge.windowList || [];
-            for (let i = 0; i < wins.length; i++) {
-                if (wins[i].fullscreen || wins[i].maximized)
-                    return false;
-            }
-            return true;
+            return wins.every(w => !!w?.floating);
         }
         return Hypr.monitorFor(screen)?.activeWorkspace?.toplevels?.values.every(
             t => t.lastIpcObject?.floating) ?? true;
