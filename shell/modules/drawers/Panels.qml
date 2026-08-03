@@ -39,6 +39,24 @@ Item {
     readonly property real rightMargin: anchors.rightMargin
     readonly property real topMargin: anchors.topMargin
     readonly property real bottomMargin: anchors.bottomMargin
+    readonly property bool popoutIntersectsRight: {
+        if (!popoutsWrapper.visible || popoutsWrapper.offsetScale >= 1) return false;
+        if (Config.bar.position === "top" || Config.bar.position === "bottom") {
+            const notifW = notifications.implicitWidth > 0 ? notifications.implicitWidth : Tokens.sizes.notifs.width;
+            const notifLeft = (Config.bar.position === "right") ? 0 : (root.width - notifW);
+            const notifRight = notifLeft + notifW;
+            const popLeft = popoutsWrapper.x;
+            const popRight = popoutsWrapper.x + popoutsWrapper.content.nonAnimWidth;
+            return popLeft < notifRight && popRight > notifLeft;
+        } else {
+            const notifH = notifications.implicitHeight > 0 ? notifications.implicitHeight : 300;
+            const notifTop = (Config.bar.position === "bottom") ? (root.height - notifH) : 0;
+            const notifBottom = notifTop + notifH;
+            const popTop = popoutsWrapper.y;
+            const popBottom = popoutsWrapper.y + popoutsWrapper.content.nonAnimHeight;
+            return popTop < notifBottom && popBottom > notifTop;
+        }
+    }
 
     anchors.fill: parent
     anchors.leftMargin: (Config.bar.position === "left" ? bar.implicitWidth + (GlobalConfig.appearance.islands ? Tokens.spacing.extraLarge * 2 : 0) : borderThickness + (GlobalConfig.appearance.islands ? Tokens.spacing.extraLarge : 0))
@@ -153,7 +171,7 @@ Item {
 
         property string vAnchor: Config.bar.position === "bottom" ? "bottom" : "top"
         property string hAnchor: Config.bar.position === "right" ? "left" : "right"
-        property bool shouldPush: popoutsWrapper.offsetScale < 1 && !popoutsWrapper.content.isDockPopout && !sidebar.visible
+        property bool shouldPush: root.popoutIntersectsRight && !popoutsWrapper.content.isDockPopout && !sidebar.visible
 
         visibilities: root.visibilities
         sidebarPanel: sidebar
@@ -250,7 +268,7 @@ Item {
 
         property string vAnchor: "bottom"
         property string hAnchor: Config.bar.position === "right" ? "left" : "right"
-        property bool shouldPush: popoutsWrapper.offsetScale < 1 && !popoutsWrapper.content.isDockPopout
+        property bool shouldPush: root.popoutIntersectsRight && !popoutsWrapper.content.isDockPopout
 
         visibilities: root.visibilities
         popouts: popoutsWrapper.content
