@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.components.effects
@@ -23,7 +24,15 @@ Item {
     Loader {
         asynchronous: true
         anchors.centerIn: parent
-        sourceComponent: SysInfo.isDefaultLogo ? caelestiaLogo : distroIcon
+        sourceComponent: {
+            if (SysInfo.isDefaultLogo) {
+                return caelestiaLogo;
+            } else if (GlobalConfig.general.logo && GlobalConfig.general.logo !== "caelestia") {
+                return customIcon;
+            } else {
+                return distroIcon;
+            }
+        }
     }
 
     Component {
@@ -42,6 +51,34 @@ Item {
             source: SysInfo.osLogo
             implicitSize: Math.round(Tokens.font.body.large.pointSize * 1.2)
             colour: Colours.palette.m3tertiary
+        }
+    }
+
+    Component {
+        id: customIcon
+
+        Loader {
+            sourceComponent: SysInfo.recolourCustomLogo ? colouredIconComponent : iconImageComponent
+        }
+    }
+
+    Component {
+        id: colouredIconComponent
+
+        ColouredIcon {
+            source: SysInfo.osLogo
+            implicitSize: Math.round(Tokens.font.body.large.pointSize * 1.2 * (SysInfo.customLogoSize / 100))
+            colour: Colours.palette.m3tertiary
+        }
+    }
+
+    Component {
+        id: iconImageComponent
+
+        IconImage {
+            source: SysInfo.osLogo
+            implicitWidth: Math.round(Tokens.font.body.large.pointSize * 1.2 * (SysInfo.customLogoSize / 100))
+            implicitHeight: Math.round(Tokens.font.body.large.pointSize * 1.2 * (SysInfo.customLogoSize / 100))
         }
     }
 }

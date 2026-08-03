@@ -2,8 +2,10 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import Caelestia.Config
 import qs.components
+import qs.components.filedialog
 import qs.utils
 import qs.modules.nexus.common
 
@@ -30,6 +32,80 @@ PageBase {
             text: qsTr("Enabled")
             checked: Config.launcher.enabled
             onToggled: GlobalConfig.launcher.enabled = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Use alternative logo")
+            subtext: qsTr("Use the Caelestia logo or a custom image instead of your distribution's logo")
+            checked: GlobalConfig.general.logo !== ""
+            onToggled: {
+                if (checked) {
+                    if (GlobalConfig.general.logo === "") {
+                        GlobalConfig.general.logo = "caelestia";
+                    }
+                } else {
+                    GlobalConfig.general.logo = "";
+                }
+            }
+        }
+
+        NavRow {
+            visible: GlobalConfig.general.logo !== ""
+            icon: "image"
+            label: qsTr("Pick custom logo")
+            status: GlobalConfig.general.logo.includes("/") ? GlobalConfig.general.logo : qsTr("Select an image from your local files")
+            onClicked: customLogoDialog.open()
+
+            FileDialog {
+                id: customLogoDialog
+
+                title: qsTr("Select a custom logo")
+                filterLabel: qsTr("Image files")
+                filters: Images.validImageExtensions
+                onAccepted: path => {
+                    GlobalConfig.general.logo = path;
+                }
+            }
+        }
+
+        NavRow {
+            visible: GlobalConfig.general.logo !== ""
+            icon: "palette"
+            label: qsTr("Select KDE icon")
+            status: GlobalConfig.general.logo && GlobalConfig.general.logo !== "caelestia" && !GlobalConfig.general.logo.includes("/") ? GlobalConfig.general.logo : qsTr("Pick an icon from your system theme")
+            onClicked: kdeIconProcess.running = true
+
+            Process {
+                id: kdeIconProcess
+
+                command: ["kdialog", "--geticon", "Select Icon"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let res = text.trim();
+                        if (res) {
+                            GlobalConfig.general.logo = res;
+                        }
+                    }
+                }
+            }
+        }
+
+        ToggleRow {
+            visible: GlobalConfig.general.logo !== "" && GlobalConfig.general.logo !== "caelestia"
+            text: qsTr("Tint custom logo")
+            subtext: qsTr("Apply the Material You accent color to your custom logo")
+            checked: SysInfo.recolourCustomLogo
+            onToggled: SysInfo.recolourCustomLogo = checked
+        }
+
+        StepperRow {
+            visible: GlobalConfig.general.logo !== "" && GlobalConfig.general.logo !== "caelestia"
+            label: qsTr("Logo size (%)")
+            value: SysInfo.customLogoSize
+            from: 50
+            to: 200
+            stepSize: 10
+            onMoved: v => SysInfo.customLogoSize = v
         }
 
         ToggleRow {

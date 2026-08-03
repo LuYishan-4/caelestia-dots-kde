@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
 import Caelestia.Config
@@ -15,6 +16,9 @@ Singleton {
     property list<string> osIdLike
     property string osLogo: Qt.resolvedUrl(`${Quickshell.shellDir}/assets/logo.svg`)
     property bool isDefaultLogo: true
+
+    property alias recolourCustomLogo: sysInfoSettings.recolourCustomLogo
+    property alias customLogoSize: sysInfoSettings.customLogoSize
 
     property string uptime
     readonly property string user: Quickshell.env("USER")
@@ -134,5 +138,14 @@ Singleton {
                 str += `${str ? ", " : ""}${minutes} minute${minutes === 1 ? "" : "s"}`;
             root.uptime = str;
         }
+    }
+
+    Settings {
+        id: sysInfoSettings
+
+        property bool recolourCustomLogo: false
+        property real customLogoSize: 100
+
+        category: "Launcher"
     }
 }
