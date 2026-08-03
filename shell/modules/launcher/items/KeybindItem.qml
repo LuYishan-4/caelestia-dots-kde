@@ -17,10 +17,14 @@ Item {
             return;
         root.list.visibilities.launcher = false;
 
+        const isKDE = typeof KWinActiveWindowBridge !== "undefined";
         let actionStr = root.modelData.action;
+
         if (actionStr.startsWith("command(") && actionStr.endsWith(")")) {
             actionStr = actionStr.substring(8, actionStr.length - 1);
             Quickshell.execDetached(["sh", "-c", actionStr]);
+        } else if (isKDE) {
+            // Shortcut already active via kglobalaccel — nothing to dispatch.
         } else {
             Quickshell.execDetached(["sh", "-c", "hyprctl dispatch " + actionStr]);
         }

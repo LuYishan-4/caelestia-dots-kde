@@ -15,7 +15,7 @@ Variants {
         id: root
         required property ShellScreen modelData
         screen: modelData
-        name: "drawers" // Use 'drawers' namespace so Hyprland blurs it automatically
+        name: "drawers" // Shared layer namespace for compositor blur effects
         isDesktopWidget: true
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Bottom

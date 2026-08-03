@@ -248,6 +248,10 @@ Singleton {
     }
 
     function reloadHyprRules(): void {
+        // Layer rules are Hyprland-only; KWin handles blur via effects.
+        if (typeof KWinActiveWindowBridge !== "undefined")
+            return;
+
         let rule, trEnabled;
         if (Hypr.usingLua) {
             rule = `eval hl.layer_rule({ match = { namespace = "caelestia-drawers" }, %1 = %2 })`;

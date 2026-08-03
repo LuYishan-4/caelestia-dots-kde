@@ -615,7 +615,12 @@ PageBase {
 
         Process {
             id: backupFolderProcess
-            command: GlobalConfig.general.apps.explorer.concat([Paths.absolutePath("~/.config/caelestia-update/backups")])
+            // Create the backups dir if missing so the file manager opens cleanly.
+            command: ["sh", "-c",
+                'dir="$1"; shift; mkdir -p "$dir" && exec "$@" "$dir"',
+                "--",
+                Paths.absolutePath("~/.config/caelestia-update/backups")
+            ].concat(GlobalConfig.general.apps.explorer)
         }
     }
 }

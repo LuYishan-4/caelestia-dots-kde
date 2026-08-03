@@ -170,8 +170,9 @@ run_elevated() {
     fi
 }
 
-# This script deploys Python bridges and mock hyprctl which the shell needs.
-# Its internal sudo calls will reuse the cached credential without re-prompting.
+# Apply config updates and rebuild the shell UI.  The native C++ plugin
+# backend talks directly to KWin/Wayland — no Python daemon or mock
+# hyprctl binary is involved.
 bash "$BUNDLE_DIR/scripts/03-deploy-configs.sh" || die "Config deployment failed."
 
 info "Building Caelestia Shell UI..."

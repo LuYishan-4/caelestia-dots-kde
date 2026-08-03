@@ -31,7 +31,14 @@ Item {
     readonly property string sansFont: GlobalConfig.appearance.font.body.family || "Sans Serif"
     readonly property int alignment: Config.background.desktopLyrics.alignment
     readonly property bool autoHide: Config.background.desktopLyrics.autoHide
-    readonly property bool allWindowsFloating: Hypr.monitorFor(screen)?.activeWorkspace?.toplevels?.values.every(t => t.lastIpcObject?.floating) ?? true
+    readonly property bool allWindowsFloating: {
+        if (typeof KWinActiveWindowBridge !== "undefined") {
+            const wins = KWinActiveWindowBridge.windowList || [];
+            return wins.every(w => !!w?.floating);
+        }
+        return Hypr.monitorFor(screen)?.activeWorkspace?.toplevels?.values.every(
+            t => t.lastIpcObject?.floating) ?? true;
+    }
     readonly property bool shouldHide: autoHide && !allWindowsFloating
 
     property bool hasLyrics: Lyrics.hasLyrics

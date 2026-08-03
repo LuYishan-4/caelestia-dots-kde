@@ -33,7 +33,28 @@ Item {
         let shouldPause = false;
 
         try {
-            if (typeof Hypr !== "undefined" && Hypr.monitors) {
+            if (typeof KWinActiveWindowBridge !== "undefined") {
+                const wins = KWinActiveWindowBridge.windowList || [];
+                if (pauseOnAllDisplays) {
+                    for (let i = 0; i < wins.length; i++) {
+                        if (pauseOnFullscreen && (wins[i].fullscreen ?? 0) > 1)
+                            shouldPause = true;
+                        if (pauseOnTiled && !wins[i].floating && !(wins[i].fullscreen ?? 0))
+                            shouldPause = true;
+                    }
+                } else {
+                    const screenName = root.screen ? root.screen.name : "";
+                    const activeOut = KWinActiveWindowBridge.activeOutputName || "";
+                    if (activeOut === screenName || screenName === "") {
+                        for (let i = 0; i < wins.length; i++) {
+                            if (pauseOnFullscreen && (wins[i].fullscreen ?? 0) > 1)
+                                shouldPause = true;
+                            if (pauseOnTiled && !wins[i].floating && !(wins[i].fullscreen ?? 0))
+                                shouldPause = true;
+                        }
+                    }
+                }
+            } else if (typeof Hypr !== "undefined" && Hypr.monitors) {
                 if (pauseOnAllDisplays) {
                     let anyFullscreen = false;
                     let anyTiled = false;

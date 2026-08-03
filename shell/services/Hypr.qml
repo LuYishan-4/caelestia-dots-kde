@@ -130,15 +130,101 @@ Singleton {
 
     signal configReloaded
 
+    function hasFullscreen(): bool {
+        if (typeof KWinActiveWindowBridge !== "undefined") {
+            const wins = KWinActiveWindowBridge.windowList || [];
+            for (let i = 0; i < wins.length; i++) {
+                if ((wins[i].fullscreen ?? 0) > 1)
+                    return true;
+            }
+            return false;
+        }
+        const monVals = root.monitors.values || [];
+        for (let i = 0; i < monVals.length; i++) {
+            const toplevels = monVals[i]?.activeWorkspace?.toplevels?.values || [];
+            for (let j = 0; j < toplevels.length; j++) {
+                if ((toplevels[j]?.lastIpcObject?.fullscreen ?? 0) > 1)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     function dispatch(request: string): void {
+        const isKDE = typeof KWinActiveWindowBridge !== "undefined";
+
+        // ── workspace (absolute) ──────────────────────────────────────
         if (request.startsWith("workspace ")) {
-            const ws = request.split(" ")[1];
-            if (typeof KWinWorkspaceState !== "undefined") {
-                KWinWorkspaceState.switchTo(ws);
+            const ws = request.split(" ").slice(1).join(" ");
+            if (isKDE) {
+                // Relative workspace scrolling: "r+1" / "r-1"
+                if (/^r[+-]\d+$/.test(ws)) {
+                    if (ws.charAt(1) === "+")
+                        KWinActiveWindowBridge.nextDesktop();
+                    else
+                        KWinActiveWindowBridge.previousDesktop();
+                } else {
+                    KWinWorkspaceState.switchTo(ws);
+                }
             }
             return;
         }
-        console.log("Unhandled dispatch: " + request);
+
+        // ── focuswindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("focuswindow address:0x")) {
+            if (isKDE) {
+                const prefix = "focuswindow address:0x";
+                KWinActiveWindowBridge.focusWindow(request.slice(prefix.length).trim());
+            }
+            return;
+        }
+
+        // ── closewindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("closewindow address:0x")) {
+            if (isKDE) {
+                const prefix = "closewindow address:0x";
+                KWinActiveWindowBridge.closeWindow(request.slice(prefix.length).trim());
+            }
+            return;
+        }
+
+        // ── movetoworkspace <id>,address:0x<hex> ─────────────────────
+        const moveMatch = request.match(/^movetoworkspace\s+(\S+),address:0x/);
+        if (moveMatch) {
+            if (isKDE) {
+                const desktopId = parseInt(moveMatch[1], 10);
+                const addr = request.slice(moveMatch[0].length).trim();
+                if (!isNaN(desktopId))
+                    KWinActiveWindowBridge.setWindowDesktop(addr, desktopId);
+            }
+            return;
+        }
+
+        // ── dpms off / dpms on ───────────────────────────────────────
+        if (request === "dpms off" || request === "dpms on") {
+            if (isKDE) {
+                const enable = request === "dpms on";
+                KWinActiveWindowBridge.runArbitraryScript(
+                    `var outs = workspace.outputs(); ` +
+                    `for (var i = 0; i < outs.length; i++) outs[i].setEnabled(${enable});`
+                );
+            }
+            return;
+        }
+
+        // ── togglespecialworkspace ────────────────────────────────────
+        // KDE has no special/scratchpad workspace concept; log and ignore.
+        if (request.startsWith("togglespecialworkspace")) {
+            if (!isKDE) {
+                // On actual Hyprland this would be handled by the IPC, but
+                // we no longer have a socket — log for visibility.
+                console.log("Hypr.dispatch: special workspace toggle not supported on KDE");
+            }
+            return;
+        }
+
+        // ── unrecognised ──────────────────────────────────────────────
+        console.log("Hypr.dispatch: unhandled request: " + request);
     }
 
     function cycleSpecialWorkspace(direction: string): void {

@@ -257,9 +257,9 @@ PageBase {
         ToggleRow {
             Layout.fillWidth: true
             last: true
-            text: qsTr("Hyprland splash")
-            //visible: Quickshell.env("XDG_CURRENT_DESKTOP").includes("Hyprland")
-            subtext: qsTr("Show the current Hyprland splash text")
+            text: qsTr("Welcome splash")
+            visible: typeof KWinActiveWindowBridge === "undefined"
+            subtext: qsTr("Show a welcome message on the dashboard")
             checked: Config.dashboard.showHyprlandSplash
             onToggled: GlobalConfig.dashboard.showHyprlandSplash = checked
         }
