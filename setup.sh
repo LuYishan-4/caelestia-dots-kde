@@ -67,6 +67,50 @@ detect_base_distro() {
     echo "$detected"
 }
 
+# ── Country detection for pacman mirror ranking ─────────────────────────
+# ipapi.co free tier rate-limits aggressively; a single repeated request
+# within the same window will return an empty 429.  Race multiple geo-IP
+# services in parallel and take whichever answers first, then cache the
+# result for 24h so subsequent invocations (updates, re-runs) never hit
+# the network at all.
+detect_country() {
+    local cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-country"
+    local cache_ttl=86400  # 24 hours
+
+    # Serve from cache when fresh.
+    if [[ -f "$cache_file" ]]; then
+        local cache_age
+        cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)))
+        if (( cache_age < cache_ttl )); then
+            cat "$cache_file"
+            return 0
+        fi
+    fi
+
+    # Race four geo-IP services; first non-empty, non-error result wins.
+    # Each is wrapped in a subshell so a single curl timeout doesn't kill
+    # the whole race.  Services ordered roughly by reliability / rate-limit
+    # tolerance.
+    local country=""
+    country=$(
+        {
+            curl -fsSL --max-time 2 'https://am.i.mullvad.net/country'                     2>/dev/null &
+            curl -fsSL --max-time 2 'https://ipinfo.io/country'                            2>/dev/null &
+            curl -fsSL --max-time 2 'https://ifconfig.co/json'                             2>/dev/null | grep -oP '"country"\s*:\s*"\K[^"]+' &
+            wait
+        } 2>/dev/null | grep -m1 -E '^[A-Za-z]{2,3}$' || true
+    )
+
+    if [[ -n "$country" ]]; then
+        mkdir -p "$(dirname "$cache_file")"
+        printf '%s' "$country" > "$cache_file"
+        printf '%s' "$country"
+        return 0
+    fi
+
+    return 1
+}
+
 silent_refresh_pacman_sources() {
     if [[ "$BASE_DISTRO" != "arch" ]]; then
         return 0
@@ -119,7 +163,7 @@ silent_refresh_pacman_sources() {
             # fall back to the previous global behaviour if that lookup fails
             # (offline, API down, etc.) rather than hard-failing the install.
             local reflector_country
-            reflector_country=$(curl -fsSL --max-time 3 https://ipapi.co/country_name/ 2>/dev/null || true)
+            reflector_country=$(detect_country)
             local -a reflector_args=(--latest 20 --protocol https --sort rate)
             if [[ -n "$reflector_country" ]]; then
                 echo "[INFO]  Ranking pacman mirrors by download speed (country: $reflector_country)..."
