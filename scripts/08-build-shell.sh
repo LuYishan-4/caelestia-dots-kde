@@ -155,8 +155,18 @@ sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
 USER_HOME="$1"
 USER_CACHE="$2"
 
-ln -sf /usr/lib/libopencv_imgproc.so.5.0.0 /usr/lib/libopencv_imgproc.so.413 2>/dev/null || echo "[WARN] Failed to link opencv imgproc"
-ln -sf /usr/lib/libopencv_core.so.5.0.0 /usr/lib/libopencv_core.so.413 2>/dev/null || echo "[WARN] Failed to link opencv core"
+OPENCV_IMGPROC=$(ldconfig -p 2>/dev/null | awk '/libopencv_imgproc\.so\.5/ {print $NF; exit}')
+OPENCV_CORE=$(ldconfig -p 2>/dev/null | awk '/libopencv_core\.so\.5/ {print $NF; exit}')
+if [ -n "$OPENCV_IMGPROC" ]; then
+    ln -sf "$OPENCV_IMGPROC" "$(dirname "$OPENCV_IMGPROC")/libopencv_imgproc.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv imgproc"
+else
+    echo "[WARN] libopencv_imgproc.so.5 not found via ldconfig - recording may not work"
+fi
+if [ -n "$OPENCV_CORE" ]; then
+    ln -sf "$OPENCV_CORE" "$(dirname "$OPENCV_CORE")/libopencv_core.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv core"
+else
+    echo "[WARN] libopencv_core.so.5 not found via ldconfig - recording may not work"
+fi
 
 if ! python3 -c '
 import sys, os, glob, re

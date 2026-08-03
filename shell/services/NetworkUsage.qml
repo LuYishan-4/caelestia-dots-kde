@@ -104,6 +104,10 @@ Singleton {
         }
     }
 
+    // Regex to skip loopback and virtual/tunnel/container interfaces
+    // to avoid double-counting VPN/container/VM traffic.
+    const VIRTUAL = /^(lo|veth|docker\d*|br-|virbr|vnet|tun|tap|wg\d*|ppp|lxc|cali|flannel|kube|cni)/;
+
     function parseNetDev(content: string): var {
         const lines = content.split("\n");
         let totalRx = 0;
@@ -119,8 +123,7 @@ Singleton {
                 continue;
 
             const iface = parts[0].replace(":", "");
-            // Skip loopback interface
-            if (iface === "lo")
+            if (VIRTUAL.test(iface))
                 continue;
 
             const rxBytes = parseFloat(parts[1]) || 0;

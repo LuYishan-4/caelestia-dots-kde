@@ -230,10 +230,21 @@ Singleton {
         };
         const iface = root.currentConfig?.interface || "";
 
-        if (iface && output.includes(iface + ":")) {
-            status.connected = true;
-            status.state = "connected";
+        // Match the interface name per-line with the UP flag to avoid
+        // false "connected" when an unrelated interface name contains
+        // the configured one as a substring, or when the WG interface
+        // exists but is administratively down.
+        if (iface) {
+            const escaped = iface.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const lineRe = new RegExp("^\\d+:\\s*" + escaped + ":");
+            const upFlagRe = /[<,]UP(,|>)/;
+            status.connected = output.split("\n").some(line => {
+                const trimmed = line.trim();
+                return lineRe.test(trimmed) && (trimmed.includes("state UP") || upFlagRe.test(trimmed));
+            });
         }
+        if (status.connected)
+            status.state = "connected";
         return status;
     }
 
