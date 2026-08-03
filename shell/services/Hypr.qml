@@ -130,15 +130,84 @@ Singleton {
 
     signal configReloaded
 
+    // Translates Hyprland-style dispatch strings into KWin equivalents when
+    // running under KDE, and forwards to the Hyprland IPC socket otherwise.
+    // Callers that already check typeof KWinActiveWindowBridge are still
+    // preferred, but this bridge catches the unguarded paths (idle DPMS,
+    // bar workspace scroll, etc.) so they work on both compositors.
     function dispatch(request: string): void {
+        const isKDE = typeof KWinActiveWindowBridge !== "undefined";
+
+        // ── workspace (absolute) ──────────────────────────────────────
         if (request.startsWith("workspace ")) {
-            const ws = request.split(" ")[1];
-            if (typeof KWinWorkspaceState !== "undefined") {
-                KWinWorkspaceState.switchTo(ws);
+            const ws = request.split(" ").slice(1).join(" ");
+            if (isKDE) {
+                // Relative workspace scrolling: "r+1" / "r-1"
+                if (/^r[+-]\d+$/.test(ws)) {
+                    if (ws.charAt(1) === "+")
+                        KWinActiveWindowBridge.nextDesktop();
+                    else
+                        KWinActiveWindowBridge.previousDesktop();
+                } else {
+                    KWinWorkspaceState.switchTo(ws);
+                }
             }
             return;
         }
-        console.log("Unhandled dispatch: " + request);
+
+        // ── focuswindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("focuswindow address:0x")) {
+            if (isKDE) {
+                KWinActiveWindowBridge.focusWindow(request.slice(22).trim());
+            }
+            return;
+        }
+
+        // ── closewindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("closewindow address:0x")) {
+            if (isKDE) {
+                KWinActiveWindowBridge.closeWindow(request.slice(22).trim());
+            }
+            return;
+        }
+
+        // ── movetoworkspace <id>,address:0x<hex> ─────────────────────
+        const moveMatch = request.match(/^movetoworkspace\s+(\S+),address:0x/);
+        if (moveMatch) {
+            if (isKDE) {
+                const desktopId = parseInt(moveMatch[1], 10);
+                const addr = request.slice(moveMatch[0].length).trim();
+                if (!isNaN(desktopId))
+                    KWinActiveWindowBridge.setWindowDesktop(addr, desktopId);
+            }
+            return;
+        }
+
+        // ── dpms off / dpms on ───────────────────────────────────────
+        if (request === "dpms off" || request === "dpms on") {
+            if (isKDE) {
+                const enable = request === "dpms on";
+                KWinActiveWindowBridge.runArbitraryScript(
+                    `var outs = workspace.outputs(); ` +
+                    `for (var i = 0; i < outs.length; i++) outs[i].setEnabled(${enable});`
+                );
+            }
+            return;
+        }
+
+        // ── togglespecialworkspace ────────────────────────────────────
+        // KDE has no special/scratchpad workspace concept; log and ignore.
+        if (request.startsWith("togglespecialworkspace")) {
+            if (!isKDE) {
+                // On actual Hyprland this would be handled by the IPC, but
+                // we no longer have a socket — log for visibility.
+                console.log("Hypr.dispatch: special workspace toggle not supported on KDE");
+            }
+            return;
+        }
+
+        // ── unrecognised ──────────────────────────────────────────────
+        console.log("Hypr.dispatch: unhandled request: " + request);
     }
 
     function cycleSpecialWorkspace(direction: string): void {
