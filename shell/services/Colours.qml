@@ -248,6 +248,12 @@ Singleton {
     }
 
     function reloadHyprRules(): void {
+        // Layer rules are a Hyprland-only mechanism.  On KDE the blur and
+        // transparency for drawers are controlled by KWin effects, not
+        // Hyprland IPC, so there is nothing to reload here.
+        if (typeof KWinActiveWindowBridge !== "undefined")
+            return;
+
         let rule, trEnabled;
         if (Hypr.usingLua) {
             rule = `eval hl.layer_rule({ match = { namespace = "caelestia-drawers" }, %1 = %2 })`;
