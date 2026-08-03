@@ -106,7 +106,7 @@ Singleton {
 
     // Regex to skip loopback and virtual/tunnel/container interfaces
     // to avoid double-counting VPN/container/VM traffic.
-    const VIRTUAL = /^(lo|veth|docker\d*|br-|virbr|vnet|tun|tap|wg\d*|ppp|lxc|cali|flannel|kube|cni)/;
+    readonly property var _virtualIfaceRegex: /^(lo|veth|docker\d*|br-|virbr|vnet|tun|tap|wg\d*|ppp|lxc|cali|flannel|kube|cni)/
 
     function parseNetDev(content: string): var {
         const lines = content.split("\n");
@@ -123,7 +123,7 @@ Singleton {
                 continue;
 
             const iface = parts[0].replace(":", "");
-            if (VIRTUAL.test(iface))
+            if (_virtualIfaceRegex.test(iface))
                 continue;
 
             const rxBytes = parseFloat(parts[1]) || 0;
