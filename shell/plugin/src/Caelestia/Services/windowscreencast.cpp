@@ -44,6 +44,11 @@ WindowScreencastGlobal::WindowScreencastGlobal()
     }
 }
 
+WindowScreencastGlobal* WindowScreencastGlobal::instance() {
+    static WindowScreencastGlobal s_instance;
+    return &s_instance;
+}
+
 WindowScreencastGlobal::~WindowScreencastGlobal() {
     if (isActive()) {
         destroy();
@@ -100,10 +105,7 @@ void WindowScreencastRequest::setUuid(const QString &uuid) {
 
     if (!m_uuid.isEmpty()) {
         qDebug() << "WindowScreencastRequest: uuid set to" << m_uuid;
-        if (!m_global) {
-            m_global = std::make_unique<WindowScreencastGlobal>();
-        }
-        setStream(m_global->createWindowStream(m_uuid));
+        setStream(WindowScreencastGlobal::instance()->createWindowStream(m_uuid));
     }
 }
 
@@ -177,9 +179,6 @@ void OutputScreencastRequest::setOutputName(const QString &outputName) {
 
     if (!m_outputName.isEmpty()) {
         qDebug() << "OutputScreencastRequest: outputName set to" << m_outputName;
-        if (!m_global) {
-            m_global = std::make_unique<WindowScreencastGlobal>();
-        }
 
         QScreen *targetScreen = nullptr;
         for (QScreen *s : QGuiApplication::screens()) {
@@ -195,7 +194,7 @@ void OutputScreencastRequest::setOutputName(const QString &outputName) {
         if (targetScreen) {
             auto *ws = targetScreen->nativeInterface<QNativeInterface::QWaylandScreen>();
             if (ws && ws->output()) {
-                setStream(m_global->createOutputStream(ws->output()));
+                setStream(WindowScreencastGlobal::instance()->createOutputStream(ws->output()));
             } else {
                 qWarning() << "OutputScreencastRequest: Failed to get wl_output for screen" << targetScreen->name();
             }

@@ -50,6 +50,8 @@ class WindowScreencastGlobal : public QWaylandClientExtensionTemplate<WindowScre
     Q_OBJECT
 
 public:
+    static WindowScreencastGlobal* instance();
+
     WindowScreencastGlobal();
     ~WindowScreencastGlobal() override;
 
@@ -91,7 +93,7 @@ private:
     void setNodeId(quint32 nodeId);
     void setObjectSerial(quint64 objectSerial);
 
-    std::unique_ptr<WindowScreencastGlobal> m_global;
+    /// Shared global — no longer own a private instance.
     std::unique_ptr<WindowScreencastStream> m_stream;
     QString m_uuid;
     quint32 m_nodeId = 0;
@@ -125,7 +127,7 @@ private:
     void setNodeId(quint32 nodeId);
     void setObjectSerial(quint64 objectSerial);
 
-    std::unique_ptr<WindowScreencastGlobal> m_global;
+    /// Shared global — no longer own a private instance.
     std::unique_ptr<WindowScreencastStream> m_stream;
     QString m_outputName;
     quint32 m_nodeId = 0;
