@@ -304,7 +304,6 @@ fi
 section "Step 4 - Remove Bridge Scripts"
 
 for f in \
-    "$HOME/.local/bin/hyprctl" \
     "$HOME/.local/bin/kcolorpicker" \
     "$HOME/.local/bin/qs-kwin-bridge.py" \
     "$HOME/.local/bin/caelestia-shortcuts" \
