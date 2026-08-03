@@ -173,7 +173,8 @@ Singleton {
         // ── focuswindow address:0x<hex> ───────────────────────────────
         if (request.startsWith("focuswindow address:0x")) {
             if (isKDE) {
-                KWinActiveWindowBridge.focusWindow(request.slice(22).trim());
+                const prefix = "focuswindow address:0x";
+                KWinActiveWindowBridge.focusWindow(request.slice(prefix.length).trim());
             }
             return;
         }
