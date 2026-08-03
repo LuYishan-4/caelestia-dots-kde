@@ -21,6 +21,39 @@ PageBase {
     ]
     readonly property list<string> notifFullscreenValues: ["off", "on"]
 
+    // Notification position, mapped to GlobalConfig.notifs.position
+    readonly property list<MenuItem> notifPositionItems: [
+        MenuItem {
+            text: qsTr("Auto")
+            icon: "auto_awesome"
+        },
+        MenuItem {
+            text: qsTr("Top Left")
+            icon: "north_west"
+        },
+        MenuItem {
+            text: qsTr("Top Center")
+            icon: "north"
+        },
+        MenuItem {
+            text: qsTr("Top Right")
+            icon: "north_east"
+        },
+        MenuItem {
+            text: qsTr("Bottom Left")
+            icon: "south_west"
+        },
+        MenuItem {
+            text: qsTr("Bottom Center")
+            icon: "south"
+        },
+        MenuItem {
+            text: qsTr("Bottom Right")
+            icon: "south_east"
+        }
+    ]
+    readonly property list<string> notifPositionValues: ["auto", "top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"]
+
     // Toast fullscreen visibility, mapped to GlobalConfig.utilities.toasts.fullscreen
     readonly property list<MenuItem> toastFullscreenItems: [
         MenuItem {
@@ -59,6 +92,14 @@ PageBase {
             menuItems: root.notifFullscreenItems
             active: root.notifFullscreenItems[Math.max(0, root.notifFullscreenValues.indexOf(GlobalConfig.notifs.fullscreen))]
             onSelected: item => GlobalConfig.notifs.fullscreen = root.notifFullscreenValues[root.notifFullscreenItems.indexOf(item)]
+        }
+
+        SelectRow {
+            label: qsTr("Position")
+            subtext: qsTr("Where notification popups appear on screen")
+            menuItems: root.notifPositionItems
+            active: root.notifPositionItems[Math.max(0, root.notifPositionValues.indexOf(GlobalConfig.notifs.position))]
+            onSelected: item => GlobalConfig.notifs.position = root.notifPositionValues[root.notifPositionItems.indexOf(item)]
         }
 
         ToggleRow {

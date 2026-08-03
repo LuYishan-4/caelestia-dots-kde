@@ -23,8 +23,20 @@ Item {
 
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    anchors.left: Config.bar.position === "right" ? parent.left : undefined
-    anchors.right: Config.bar.position !== "right" ? parent.right : undefined
+    anchors.left: {
+        const pos = GlobalConfig.notifs.position;
+        if (pos === "auto")
+            return Config.bar.position === "right" ? parent.left : undefined;
+        const h = pos.split("-")[1];
+        return (h === "left" || h === "center") ? parent.left : undefined;
+    }
+    anchors.right: {
+        const pos = GlobalConfig.notifs.position;
+        if (pos === "auto")
+            return Config.bar.position !== "right" ? parent.right : undefined;
+        const h = pos.split("-")[1];
+        return h === "right" ? parent.right : undefined;
+    }
 
     implicitWidth: Tokens.sizes.notifs.width
     implicitHeight: {

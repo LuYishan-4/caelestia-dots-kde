@@ -558,6 +558,7 @@ StyledWindow {
             popouts.transform: Matrix4x4 {
                 matrix: popoutBg.deformMatrix
             }
+            cursorPos: Qt.point(interactions.mouseX, interactions.mouseY)
         }
         BarWrapper {
             id: bar
