@@ -182,7 +182,8 @@ Singleton {
         // ── closewindow address:0x<hex> ───────────────────────────────
         if (request.startsWith("closewindow address:0x")) {
             if (isKDE) {
-                KWinActiveWindowBridge.closeWindow(request.slice(22).trim());
+                const prefix = "closewindow address:0x";
+                KWinActiveWindowBridge.closeWindow(request.slice(prefix.length).trim());
             }
             return;
         }
