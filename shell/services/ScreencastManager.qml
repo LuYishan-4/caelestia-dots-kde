@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
+import Caelestia.Config
 import Caelestia.Services
 
 Item {
@@ -23,8 +24,11 @@ Item {
     // request is denied.  0 = unlimited (NOT recommended — KWin has finite
     // screencast resources).  Default 16.
     property int maxStreams: 16
-    // Global toggle for all screencasts
-    property bool enableStreams: true
+    // Global toggle for all screencasts. Tied to GlobalConfig.bar.livePreviews so
+    // users on setups where KWin's screencast protocol can't handle a second
+    // concurrent client (e.g. some NVIDIA + Vesktop combinations) have a way to
+    // fully disable this shell's use of it.
+    property bool enableStreams: GlobalConfig.bar.livePreviews
     // Internal dictionary: uuid -> { refCount: number, requestItem: WindowScreencastRequest, lastUsed: Date }
     property var _streams: ({})
     // Ordered list of uuids by last-access time — oldest first, used for eviction.

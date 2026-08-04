@@ -211,6 +211,11 @@ class BarConfig : public ConfigObject {
     CONFIG_PROPERTY(bool, perElementPreviewScale, false)
     CONFIG_PROPERTY(bool, perElementFontScale, false)
     CONFIG_PROPERTY(qreal, fontScaleOffset, 0.0)
+    // Live PipeWire window thumbnails (dock hover, overview, alt-tab, window info).
+    // Disable if screen sharing / camera in other apps (e.g. Vesktop) freezes or
+    // crashes - some NVIDIA + KWin setups can't handle KWin's screencast protocol
+    // being used by two clients at once.
+    CONFIG_PROPERTY(bool, livePreviews, true)
     CONFIG_SUBOBJECT(BarPreviewScales, previewScales)
     CONFIG_SUBOBJECT(BarPreviewFontScales, previewFontScales)
     CONFIG_PROPERTY(bool, persistent, true)
