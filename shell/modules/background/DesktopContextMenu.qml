@@ -10,31 +10,14 @@ import qs.modules.nexus
 Controls.Menu {
     id: root
 
-    attachSideX: Controls.Menu.Right
-    attachSideY: Controls.Menu.Bottom
-    thisSideX: Controls.Menu.Left
-    thisSideY: Controls.Menu.Top
-    transparentBackground: true
+    property real _menuW: root.backgroundItem && root.backgroundItem.implicitWidth > 0 ? root.backgroundItem.implicitWidth : 250
+    property real _menuH: root.backgroundItem && root.backgroundItem.implicitHeight > 0 ? root.backgroundItem.implicitHeight : 350
+    property bool _flipX: attachTo && attachTo.parent && (attachTo.x + _menuW > attachTo.parent.width)
+    property bool _flipY: attachTo && attachTo.parent && (attachTo.y + _menuH > attachTo.parent.height)
     property string screenName: ""
     property var itemPool: ({})
     property var entryByKey: ({})
     property real perfMenuOpenStartedAt: 0
-    
-    Timer {
-        id: execTimer
-        interval: 250
-        repeat: false
-        property var pendingAction: null
-        onTriggered: {
-            if (pendingAction) pendingAction();
-            pendingAction = null;
-        }
-    }
-
-    Component {
-        id: menuItemComp
-        Controls.MenuItem {}
-    }
 
     function defaultEntries() {
         return [
@@ -141,13 +124,11 @@ Controls.Menu {
         }
     }
 
-    Connections {
-        target: ContextMenuStore
-
-        function onEntriesChanged() {
-            root.applyEntries(ContextMenuStore.entries, "store_update");
-        }
-    }
+    attachSideX: _flipX ? Controls.Menu.Left : Controls.Menu.Right
+    attachSideY: _flipY ? Controls.Menu.Top : Controls.Menu.Bottom
+    thisSideX: _flipX ? Controls.Menu.Right : Controls.Menu.Left
+    thisSideY: _flipY ? Controls.Menu.Bottom : Controls.Menu.Top
+    transparentBackground: true
 
     onExpandedChanged: {
         if (expanded) {
@@ -157,4 +138,32 @@ Controls.Menu {
     }
 
     Component.onCompleted: reloadMenu(true)
+
+    Timer {
+        id: execTimer
+
+        property var pendingAction: null
+
+        interval: 250
+        repeat: false
+
+        onTriggered: {
+            if (pendingAction) pendingAction();
+            pendingAction = null;
+        }
+    }
+
+    Connections {
+        function onEntriesChanged() {
+            root.applyEntries(ContextMenuStore.entries, "store_update");
+        }
+
+        target: ContextMenuStore
+    }
+
+    Component {
+        id: menuItemComp
+
+        Controls.MenuItem {}
+    }
 }

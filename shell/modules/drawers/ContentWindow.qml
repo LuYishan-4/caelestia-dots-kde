@@ -575,8 +575,8 @@ StyledWindow {
         Connections {
             function onOpenDesktopContextMenu(x, y, screenName) {
                 if (root.screen.name === screenName) {
-                    desktopContextMenuAnchor.x = x - panels.leftMargin;
-                    desktopContextMenuAnchor.y = y - panels.topMargin;
+                    desktopContextMenuAnchor.x = x;
+                    desktopContextMenuAnchor.y = y;
                     if (desktopContextMenu.expanded) {
                         // Close first so the menu repositions on reopen
                         desktopContextMenu.expanded = false;

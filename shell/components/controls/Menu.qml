@@ -2,8 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
 import qs.components
@@ -82,6 +82,11 @@ MouseArea {
     Elevation {
         id: menu
 
+        property string vAnchor: "none"
+        property string hAnchor: "none"
+        property real offsetScale: 1 - animScale
+        property real animScale: root.expanded ? 1 : 0.0
+
         x: {
             watcher.transform; // mapToItem is not reactive so this forces updates
             const item = root.attachTo;
@@ -101,16 +106,9 @@ MouseArea {
 
         radius: Tokens.rounding.large
         level: root.transparentBackground ? 0 : 2
-        
-        property string vAnchor: "none"
-        property string hAnchor: "none"
-        property real offsetScale: 1 - animScale
-
         implicitWidth: Math.max(200, column.implicitWidth + Tokens.padding.extraSmall * 2)
         implicitHeight: Math.min(root.maxHeight, column.implicitHeight + Tokens.padding.extraSmall * 2)
-        
         width: implicitWidth
-        property real animScale: root.expanded ? 1 : 0.0
         height: implicitHeight * animScale
 
         Behavior on animScale {
@@ -125,6 +123,7 @@ MouseArea {
         }
 
         StyledRect {
+            y: root.thisSideY === Menu.Bottom ? menu.height - menu.implicitHeight : 0
             width: menu.implicitWidth
             height: menu.implicitHeight
             
