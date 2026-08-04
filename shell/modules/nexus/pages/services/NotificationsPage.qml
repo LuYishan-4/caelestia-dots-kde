@@ -190,7 +190,7 @@ PageBase {
             value: GlobalConfig.audio.sounds.notificationVolume
             enabled: GlobalConfig.audio.sounds.enabled
             onMoved: v => GlobalConfig.audio.sounds.notificationVolume = v
-            onInteraction: v => Audio.playNotification()
+            onReleased: v => Audio.playNotification()
         }
 
         SectionHeader {
