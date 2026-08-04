@@ -242,15 +242,11 @@ KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
     m_windowListDebounce->setInterval(150); // Throttle geometry updates to ~6 fps to save QML CPU
     m_windowListDebounce->setSingleShot(true);
     connect(m_windowListDebounce, &QTimer::timeout, this, [this]() {
-        qDebug() << "Caelestia: windowListDebounce timer fired, pending JSON empty?" << m_pendingWindowListJson.isEmpty();
         if (!m_pendingWindowListJson.isEmpty()) {
             QJsonDocument doc = QJsonDocument::fromJson(m_pendingWindowListJson.toUtf8());
             if (doc.isArray()) {
                 m_windowList = doc.array().toVariantList();
-                qDebug() << "Caelestia: emitting windowListChanged(), items count:" << m_windowList.size();
                 emit windowListChanged();
-            } else {
-                qDebug() << "Caelestia: doc is not an array!";
             }
 
             QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
@@ -645,11 +641,9 @@ void KWinActiveWindowBridge::previousDesktop() {
 }
 
 void KWinActiveWindowBridge::updateWindowList(const QString& windowsJson) {
-    qDebug() << "Caelestia: updateWindowList called, length:" << windowsJson.length();
     m_pendingWindowListJson = windowsJson;
     if (!m_windowListDebounce->isActive()) {
         m_windowListDebounce->start();
-        qDebug() << "Caelestia: started windowListDebounce timer";
     }
 }
 

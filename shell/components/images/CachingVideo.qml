@@ -96,7 +96,9 @@ Item {
         const soundEnabled = GlobalConfig.background.videoWallpaperSoundEnabled;
         const isPlaying = Players.active?.isPlaying ?? false;
 
-        audioOutput.muted = !root.isFirstInstance || !soundEnabled || (muteOnMedia && isPlaying);
+        if (audioLoader.item) {
+            audioLoader.item.muted = !root.isFirstInstance || !soundEnabled || (muteOnMedia && isPlaying);
+        }
     }
 
     Component.onCompleted: {
