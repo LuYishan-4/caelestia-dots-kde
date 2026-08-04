@@ -61,8 +61,8 @@ Item {
     scale: 0.5
     opacity: 0
     z: ListView.isCurrentItem ? 1 : 0
-    implicitWidth: previewBox.width + Tokens.padding.largeIncreased * 2
-    implicitHeight: previewBox.height + label.height + Tokens.spacing.small / 2 + Tokens.padding.large + Tokens.padding.medium
+    implicitWidth: previewBox.maxW + Tokens.padding.largeIncreased * 2
+    implicitHeight: previewBox.maxH + label.height + Tokens.spacing.small / 2 + Tokens.padding.large + Tokens.padding.medium
     width: list.itemWidth
 
     HoverHandler {
@@ -70,6 +70,8 @@ Item {
     }
 
     StateLayer {
+        anchors.leftMargin: -Tokens.padding.large
+        anchors.rightMargin: -Tokens.padding.large
         radius: Tokens.rounding.medium
         onClicked: root.clicked()
     }
@@ -78,7 +80,8 @@ Item {
 
         anchors.fill: previewBox
         radius: previewBox.radius
-        color: Colours.layer(Colours.palette.m3surfaceContainerHighest, root.ListView.isCurrentItem ? 1 : 0)
+        //color: Colours.layer(Colours.palette.m3surfaceContainerHighest, root.ListView.isCurrentItem ? 1 : 0)
+        color: "transparent"
         opacity: root.ListView.isCurrentItem ? 1 : 0
 
         Behavior on opacity {
@@ -102,10 +105,22 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         y: Tokens.padding.large
-        color: Colours.tPalette.m3surfaceContainer
+        color: "transparent"
         radius: Tokens.rounding.medium
-        implicitWidth: Tokens.sizes.launcher.windowSwitcherWidth
-        implicitHeight: implicitWidth / 16 * 9
+
+        readonly property real maxW: Tokens.sizes.launcher.windowSwitcherWidth
+        readonly property real maxH: maxW / 16 * 9
+
+        implicitWidth: {
+            const h = maxW / windowAspect;
+            if (h > maxH) return maxH * windowAspect;
+            return maxW;
+        }
+        implicitHeight: {
+            const w = maxH * windowAspect;
+            if (w > maxW) return maxW / windowAspect;
+            return maxH;
+        }
         Component.onDestruction: {
             if (previewBox.streamRequest && root.modelData && root.modelData.address) {
                 ScreencastManager.releaseStream(root.modelData.address);
@@ -175,7 +190,7 @@ Item {
         anchors.top: previewBox.bottom
         anchors.topMargin: Tokens.spacing.small / 2
         anchors.horizontalCenter: parent.horizontalCenter
-        width: previewBox.width - Tokens.padding.medium * 2
+        width: previewBox.maxW - Tokens.padding.medium * 2
         horizontalAlignment: Text.AlignHCenter
         elide: Text.ElideRight
         renderType: Text.QtRendering
