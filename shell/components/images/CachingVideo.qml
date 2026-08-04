@@ -118,8 +118,34 @@ Item {
             mediaPlayer.play();
     }
 
-    AudioOutput {
-        id: audioOutput
+    // Only create an AudioOutput when sound is actually enabled.
+    // Unconditionally instantiating AudioOutput triggers PipeWire audio-format
+    // negotiation on every startup. On setups with HDMI/S-PDIF outputs,
+    // PipeWire advertises IEC958 and F32P-planar formats that Qt's PipeWire
+    // backend cannot parse, producing `spaVisitChoice: parse error` warnings.
+    // On some PipeWire versions this causes the entire audio backend to fail,
+    // which in turn prevents MediaPlayer from starting video playback at all.
+    // Lazily loading AudioOutput avoids the negotiation unless the user has
+    // sound enabled (which is off by default).
+    Loader {
+        id: audioLoader
+
+        active: GlobalConfig.background.videoWallpaperSoundEnabled
+
+        sourceComponent: AudioOutput {
+            id: audioOutputImpl
+
+            muted: !root.isFirstInstance || (GlobalConfig.background.videoWallpaperMuteOnMedia && (Players.active?.isPlaying ?? false))
+
+            Component.onCompleted: {
+                mediaPlayer.audioOutput = audioOutputImpl;
+            }
+
+            Component.onDestruction: {
+                if (mediaPlayer.audioOutput === audioOutputImpl)
+                    mediaPlayer.audioOutput = null;
+            }
+        }
     }
 
     MediaPlayer {
@@ -129,7 +155,20 @@ Item {
         videoOutput: videoOutput
         loops: MediaPlayer.Infinite
         autoPlay: true
-        audioOutput: audioOutput
+        // audioOutput is wired dynamically by the Loader above so that the
+        // PipeWire backend is only initialised when the user has enabled sound.
+
+        onErrorOccurred: function(error, errorString) {
+            // If the player enters an error state (e.g. audio backend failure),
+            // detach the audio output and retry video-only so the wallpaper
+            // still plays without sound rather than being completely blank.
+            if (mediaPlayer.audioOutput !== null) {
+                console.warn("[CachingVideo] MediaPlayer error (audio?), retrying video-only:", errorString);
+                mediaPlayer.audioOutput = null;
+                if (root.path)
+                    Qt.callLater(() => mediaPlayer.play());
+            }
+        }
     }
 
     VideoOutput {
@@ -147,7 +186,7 @@ Item {
         id: mediaCheckTimer
 
         interval: 500
-        running: GlobalConfig.background.videoWallpaperMuteOnMedia
+        running: GlobalConfig.background.videoWallpaperMuteOnMedia && audioLoader.active
         repeat: true
 
         onTriggered: checkMuteState()
