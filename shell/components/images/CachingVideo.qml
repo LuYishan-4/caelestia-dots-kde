@@ -35,11 +35,14 @@ Item {
         try {
             if (typeof KWinActiveWindowBridge !== "undefined") {
                 const wins = KWinActiveWindowBridge.windowList || [];
+                // KWin serialises fullscreen as a boolean (true/false), not
+                // the integer levels Hyprland uses (0/1/2). Use === true so
+                // the check works for both truthy booleans and int > 0.
                 if (pauseOnAllDisplays) {
                     for (let i = 0; i < wins.length; i++) {
-                        if (pauseOnFullscreen && (wins[i].fullscreen ?? 0) > 1)
+                        if (pauseOnFullscreen && wins[i].fullscreen === true)
                             shouldPause = true;
-                        if (pauseOnTiled && !wins[i].floating && !(wins[i].fullscreen ?? 0))
+                        if (pauseOnTiled && !wins[i].floating && !wins[i].fullscreen)
                             shouldPause = true;
                     }
                 } else {
@@ -47,9 +50,9 @@ Item {
                     const activeOut = KWinActiveWindowBridge.activeOutputName || "";
                     if (activeOut === screenName || screenName === "") {
                         for (let i = 0; i < wins.length; i++) {
-                            if (pauseOnFullscreen && (wins[i].fullscreen ?? 0) > 1)
+                            if (pauseOnFullscreen && wins[i].fullscreen === true)
                                 shouldPause = true;
-                            if (pauseOnTiled && !wins[i].floating && !(wins[i].fullscreen ?? 0))
+                            if (pauseOnTiled && !wins[i].floating && !wins[i].fullscreen)
                                 shouldPause = true;
                         }
                     }

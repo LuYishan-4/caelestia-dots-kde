@@ -133,8 +133,10 @@ Singleton {
     function hasFullscreen(): bool {
         if (typeof KWinActiveWindowBridge !== "undefined") {
             const wins = KWinActiveWindowBridge.windowList || [];
+            // KWin serialises fullscreen as a boolean, not Hyprland's integer
+            // level (0/1/2), so `> 1` is always false. Use === true instead.
             for (let i = 0; i < wins.length; i++) {
-                if ((wins[i].fullscreen ?? 0) > 1)
+                if (wins[i].fullscreen === true)
                     return true;
             }
             return false;
