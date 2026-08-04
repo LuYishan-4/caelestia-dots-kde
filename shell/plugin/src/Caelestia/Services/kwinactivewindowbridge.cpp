@@ -175,6 +175,12 @@ function onWindowAdded(window) {
             try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
             try { window.frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+            // fullScreen/maximize changes update the fullscreen and floating
+            // fields in the window list entry, so the shell must be told
+            // whenever either property flips — without this the bar stays
+            // hidden after exiting fullscreen until the app is closed.
+            try { window.fullScreenChanged.connect(notifyWindowList); } catch(e){}
+            try { window.maximizedChanged.connect(notifyWindowList); } catch(e){}
         }
     } catch (e) {
         console.info("Caelestia: Error in onWindowAdded: " + e);
@@ -213,6 +219,8 @@ for (let i = 0; i < initialWins.length; ++i) {
             try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+            try { initialWins[i].fullScreenChanged.connect(notifyWindowList); } catch(e){}
+            try { initialWins[i].maximizedChanged.connect(notifyWindowList); } catch(e){}
         }
     } catch (e) {
         console.info("Caelestia: Error initializing window: " + e);
