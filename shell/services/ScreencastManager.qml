@@ -7,6 +7,7 @@ import Caelestia.Services
 
 Item {
     id: root
+
     // If true, keeps streams alive after refCount reaches 0.
     // WARNING: Setting this true means PipeWire/KWin screencast nodes are never
     // freed.  Too many concurrent nodes can exhaust KWin's screencast resources and
@@ -163,6 +164,7 @@ Item {
     // Periodic cleanup of idle streams when continuousMode + idleTimeoutMs are set
     Timer {
         id: idleCleanupTimer
+
         interval: root.idleTimeoutMs > 0 ? root.idleTimeoutMs : 30000
         repeat: false
         onTriggered: {
