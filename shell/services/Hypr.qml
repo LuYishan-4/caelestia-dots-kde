@@ -112,7 +112,13 @@ Singleton {
         if (keys.length > 0) return root._monitorCache[keys[0]];
         return null;
     }
-    readonly property int activeWsId: focusedWorkspace?.id ?? root.mockActiveWs
+    // On KDE, use KWinWorkspaceState.activeId so workspace switches invalidate
+    // any binding that reads this property (e.g. ContentWindow.hasFullscreen).
+    readonly property int activeWsId: {
+        if (typeof KWinWorkspaceState !== "undefined")
+            return KWinWorkspaceState.activeId;
+        return focusedWorkspace?.id ?? root.mockActiveWs;
+    }
 
     readonly property bool capsLock: CUtils.capsLock
     readonly property bool numLock: CUtils.numLock
@@ -144,6 +150,46 @@ Singleton {
         const monVals = root.monitors.values || [];
         for (let i = 0; i < monVals.length; i++) {
             const toplevels = monVals[i]?.activeWorkspace?.toplevels?.values || [];
+            for (let j = 0; j < toplevels.length; j++) {
+                if ((toplevels[j]?.lastIpcObject?.fullscreen ?? 0) > 1)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // Per-monitor fullscreen check for multi-monitor setups.
+    // On KDE, each window entry carries an `output` field (screen name) and a
+    // `workspace.id` that matches KWinWorkspaceState.activeId, so we scope the
+    // check to windows on this output AND the currently active workspace.
+    // On Hyprland, monitor.activeWorkspace already provides workspace scoping.
+    // Falls back to the global check if no screen name is given.
+    function hasFullscreenOn(screenName: string): bool {
+        if (!screenName)
+            return hasFullscreen();
+        if (typeof KWinActiveWindowBridge !== "undefined") {
+            const wins = KWinActiveWindowBridge.windowList || [];
+            const activeWsId = (typeof KWinWorkspaceState !== "undefined")
+                ? KWinWorkspaceState.activeId : -1;
+            for (let i = 0; i < wins.length; i++) {
+                if (!wins[i].fullscreen)
+                    continue;
+                if (wins[i].output !== screenName)
+                    continue;
+                // Only count windows on the active workspace (ignore other desktops).
+                if (activeWsId !== -1 && wins[i].workspace?.id !== activeWsId)
+                    continue;
+                return true;
+            }
+            return false;
+        }
+        const monVals = root.monitors.values || [];
+        for (let i = 0; i < monVals.length; i++) {
+            const mon = monVals[i];
+            if (mon?.lastIpcObject?.name !== screenName)
+                continue;
+            // activeWorkspace already scopes to the current workspace on Hyprland.
+            const toplevels = mon?.activeWorkspace?.toplevels?.values || [];
             for (let j = 0; j < toplevels.length; j++) {
                 if ((toplevels[j]?.lastIpcObject?.fullscreen ?? 0) > 1)
                     return true;

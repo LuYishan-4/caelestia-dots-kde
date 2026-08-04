@@ -156,6 +156,7 @@ function notifyWindowList() {
                     maximized: (w.maximizeMode === 3) ? true : false,
                     minimized: w.minimized ? true : false,
                     floating: !w.tile,
+                    output: (w.output && w.output.name) ? w.output.name : "",
                     workspace: { id: deskId }
                 });
             }

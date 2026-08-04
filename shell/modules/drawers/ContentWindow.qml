@@ -36,7 +36,10 @@ StyledWindow {
     // typed to avoid "Unable to assign QObject to HyprlandMonitor" warnings
     // and the resulting null-monitor cascade.
     readonly property var monitor: Hypr.monitorFor(screen)
-    readonly property bool hasFullscreen: Hypr.hasFullscreen()
+    // Reference Hypr.activeWsId so QML re-evaluates this binding whenever the
+    // active workspace changes — hasFullscreenOn() filters by workspace, but
+    // a plain function call only re-runs when its direct property deps change.
+    readonly property bool hasFullscreen: (Hypr.activeWsId, Hypr.hasFullscreenOn(screen?.name ?? ""))
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
     property real dynamicBorderThickness: visibilities.overview ? Math.min(root.width, root.height) * 0.15 : Config.border.thickness
