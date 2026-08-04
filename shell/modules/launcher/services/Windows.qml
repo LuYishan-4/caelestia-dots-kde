@@ -32,7 +32,7 @@ QtObject {
 
     function updateItems(): void {
         const activeAddress = KWinActiveWindowBridge.activeWindow ? KWinActiveWindowBridge.activeWindow.address : "";
-        const winList = KWinActiveWindowBridge.windowList;
+        const winList = (KWinActiveWindowBridge.windowList || []).filter(w => !(w.class && w.class.toLowerCase().includes("xwaylandvideobridge")));
         
         let currentItems = root.items.slice();
         
