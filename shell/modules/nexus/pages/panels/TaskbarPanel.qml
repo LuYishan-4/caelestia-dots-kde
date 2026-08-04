@@ -114,6 +114,13 @@ PageBase {
         }
 
         ToggleRow {
+            text: qsTr("Live window previews")
+            subtext: qsTr("Live thumbnails in hover/overview/alt-tab. Disable if screen sharing or camera in other apps (e.g. Vesktop) freezes")
+            checked: GlobalConfig.bar.livePreviews
+            onToggled: GlobalConfig.bar.livePreviews = checked
+        }
+
+        ToggleRow {
             text: qsTr("Scale with bar size")
             subtext: qsTr("Multiply the preview scale with the bar scale")
             checked: GlobalConfig.bar.previewScaleWithBar
