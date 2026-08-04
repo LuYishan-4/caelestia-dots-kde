@@ -541,7 +541,8 @@ fi
                         const summaryText = root.currentBranch === "main"
                             ? qsTr("Main branch version update available")
                             : qsTr("%1 new commits on %2 branch").arg(root.pendingCount).arg(root.currentBranch);
-                        Toaster.toast(qsTr("System Update Available"), summaryText, "update");
+                        if (GlobalConfig.utilities.toasts.updateAvailable)
+                            Toaster.toast(qsTr("System Update Available"), summaryText, "update");
                     }
                 } catch(e) {
                     console.log("UpdateChecker git parse error:", e);

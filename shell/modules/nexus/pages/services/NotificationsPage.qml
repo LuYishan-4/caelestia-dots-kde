@@ -267,10 +267,40 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
             text: qsTr("Now playing")
             checked: GlobalConfig.utilities.toasts.nowPlaying
             onToggled: GlobalConfig.utilities.toasts.nowPlaying = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Config loaded")
+            checked: GlobalConfig.utilities.toasts.configLoaded
+            onToggled: GlobalConfig.utilities.toasts.configLoaded = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Keyboard layout limit")
+            checked: GlobalConfig.utilities.toasts.kbLimit
+            onToggled: GlobalConfig.utilities.toasts.kbLimit = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Night light changes")
+            checked: GlobalConfig.utilities.toasts.nightLightChanged
+            onToggled: GlobalConfig.utilities.toasts.nightLightChanged = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Clipboard changes")
+            checked: GlobalConfig.utilities.toasts.clipboardChanged
+            onToggled: GlobalConfig.utilities.toasts.clipboardChanged = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: qsTr("System updates")
+            checked: GlobalConfig.utilities.toasts.updateAvailable
+            onToggled: GlobalConfig.utilities.toasts.updateAvailable = checked
         }
     }
 }

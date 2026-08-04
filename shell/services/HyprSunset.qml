@@ -16,7 +16,8 @@ Singleton {
     readonly property bool autoMode: NightColorBridge.autoMode
 
     function nightLightToast(message: string): void {
-        Toaster.toast(qsTr("Night Light"), qsTr(message), "dark_mode");
+        if (GlobalConfig.utilities.toasts.nightLightChanged)
+            Toaster.toast(qsTr("Night Light"), qsTr(message), "dark_mode");
     }
 
     function setDayTemperature(temp): void {

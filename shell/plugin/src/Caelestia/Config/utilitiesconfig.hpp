@@ -14,7 +14,7 @@ class UtilitiesToasts : public ConfigObject {
     QML_ANONYMOUS
 
     CONFIG_PROPERTY(QString, fullscreen, u"off"_s)
-    CONFIG_GLOBAL_PROPERTY(bool, configLoaded, true)
+    CONFIG_GLOBAL_PROPERTY(bool, configLoaded, false)
     CONFIG_GLOBAL_PROPERTY(bool, chargingChanged, true)
     CONFIG_GLOBAL_PROPERTY(bool, gameModeChanged, true)
     CONFIG_GLOBAL_PROPERTY(bool, dndChanged, true)
@@ -26,6 +26,9 @@ class UtilitiesToasts : public ConfigObject {
     CONFIG_GLOBAL_PROPERTY(bool, kbLimit, true)
     CONFIG_GLOBAL_PROPERTY(bool, vpnChanged, true)
     CONFIG_GLOBAL_PROPERTY(bool, nowPlaying, false)
+    CONFIG_GLOBAL_PROPERTY(bool, clipboardChanged, true)
+    CONFIG_GLOBAL_PROPERTY(bool, nightLightChanged, true)
+    CONFIG_GLOBAL_PROPERTY(bool, updateAvailable, true)
     CONFIG_GLOBAL_PROPERTY(bool, transparency, false)
     CONFIG_GLOBAL_PROPERTY(qreal, transparencyBase, 0.85)
 
