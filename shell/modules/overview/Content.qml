@@ -57,10 +57,7 @@ Item {
             NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
         }
         Rectangle {
-            x: -root.panels.leftMargin
-            y: -root.panels.topMargin
-            width: root.panels.screen.width
-            height: root.panels.screen.height
+            anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.5)
 
             HoverHandler { } // block hover

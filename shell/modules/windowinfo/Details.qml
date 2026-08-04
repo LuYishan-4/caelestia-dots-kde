@@ -10,7 +10,6 @@ ColumnLayout {
 
     required property var client
 
-    anchors.fill: parent
     spacing: Tokens.spacing.small
 
     Label {

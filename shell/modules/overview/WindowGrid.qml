@@ -148,6 +148,7 @@ Item {
                 property var windowLayout: Config.overview.layoutType === 0 ? LayoutKde.calculateLayout(page.wsWindows, width, height, Tokens.spacing.large, Tokens.spacing.large) : LayoutGnome.calculateLayout(page.wsWindows, width, height, Tokens.spacing.large, Tokens.spacing.large)
 
                 anchors.fill: parent
+                anchors.bottomMargin: workspaceIndicator.implicitHeight * 2
                 // Behaviors for smooth resizing of the whole container if needed (though it fills parent)
 
                 Repeater {
@@ -417,7 +418,7 @@ Item {
 
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: -(root.panels ? root.panels.bottomMargin : 0) + Tokens.padding.large
+        anchors.bottomMargin:Tokens.padding.large
         implicitWidth: workspaceIndicator.implicitWidth + Tokens.padding.large * 2
         implicitHeight: workspaceIndicator.implicitHeight + Tokens.padding.medium * 2
         radius: Tokens.rounding.large

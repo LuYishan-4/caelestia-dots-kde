@@ -34,10 +34,7 @@ GridLayout {
     // Cache window-icon lists per layout so the Repeater only rebuilds
     // when the set of window identities actually changes, not on every
     // geometry update (e.g. during drag).
-    property var _cachedColIcons: []
-    property string _lastColKeys: ""
-    property var _cachedRowIcons: []
-    property string _lastRowKeys: ""
+    property var _cache: ({ colKeys: "", colIcons: [], rowKeys: "", rowIcons: [] })
 
     columns: isHorizontal ? -1 : 1
     rows: isHorizontal ? 1 : -1
@@ -294,9 +291,9 @@ GridLayout {
                         const maxIcons = root.Config.bar.workspaces.maxWindowIcons;
                         windows = maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
                         const keys = windows.map(w => w.address || w["class"]).sort().join(",");
-                        if (keys === root._lastColKeys) return root._cachedColIcons;
-                        root._lastColKeys = keys;
-                        root._cachedColIcons = windows;
+                        if (keys === root._cache.colKeys) return root._cache.colIcons;
+                        root._cache.colKeys = keys;
+                        root._cache.colIcons = windows;
                         return windows;
                     }
                 }
@@ -362,9 +359,9 @@ GridLayout {
                         const maxIcons = root.Config.bar.workspaces.maxWindowIcons;
                         windows = maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
                         const keys = windows.map(w => w.address || w["class"]).sort().join(",");
-                        if (keys === root._lastRowKeys) return root._cachedRowIcons;
-                        root._lastRowKeys = keys;
-                        root._cachedRowIcons = windows;
+                        if (keys === root._cache.rowKeys) return root._cache.rowIcons;
+                        root._cache.rowKeys = keys;
+                        root._cache.rowIcons = windows;
                         return windows;
                     }
                 }
