@@ -14,7 +14,7 @@ Scope {
 
     property bool launcherInterrupted
     property string lastAction: ""
-    readonly property bool hasFullscreen: Hypr.hasFullscreen()
+    readonly property bool hasFullscreen: false
 
     Component.onCompleted: {
         // Force KeybindsModel to instantiate and load shortcuts from disk

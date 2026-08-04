@@ -119,7 +119,7 @@ CustomMouseArea {
     }
 
     anchors.fill: parent
-    acceptedButtons: fullscreen ? Qt.NoButton : Qt.AllButtons
+    acceptedButtons: (fullscreen && !(root.focusGrab && (root.focusGrab.active || popouts.isDetached))) ? Qt.NoButton : Qt.AllButtons
     hoverEnabled: true
     onPressed: event => {
         dragStart = Qt.point(event.x, event.y);

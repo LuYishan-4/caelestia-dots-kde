@@ -39,7 +39,9 @@ StyledWindow {
     // Reference Hypr.activeWsId so QML re-evaluates this binding whenever the
     // active workspace changes — hasFullscreenOn() filters by workspace, but
     // a plain function call only re-runs when its direct property deps change.
-    readonly property bool hasFullscreen: (Hypr.activeWsId, Hypr.hasFullscreenOn(screen?.name ?? ""))
+    readonly property bool actualFullscreen: (Hypr.activeWsId, Hypr.hasFullscreenOn(screen?.name ?? ""))
+    readonly property bool hasOpenOverlay: focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview
+    readonly property bool hasFullscreen: actualFullscreen && !hasOpenOverlay
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
     property real dynamicBorderThickness: visibilities.overview ? Math.min(root.width, root.height) * 0.15 : Config.border.thickness
@@ -68,8 +70,8 @@ StyledWindow {
     }
     name: "drawers"
     mask: {
+        if (hasOpenOverlay) return fullRegion;
         if (hasFullscreen) return emptyRegion;
-        if (focusGrabState.active || panels.popouts.isDetached || desktopContextMenu.expanded || visibilities.overview) return fullRegion;
         return regions;
     }
     anchors.top: true
@@ -824,6 +826,6 @@ StyledWindow {
         }
     }
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.layer: (actualFullscreen && (hasOpenOverlay || fsTransitionProg < 1)) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 }
