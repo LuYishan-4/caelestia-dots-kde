@@ -34,8 +34,6 @@ Scope {
         name: "showall"
         description: "Toggle launcher, dashboard and osd"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const v = Visibilities.getForActive();
             v.launcher = v.dashboard = v.osd = v.utilities = !(v.launcher || v.dashboard || v.osd || v.utilities);
         }
@@ -46,8 +44,6 @@ Scope {
         name: "dashboard"
         description: "Toggle dashboard"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             visibilities.dashboard = !visibilities.dashboard;
         }
@@ -58,8 +54,6 @@ Scope {
         name: "overview"
         description: "Toggle overview"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             visibilities.overview = !visibilities.overview;
         }
@@ -70,8 +64,6 @@ Scope {
         name: "screenshot"
         description: "Toggle screenshot overlay"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             regionSelector.screenshot();
         }
     }
@@ -81,8 +73,6 @@ Scope {
         name: "googleLens"
         description: "Toggle Google Lens search"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             regionSelector.search();
         }
     }
@@ -92,8 +82,6 @@ Scope {
         name: "screenRecording"
         description: "Toggle screen recording"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             if (Recorder.running) {
                 if (Recorder.paused) {
                     Recorder.togglePause();
@@ -125,8 +113,6 @@ Scope {
 
         description: "Toggle session menu"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             visibilities.session = !visibilities.session;
         }
@@ -138,7 +124,7 @@ Scope {
         description: "Toggle launcher"
         onPressed: root.launcherInterrupted = false
         onReleased: {
-            if (!root.launcherInterrupted && !root.hasFullscreen) {
+            if (!root.launcherInterrupted) {
                 root.lastAction = "launcher";
                 const visibilities = Visibilities.getForActive();
                 visibilities.launcher = !visibilities.launcher;
@@ -159,8 +145,6 @@ Scope {
         name: "sidebar"
         description: "Toggle sidebar"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             Visibilities.initialSidebarTab = "notifications";
             visibilities.sidebar = !visibilities.sidebar;
@@ -172,8 +156,6 @@ Scope {
         name: "aiAssistant"
         description: "Toggle AI Assistant"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             Visibilities.initialSidebarTab = "ai";
             visibilities.sidebar = true;
@@ -185,8 +167,6 @@ Scope {
         name: "utilities"
         description: "Toggle utilities"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             visibilities.utilities = !visibilities.utilities;
         }
@@ -197,8 +177,6 @@ Scope {
         name: "emoji"
         description: "Open emoji picker"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}emoji `;
             const visibilities = Visibilities.getForActive();
             visibilities.launcher = true;
@@ -210,8 +188,6 @@ Scope {
         name: "clipboard"
         description: "Open clipboard history"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}clipboard `;
             const visibilities = Visibilities.getForActive();
             visibilities.launcher = true;
@@ -223,8 +199,6 @@ Scope {
         name: "windowSwitcher"
         description: "Open window switcher"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             // Check if launcher is already open and in windows mode
             if (visibilities.launcher && root.lastAction === "windows") {
@@ -245,8 +219,6 @@ Scope {
         name: "windowSwitcherReverse"
         description: "Open window switcher (reverse)"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             const visibilities = Visibilities.getForActive();
             if (visibilities.launcher && root.lastAction === "windows") {
                 Windows.triggerCyclePrev();
@@ -266,8 +238,6 @@ Scope {
         name: "wallpaper"
         description: "Open wallpaper picker"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}wallpaper `;
             const visibilities = Visibilities.getForActive();
             visibilities.launcher = true;
@@ -279,8 +249,6 @@ Scope {
         name: "keybinds"
         description: "Open keybinds list"
         onPressed: {
-            if (root.hasFullscreen)
-                return;
             Visibilities.launcherInitialSearch = `${GlobalConfig.launcher.actionPrefix}keybinds `;
             const visibilities = Visibilities.getForActive();
             visibilities.launcher = true;
