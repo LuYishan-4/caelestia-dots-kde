@@ -23,6 +23,26 @@ ConnectedRect {
     Layout.fillWidth: true
     implicitHeight: rowLayout.implicitHeight + rowLayout.anchors.margins * 2
 
+    CustomMouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton // Only handle scroll wheel, pass clicks to children
+
+        function onWheel(event: WheelEvent) {
+            const step = root.stepSize;
+            const decimals = step < 1 ? Math.max(1, Math.ceil(-Math.log10(step))) : 0;
+            
+            if (event.angleDelta.y > 0) {
+                let v = Math.min(root.to, root.value + step);
+                v = Math.round(v * Math.pow(10, decimals)) / Math.pow(10, decimals);
+                if (v !== root.value) root.moved(v);
+            } else if (event.angleDelta.y < 0) {
+                let v = Math.max(root.from, root.value - step);
+                v = Math.round(v * Math.pow(10, decimals)) / Math.pow(10, decimals);
+                if (v !== root.value) root.moved(v);
+            }
+        }
+    }
+
     RowLayout {
         id: rowLayout
 
