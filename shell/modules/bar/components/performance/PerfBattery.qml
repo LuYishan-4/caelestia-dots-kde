@@ -1,7 +1,7 @@
 import Quickshell.Services.UPower
 import qs.components
-import qs.utils
 import qs.services
+import qs.utils
 
 PerfStat {
     readonly property bool charging: [UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state)

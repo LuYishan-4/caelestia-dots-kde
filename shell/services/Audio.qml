@@ -108,6 +108,7 @@ Singleton {
 
     Component {
         id: sfxComponent
+
         SoundEffect {}
     }
 

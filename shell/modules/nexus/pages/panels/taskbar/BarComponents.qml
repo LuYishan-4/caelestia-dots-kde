@@ -3,15 +3,15 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell.Services.UPower
 import Caelestia.Config
 import Caelestia.Services
 import qs.components
-import qs.components.effects
 import qs.components.controls
+import qs.components.effects
 import qs.services
-import qs.modules.nexus.common
 import qs.modules.bar.components as BarComponents
-import Quickshell.Services.UPower
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -47,10 +47,15 @@ PageBase {
     }
 
     property bool isGlobalDragging: false
+
     property string globalDragSourceList: ""
+
     property int globalDragSourceIndex: -1
+
     property string globalDragHoveredList: ""
+
     readonly property real zonePadding: Tokens.padding.medium
+
     readonly property real emptyZoneHeight: 72
 
     function getModel(name) {
@@ -176,7 +181,9 @@ PageBase {
         ListModel { id: libraryModel }
 
         anchors.fill: parent
+
         anchors.margins: Tokens.padding.large
+
         spacing: Tokens.spacing.large
 
         // Left Side: Active Components Zones
@@ -237,6 +244,7 @@ PageBase {
 
                 ListView {
                     id: leftList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -289,6 +297,7 @@ PageBase {
 
                 ListView {
                     id: middleList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -341,6 +350,7 @@ PageBase {
 
                 ListView {
                     id: rightList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -431,6 +441,7 @@ PageBase {
 
                 ListView {
                     id: libList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -451,6 +462,7 @@ PageBase {
         
         Item {
             id: delegateWrapper
+
             required property int index
             required property string compId
             required property bool isPlaceholder
@@ -470,6 +482,7 @@ PageBase {
             Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             
             property bool isDraggingThis: activeDragArea.drag.active
+
             z: isDraggingThis ? 100 : 1
 
             DropArea {
@@ -502,6 +515,7 @@ PageBase {
 
             StyledRect {
                 id: activeDelegate
+
                 width: delegateWrapper.width
                 height: 50
                 color: isDraggingThis ? Colours.layer(Colours.palette.m3surfaceContainerHighest, 2) : (sourceList !== "library" ? Colours.palette.m3surfaceContainerHigh : Colours.palette.m3surfaceContainer)
@@ -512,6 +526,7 @@ PageBase {
 
                 MouseArea {
                     id: activeDragArea
+
                     anchors.fill: parent
                     hoverEnabled: true
                     drag.target: isPlaceholder || !delegateWrapper.isAvailable ? null : activeDelegate
@@ -574,6 +589,7 @@ PageBase {
                     acceptedButtons: Qt.NoButton
                     color: Colours.palette.m3onSurface
                     opacity: activeDragArea.containsMouse && !isPlaceholder && !isDraggingThis ? 0.08 : 0
+
                     Behavior on opacity { NumberAnimation { duration: 150 } }
                 }
 
@@ -615,6 +631,7 @@ PageBase {
 
                 states: State {
                     when: activeDragArea.drag.active
+
                     ParentChange { target: activeDelegate; parent: root.flickable.contentItem }
                     PropertyChanges { target: activeDelegate; scale: 1.05 }
                 }

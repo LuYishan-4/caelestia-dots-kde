@@ -1,9 +1,9 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import qs.components
 import qs.components.effects
-import QtQuick.Effects
 
 StyledListView {
     id: root

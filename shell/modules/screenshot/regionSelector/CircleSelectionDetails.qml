@@ -5,6 +5,7 @@ import Quickshell
 
 Item {
     id: root
+
     required property color color
     required property color overlayColor
     required property var points
@@ -17,6 +18,7 @@ Item {
 
     Rectangle {
         id: darkenOverlay
+
         z: 1
         anchors.fill: parent
         color: root.overlayColor
@@ -24,6 +26,7 @@ Item {
 
     Shape {
         id: shape
+
         z: 2
         anchors.fill: parent
         layer.enabled: true
@@ -32,6 +35,7 @@ Item {
 
         ShapePath {
             id: shapePath
+
             strokeWidth: root.strokeWidth
             pathHints: ShapePath.PathLinear
             fillColor: "transparent"

@@ -1,4 +1,3 @@
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,6 +5,7 @@ import qs.utils
 
 Item {
     id: root
+
     Component.onCompleted: {
         console.log("StartupTasks Loaded!");
         Quickshell.execDetached(["bash", "-c", `

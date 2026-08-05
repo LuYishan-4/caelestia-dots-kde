@@ -48,6 +48,7 @@ Item {
     }
 
     implicitWidth: listWrapper.width + padding * 2
+
     implicitHeight: listWrapper.height + sessionFooter.height + searchWrapper.height + listWrapper.anchors.bottomMargin + sessionFooter.anchors.bottomMargin + searchWrapper.anchors.bottomMargin
 
     Item {

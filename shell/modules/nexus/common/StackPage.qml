@@ -1,9 +1,9 @@
 import QtQuick
-import qs.utils
 import QtQuick.Controls
-import qs.utils
 import Caelestia.Config
 import qs.components
+import qs.utils
+import qs.utils
 import qs.modules.nexus
 
 StackView {

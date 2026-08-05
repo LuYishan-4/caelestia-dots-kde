@@ -1,10 +1,10 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick.Layouts
-import Caelestia.Config
-import Caelestia.Services
 import Quickshell
 import Quickshell.Io
+import Caelestia.Config
+import Caelestia.Services
 import qs.modules.nexus.common
 
 PageBase {
@@ -16,6 +16,7 @@ PageBase {
         anchors.horizontalCenter: parent.horizontalCenter
         
         property bool showTilingLogout: false
+
         property bool isTilingEnabled: Config.general.krohnkiteEnabled
         anchors.top: parent.top
         width: root.cappedWidth

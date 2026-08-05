@@ -1,20 +1,20 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Layouts
 import QtCore
 import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
 import qs.components
-import qs.components.controls
 import qs.components.containers
+import qs.components.controls
 import qs.services
+import qs.utils
 import qs.modules.nexus
 import qs.modules.nexus.common
-import qs.utils
 
 PageBase {
     id: root
@@ -42,12 +42,19 @@ PageBase {
 
         Connections {
             target: UpdateChecker
+
             function onCommitsChanged() { root.selectedVersionId = ""; }
+
             function onVersionSummaryModeChanged() { root.selectedVersionId = ""; }
+
             function onAvailableVersionsChanged() { root.selectedVersionId = ""; }
+
             function onCurrentBranchChanged() { root.selectedVersionId = ""; }
+
             function onCurrentVersionChanged() { root.selectedVersionId = ""; }
+
             function onInstalledCommitHashChanged() { root.selectedVersionId = ""; }
+
             function onCheckingUpdatesChanged() {
                 if (!UpdateChecker.checkingUpdates)
                     root.pendingBranch = "";
@@ -66,15 +73,20 @@ PageBase {
     // this page and back — see Pages.qml, which destroys/recreates the page
     // Item on every top-level page switch.
     readonly property bool updateRunning: UpdateChecker.updateRunning
+
     readonly property real updateProgress: UpdateChecker.updateProgress
+
     readonly property string updateStatus: UpdateChecker.updateStatus
+
     readonly property string updateLogs: UpdateChecker.updateLogs
 
     // ── Timeline selection state ───────────────────────────────────────────
     property string selectedVersionId: ""
+
     property string pendingBranch: ""
     // Customize Installation is collapsed by default (see section 4 below)
     // so the commit/version timeline stays the visual focus of the page.
+
     property bool installOptionsExpanded: false
 
     readonly property bool branchDataLoading: root.pendingBranch !== "" && UpdateChecker.checkingUpdates
@@ -92,9 +104,13 @@ PageBase {
         }
         return null;
     }
+
     readonly property bool timelineSelectionEnabled: true
+
     readonly property string selectedVersionState: root.selectedEntry ? root.selectedEntry.state : ""
+
     readonly property bool selectionIsRevert: root.timelineSelectionEnabled && root.selectedVersionState === "past"
+
     readonly property bool selectionIsFuture: root.timelineSelectionEnabled && root.selectedVersionState === "available"
 
     // Drives both the primary button's visibility and the secondary button's
@@ -194,6 +210,7 @@ PageBase {
                     top: parent.top
                     margins: Tokens.padding.largeIncreased
                 }
+
                 spacing: Tokens.spacing.small
 
                 MaterialIcon {
@@ -388,6 +405,7 @@ PageBase {
                     top: parent.top
                     margins: Tokens.padding.largeIncreased
                 }
+
                 spacing: Tokens.spacing.small
 
                 LoadingIndicator {
@@ -413,6 +431,7 @@ PageBase {
 
         ConnectedRect {
             id: timelineCard
+
             visible: !root.branchDataLoading
             first: true
             last: true
@@ -422,6 +441,7 @@ PageBase {
             // below it far down the page. Commit rows are taller than plain
             // release rows, so scale the cap with the timeline's own row
             // height instead of a hard-coded constant.
+
             readonly property real maxListHeight: 6 * timeline.rowHeight
             implicitHeight: Math.min(timeline.implicitHeight, maxListHeight) + Tokens.padding.medium * 2
 
@@ -433,6 +453,7 @@ PageBase {
                     top: parent.top
                     margins: Tokens.padding.medium
                 }
+
                 height: Math.min(timeline.implicitHeight, timelineCard.maxListHeight)
                 contentWidth: width
                 contentHeight: timeline.implicitHeight
@@ -446,6 +467,7 @@ PageBase {
 
                 UpdateTimeline {
                     id: timeline
+
                     width: parent.width
                     entries: root.timelineEntries
                     selectedId: root.timelineSelectionEnabled ? root.selectedVersionId : ""
@@ -476,6 +498,7 @@ PageBase {
 
             RowLayout {
                 id: installHeaderRow
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 anchors.leftMargin: Tokens.padding.largeIncreased
@@ -550,6 +573,7 @@ PageBase {
                     top: parent.top
                     margins: Tokens.padding.medium
                 }
+
                 spacing: Tokens.spacing.small
 
                 RowLayout {
@@ -582,6 +606,7 @@ PageBase {
 
                     Flickable {
                         id: logFlickable
+
                         anchors.fill: parent
                         anchors.margins: Tokens.padding.medium
                         contentHeight: logText.implicitHeight
@@ -590,8 +615,10 @@ PageBase {
                         onContentHeightChanged: {
                             if (contentHeight > height) contentY = contentHeight - height;
                         }
+
                         StyledText {
                             id: logText
+
                             width: logFlickable.width
                             text: root.updateLogs
                             color: Colours.palette.m3onSurfaceVariant
@@ -610,12 +637,14 @@ PageBase {
         // stays local since it doesn't need to persist.
         Process {
             id: logoutProcess
+
             command: ["qdbus6", "org.kde.Shutdown", "/Shutdown", "org.kde.Shutdown.logout"]
         }
 
         Process {
             id: backupFolderProcess
             // Create the backups dir if missing so the file manager opens cleanly.
+
             command: ["sh", "-c",
                 'dir="$1"; shift; mkdir -p "$dir" && exec "$@" "$dir"',
                 "--",

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import "../../background"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -12,7 +13,6 @@ import qs.services
 import qs.utils
 import qs.modules.nexus
 import qs.modules.bar.popouts as BarPopouts
-import "../../background"
 
 StyledRect {
     id: root
@@ -66,8 +66,10 @@ StyledRect {
 
     Timer {
         id: execTimer
+
         interval: 250
         repeat: false
+
         property var pendingAction: null
         onTriggered: {
             if (pendingAction) pendingAction();

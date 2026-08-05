@@ -2,14 +2,14 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
-import qs.modules.nexus.common
 import qs.utils
-import Quickshell
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -22,6 +22,7 @@ PageBase {
         MenuItem { text: qsTr("Fit") },
         MenuItem { text: qsTr("Stretch") }
     ]
+
     readonly property list<int> scalingValues: [Image.PreserveAspectCrop, Image.PreserveAspectFit, Image.Stretch]
 
     function scaleKeyToIndex(key: int): int {

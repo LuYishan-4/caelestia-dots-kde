@@ -2,8 +2,8 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Io
+import Quickshell.Wayland
 import Caelestia
 import Caelestia.Config
 import Caelestia.Internal
@@ -61,6 +61,7 @@ Singleton {
                         property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
                         property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
                         property var lastIpcObject: null
+
                         Component.onCompleted: lastIpcObject = this
                     }
                 `, root, "monitorMock");
@@ -452,6 +453,7 @@ Singleton {
 
     HyprExtras {
         id: extras
+
         usingLua: false
     }
 }

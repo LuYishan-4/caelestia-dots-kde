@@ -9,6 +9,7 @@ PanelWindow {
 
     property bool isDesktopWidget: false
     WlrLayershell.namespace: isDesktopWidget ? "desktop" : "panel"
+
     color: "transparent"
 
     contentItem.Config.screen: screen.name

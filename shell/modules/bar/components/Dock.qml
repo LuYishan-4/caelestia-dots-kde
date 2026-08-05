@@ -1,8 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -11,8 +11,8 @@ import Caelestia
 import Caelestia.Config
 import Caelestia.Services
 import qs.components
-import qs.components.effects
 import qs.components.controls
+import qs.components.effects
 import qs.services
 import qs.utils
 
@@ -27,8 +27,11 @@ Item {
     property int modelUpdateTrigger: 0
 
     property var launchingApps: ({})
+
     property bool isDragging: false
+
     property real spacing: Tokens.spacing.medium
+
     property real padding: Tokens.padding.medium
 
     HoverHandler { id: dockHover }
@@ -79,6 +82,7 @@ Item {
         radius: Tokens.rounding.full
 
         property int __itemCount: dockModel.count
+
         property real __computedContentWidth: __itemCount > 0 ? __itemCount * itemSize + (__itemCount - 1) * root.spacing : 0
 
         implicitWidth: bar.isHorizontal ? (__computedContentWidth + padding * 2) : bar.thickness
@@ -144,10 +148,13 @@ Item {
         }
 
         property real itemSize: root.configuredItemSize
+
         property int maxHorizontalItems: Math.max(0, Math.floor((availableSize - padding * 2 - itemSize * 0.5) / (itemSize + spacing)))
+
         property real maxHorizontalSize: maxHorizontalItems >= 1 ? ((maxHorizontalItems + 0.5) * itemSize + maxHorizontalItems * spacing + padding * 2) : availableSize
 
         property int maxVerticalItems: Math.max(0, Math.floor((availableSize - padding * 2 - itemSize * 0.5) / (itemSize + spacing)))
+
         property real maxVerticalSize: maxVerticalItems >= 1 ? ((maxVerticalItems + 0.5) * itemSize + maxVerticalItems * spacing + padding * 2) : availableSize
 
         property var _appsValues: DesktopEntries.applications.values

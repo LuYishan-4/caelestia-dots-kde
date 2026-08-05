@@ -87,6 +87,7 @@ Item {
 
         Loader {
             id: loader
+
             asynchronous: true
             anchors.centerIn: parent
             active: opacity > 0
@@ -163,6 +164,7 @@ Item {
     // Caelestia Mode Toggle
     StyledRect {
         id: toggleRect
+
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -174,6 +176,7 @@ Item {
         
         RowLayout {
             id: toggleLayout
+
             anchors.fill: parent
             anchors.margins: Tokens.padding.large
             spacing: Tokens.spacing.medium
@@ -186,6 +189,7 @@ Item {
                 
                 MaterialIcon {
                     id: icon
+
                     anchors.centerIn: parent
                     text: "auto_awesome"
                     color: Visibilities.isCaelestiaMode ? Colours.palette.m3onSecondary : Colours.palette.m3onSecondaryContainer
@@ -224,6 +228,7 @@ Item {
 
     Loader {
         id: clearLoader
+
         asynchronous: true
         anchors.right: parent.right
         anchors.bottom: parent.bottom

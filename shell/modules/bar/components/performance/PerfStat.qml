@@ -30,12 +30,14 @@ StyledRect {
 
     StyledText {
         id: dummyText
+
         text: root.maxText
         font: Tokens.font.body.builders.small.weight(Font.DemiBold).build()
         visible: false
     }
 
     implicitWidth: isHorizontal ? Math.max(contentRow.implicitWidth + hPadding * 2, Math.round(barThickness * widthFactor)) : barThickness
+
     implicitHeight: isHorizontal ? barThickness : Math.max(contentCol.implicitHeight + vPadding * 2, barThickness)
     Item {
         id: progressTrack

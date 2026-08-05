@@ -5,11 +5,11 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
+import Caelestia
 import Caelestia.Config
 import qs.components
 import qs.services
 import qs.utils
-import Caelestia
 
 StyledRect {
     id: root
@@ -25,13 +25,17 @@ StyledRect {
 
     readonly property bool isHovering: hoverPos !== -1
     property real currentHoverExpansion: isHovering ? hoverExpansion : 0
+
     Behavior on currentHoverExpansion { Anim { type: Anim.DefaultEffects } }
 
     color: Colours.tPalette.m3surfaceContainer
+
     radius: Tokens.rounding.full
 
     clip: true
+
     implicitWidth: isHorizontal ? (iconColumn.implicitWidth + Tokens.padding.medium * 2 + currentHoverExpansion) : barThickness
+
     implicitHeight: isHorizontal ? barThickness : (iconColumn.implicitHeight + Tokens.padding.medium * 2 + currentHoverExpansion)
 
     GridLayout {

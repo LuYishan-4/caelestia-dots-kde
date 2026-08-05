@@ -10,8 +10,8 @@ import qs.components
 import qs.components.containers
 import qs.services
 import qs.utils
-import qs.modules.nexus.common
 import qs.modules.launcher.services
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -32,6 +32,7 @@ PageBase {
 
         ToggleRow {
             id: systemDefaultsToggle
+
             first: true
             text: qsTr("Force System Defaults (xdg-open)")
             subtext: qsTr("Override applications to use KDE system defaults")
@@ -148,6 +149,7 @@ PageBase {
 
                     RowLayout {
                         id: itemLayoutHeader
+
                         anchors.fill: parent
                         anchors.margins: Tokens.padding.medium
                         spacing: Tokens.spacing.medium

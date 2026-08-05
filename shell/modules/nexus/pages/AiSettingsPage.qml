@@ -38,6 +38,7 @@ PageBase {
 
             RowLayout {
                 id: keyRow
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 anchors.leftMargin: Tokens.padding.largeIncreased
@@ -89,8 +90,11 @@ PageBase {
     }
 
     property string claudeVersion: ""
+
     readonly property bool claudeInstalled: claudeVersion !== "" && claudeVersion !== "NOT_INSTALLED"
+
     property bool installing: false
+
     property string installStatus: ""
 
     // `claude --version` prints "2.1.220 (Claude Code)"; the bare number is what
@@ -117,9 +121,11 @@ PageBase {
     function homeDir() {
         return Quickshell.env("HOME") || "";
     }
+
     function claudeBin() {
         return homeDir() + "/.local/bin/claude";
     }
+
     function refreshStatus() {
         statusProc.running = false;
         statusProc.running = true;
@@ -127,12 +133,15 @@ PageBase {
 
     // Real login names / emails resolved from each account's .claude.json.
     property var resolvedNames: ({})
+
     property var resolvedEmails: ({})
+
     function accountJsonPath(id) {
         if (!id || id === "")
             return homeDir() + "/.claude.json";
         return homeDir() + "/.config/caelestia/claude/" + id + "/.claude.json";
     }
+
     function accountIds() {
         const a = accounts();
         const ids = [];
@@ -140,6 +149,7 @@ PageBase {
             ids.push(a[i].id);
         return ids;
     }
+
     function displayName(id, fallback) {
         return resolvedNames[id] || fallback;
     }
@@ -162,6 +172,7 @@ PageBase {
         } catch (e) {}
         return list;
     }
+
     function accountDir(id) {
         const a = accounts();
         for (let i = 0; i < a.length; i++)
@@ -169,6 +180,7 @@ PageBase {
                 return a[i].dir;
         return "";
     }
+
     function rawAccounts() {
         try {
             const p = JSON.parse(GlobalConfig.ai.claudeAccountsJson || "[]");
@@ -177,6 +189,7 @@ PageBase {
         } catch (e) {}
         return [];
     }
+
     function addAndLogin() {
         const arr = rawAccounts();
         const id = "acc_" + Date.now();
@@ -187,6 +200,7 @@ PageBase {
     }
     // Drop any added account whose login resolves to an email already used by an
     // earlier account (default first) — e.g. logging a new slot into the same account.
+
     function dedupAccounts() {
         const arr = rawAccounts();
         const seen = {};
@@ -213,6 +227,7 @@ PageBase {
                 GlobalConfig.ai.activeClaudeAccount = "";
         }
     }
+
     function removeAccount(id) {
         if (!id || id === "")
             return; // the Default (~/.claude) account is the system login — not removable
@@ -223,10 +238,12 @@ PageBase {
     }
     // Log out the Default (~/.claude) login so a different account can sign in.
     // This clears the CLI's base credentials (WinTone01), not the Claude Desktop app.
+
     function logoutDefault() {
         logoutProc.command = ["sh", "-c", JSON.stringify(root.claudeBin()) + " auth logout"];
         logoutProc.running = true;
     }
+
     function loginActive() {
         const id = GlobalConfig.ai.activeClaudeAccount || "";
         const dir = accountDir(id);
@@ -256,7 +273,9 @@ PageBase {
 
             Process {
                 id: kl
+
                 required property string provider
+
                 running: true
                 command: ["secret-tool", "lookup", "service", "caelestia", "key", "caelestia-ai-" + provider]
                 stdout: StdioCollector {
@@ -275,6 +294,7 @@ PageBase {
 
         Process {
             id: statusProc
+
             running: true
             command: ["sh", "-c", "test -x " + JSON.stringify(root.claudeBin()) + " && " + JSON.stringify(root.claudeBin()) + " --version 2>/dev/null || echo NOT_INSTALLED"]
             stdout: StdioCollector {
@@ -284,6 +304,7 @@ PageBase {
 
         Process {
             id: installProc
+
             command: ["sh", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
             stdout: SplitParser {
                 onRead: line => root.installStatus = line
@@ -307,6 +328,7 @@ PageBase {
 
         Process {
             id: logoutProc
+
             onExited: root.refreshStatus()
         }
 
@@ -315,6 +337,7 @@ PageBase {
             model: root.accountIds()
             delegate: FileView {
                 required property string modelData
+
                 path: root.accountJsonPath(modelData)
                 printErrors: false
                 watchChanges: false
@@ -496,6 +519,7 @@ PageBase {
 
             ConnectedRect {
                 id: accRect
+
                 required property var modelData
                 required property int index
 
@@ -513,6 +537,7 @@ PageBase {
 
                 RowLayout {
                     id: accRow
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     anchors.leftMargin: Tokens.padding.largeIncreased
@@ -551,6 +576,7 @@ PageBase {
 
                         MouseArea {
                             id: delMouse
+
                             anchors.fill: parent
                             anchors.margins: -8
                             hoverEnabled: true

@@ -2,12 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import M3Shapes
 import Caelestia.Config
 import qs.components
 import qs.components.controls
-import qs.modules.bar.components as BarComponents
 import qs.services as Services
-import M3Shapes
+import qs.modules.bar.components as BarComponents
 
 ColumnLayout {
     id: root

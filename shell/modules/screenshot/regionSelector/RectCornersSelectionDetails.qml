@@ -4,6 +4,7 @@ import qs.components
 
 Item {
     id: root
+
     required property real regionX
     required property real regionY
     required property real regionWidth
@@ -20,6 +21,7 @@ Item {
     // Base dark overlay around region
     Rectangle {
         id: darkenOverlay
+
         z: 1
         visible: !root.breathingBorderOnly
         anchors {
@@ -37,6 +39,7 @@ Item {
 
     Rectangle {
         id: selectionBorder
+
         z: 9
         anchors {
             left: parent.left
@@ -49,13 +52,16 @@ Item {
 
         border.color: root.color
         color: "transparent"
+
         property int borderWidth: 1
 
         // Breathing
         opacity: 0.9
+
         SequentialAnimation on opacity {
             running: root.breathingBorderOnly
             loops: Animation.Infinite
+
             NumberAnimation { from: 0.9; to: 0.3; duration: 1200; easing.type: Easing.InOutQuad }
             NumberAnimation { from: 0.3; to: 0.9; duration: 1200; easing.type: Easing.InOutQuad }
         }

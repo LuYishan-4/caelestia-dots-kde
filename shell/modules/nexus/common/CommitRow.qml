@@ -21,6 +21,7 @@ ConnectedRect {
 
     RowLayout {
         id: rowLayout
+
         anchors.fill: parent
         anchors.margins: Tokens.padding.medium
         anchors.leftMargin: Tokens.padding.largeIncreased
@@ -72,6 +73,7 @@ ConnectedRect {
 
             StyledText {
                 id: hashText
+
                 anchors.centerIn: parent
                 text: root.hash
                 font: Tokens.font.label.medium

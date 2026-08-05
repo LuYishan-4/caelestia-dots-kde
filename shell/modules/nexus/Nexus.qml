@@ -105,6 +105,7 @@ Item {
             // If the update finishes/is cancelled elsewhere while this dialog
             // is open, don't leave a stale confirmation on screen.
             target: UpdateChecker
+
             function onUpdateRunningChanged(): void {
                 if (!UpdateChecker.updateRunning)
                     closeConfirmDialog.visible = false;

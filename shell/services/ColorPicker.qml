@@ -1,4 +1,5 @@
 pragma Singleton
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -9,6 +10,7 @@ Item {
 
     Process {
         id: dbusProcess
+
         command: [
             "dbus-send",
             "--session",
@@ -20,6 +22,7 @@ Item {
         
         stdout: StdioCollector {
             id: outCollector
+
             onStreamFinished: {
                 // The output looks like:
                 // method return time=1686000000 sender=:1.30 -> destination=:1.100 serial=101 reply_serial=2

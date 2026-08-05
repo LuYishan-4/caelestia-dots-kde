@@ -1,9 +1,9 @@
 pragma ComponentBehavior: Bound
 
+import "modules/lock"
 import QtQml
 import Quickshell
 import Caelestia.Config
-import "modules/lock"
 
 ShellRoot {
     Variants {
@@ -11,6 +11,7 @@ ShellRoot {
         
         LockBackgroundWindow {
             required property var modelData
+
             screen: modelData
         }
     }

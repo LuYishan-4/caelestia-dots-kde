@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import "items"
 import QtQuick
 import Quickshell
-import Caelestia.Config
 import Caelestia
+import Caelestia.Config
 import qs.components.controls
 import qs.services
 import qs.utils
@@ -129,6 +129,7 @@ PathView {
 
     Timer {
         id: previewTimer
+
         interval: 100
         onTriggered: {
             if (root.currentItem)
@@ -142,12 +143,17 @@ PathView {
     }
 
     implicitWidth: Math.min(numItems, count) * itemWidth
+
     pathItemCount: numItems
+
     cacheItemCount: 4
 
     snapMode: PathView.SnapToItem
+
     preferredHighlightBegin: 0.5
+
     preferredHighlightEnd: 0.5
+
     highlightRangeMode: PathView.StrictlyEnforceRange
 
     delegate: WallpaperItem {

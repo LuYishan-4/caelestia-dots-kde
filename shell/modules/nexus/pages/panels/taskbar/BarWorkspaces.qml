@@ -20,6 +20,7 @@ PageBase {
 
         Connections {
             target: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState : null
+
             function onWorkspacesChanged() {
                 let len = KWinWorkspaceState.workspaces.length;
                 if (len > 0 && GlobalConfig.bar.workspaces.shown !== len) {

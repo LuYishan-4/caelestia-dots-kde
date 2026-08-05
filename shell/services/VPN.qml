@@ -336,6 +336,7 @@ Singleton {
 
     Connections {
         target: Nmcli
+
         function onMonitorEvent(): void {
             statusCheckTimer.restart();
         }

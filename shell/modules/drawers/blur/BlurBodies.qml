@@ -11,6 +11,7 @@ Region {
     required property real inTop
     required property real inBottom
     // These are big rectangles bluring most of the body
+
     Region {
         // Horizontal
         x: bX

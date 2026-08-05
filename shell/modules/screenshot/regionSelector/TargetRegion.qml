@@ -6,6 +6,7 @@ import qs.components
 
 Rectangle {
     id: root
+
     required property var clientDimensions
 
     property color colBackground: Qt.alpha("#88111111", 0.9)
@@ -17,6 +18,7 @@ Rectangle {
     property color fillColor: "transparent"
     property string text: ""
     property real textPadding: 10
+
     z: 2
     color: fillColor
     border.color: borderColor
@@ -31,9 +33,13 @@ Rectangle {
     Behavior on opacity {
         animation: NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
     }
+
     x: clientDimensions.at[0]
+
     y: clientDimensions.at[1]
+
     width: clientDimensions.size[0]
+
     height: clientDimensions.size[1]
 
     Loader {
@@ -48,6 +54,7 @@ Rectangle {
         sourceComponent: Rectangle {
             property real verticalPadding: 5
             property real horizontalPadding: 10
+
             radius: 10
             color: root.colBackground
             border.width: 1
@@ -57,11 +64,13 @@ Rectangle {
 
             Row {
                 id: regionInfoRow
+
                 anchors.centerIn: parent
                 spacing: 4
 
                 Loader {
                     id: regionIconLoader
+
                     active: root.showIcon
                     visible: active
                     sourceComponent: IconImage {
@@ -72,6 +81,7 @@ Rectangle {
 
                 StyledText {
                     id: regionText
+
                     text: root.text
                     color: root.colForeground
                 }

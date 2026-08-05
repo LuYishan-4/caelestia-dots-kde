@@ -164,6 +164,7 @@ Searcher {
     // beside the wallpaper caches, keyed the same way getThumbnailPath already
     // described — that path was being computed but never produced by anything.
     property var videoThumbs: ({})   // source path -> cached frame, once it exists
+
     property var videoThumbsPending: ({})
 
     // What a picker should actually display for a wallpaper: the image itself, or

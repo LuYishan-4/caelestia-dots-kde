@@ -26,11 +26,13 @@ Item {
 
         IdleInhibit {
             id: idleInhibit
+
             visible: Config.utilities.showKeepAwake
         }
 
         Record {
             id: record
+
             visible: Config.utilities.showScreenRecorder
 
             props: root.props
@@ -40,6 +42,7 @@ Item {
 
         Toggles {
             id: toggles
+
             visible: Config.utilities.showQuickToggles
 
             visibilities: root.visibilities

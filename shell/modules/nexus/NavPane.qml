@@ -43,6 +43,7 @@ ColumnLayout {
 
     SearchResults {
         id: searchResults
+
         visible: root.nState.searchOpen
 
         Layout.fillWidth: true

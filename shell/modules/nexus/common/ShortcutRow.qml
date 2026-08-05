@@ -1,15 +1,14 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.Services
 import qs.components
 import qs.services
 import qs.modules.nexus.common
-
-import QtQuick.Effects
-import QtQuick.Controls
 
 ConnectedRect {
     id: root
@@ -45,6 +44,7 @@ ConnectedRect {
             StyledText {
                 id: label
                 Layout.fillWidth: true
+
                 font: Tokens.font.body.small
                 elide: Text.ElideRight
             }
@@ -52,6 +52,7 @@ ConnectedRect {
             StyledText {
                 id: status
                 Layout.fillWidth: true
+
                 visible: text
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.label.small
@@ -81,6 +82,7 @@ ConnectedRect {
 
                     RowLayout {
                         id: pillRow
+
                         anchors.centerIn: parent
                         spacing: Tokens.spacing.extraSmall
 
@@ -92,6 +94,7 @@ ConnectedRect {
 
                         Rectangle {
                             property string partCollisionName: KeybindsModel.getKeyCollisionForPart(root.actionName, modelData)
+
                             visible: partCollisionName !== ""
                             Layout.preferredWidth: 8
                             Layout.preferredHeight: 8
@@ -101,11 +104,13 @@ ConnectedRect {
 
                             SequentialAnimation on opacity {
                                 loops: Animation.Infinite
+
                                 NumberAnimation { from: 0.3; to: 1.0; duration: 1000 }
                                 NumberAnimation { from: 1.0; to: 0.3; duration: 1000 }
                             }
 
                             layer.enabled: true
+
                             layer.effect: MultiEffect {
                                 shadowEnabled: true
                                 shadowColor: Colours.palette.m3error
@@ -128,6 +133,7 @@ ConnectedRect {
                             
                             MouseArea {
                                 id: maClose
+
                                 anchors.fill: parent
                                 anchors.margins: -Tokens.padding.small
                                 hoverEnabled: true
@@ -145,12 +151,14 @@ ConnectedRect {
             
             MaterialIcon {
                 id: addIcon
+
                 text: "add"
                 color: maAdd.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 fontStyle: Tokens.font.icon.medium
                 
                 MouseArea {
                     id: maAdd
+
                     anchors.fill: parent
                     anchors.margins: -Tokens.padding.small
                     hoverEnabled: true
@@ -167,6 +175,7 @@ ConnectedRect {
                 
                 MouseArea {
                     id: maReset
+
                     anchors.fill: parent
                     anchors.margins: -Tokens.padding.small
                     hoverEnabled: true

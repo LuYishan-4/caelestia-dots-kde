@@ -15,6 +15,7 @@ Region {
     required property real rRight
 
     property int steps: Math.max(1, blurQuality)
+
     function getM(i) { return Math.ceil(i * steps / 100); }
     function isActive(i) { return getM(i) > getM(i - 1); }
     function getYo(i) { return getM(i) / steps; }
@@ -22,8 +23,11 @@ Region {
 
     // Outer corner radii (only non-zero if both adjacent edges are rounded)
     property real rTL: Math.min(rTop, rLeft)
+
     property real rTR: Math.min(rTop, rRight)
+
     property real rBL: Math.min(rBottom, rLeft)
+
     property real rBR: Math.min(rBottom, rRight)
 
 
@@ -33,26 +37,38 @@ Region {
 
     // Top-left   
     property real tlX: 0 // Shift the whole corner mask horizontally 
+
     property real tlY: 0 // Shift the whole corner mask vertically
+
     property real tlW: 1 // Change the width towards right
+
     property real tlH: 0 // Change the height towards down
 
     // Top-right
     property real trX: -1
+
     property real trY: 0
+
     property real trW: 1
+
     property real trH: 0
 
     // Bottom-left
     property real blX: 0
+
     property real blY: -1
+
     property real blW: 1
+
     property real blH: 1
 
     // Bottom-right
     property real brX: -2
+
     property real brY: -2
+
     property real brW: 2
+
     property real brH: 2
 
     // Top-Left Outer Corner

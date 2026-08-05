@@ -86,6 +86,7 @@ Singleton {
 
     Timer {
         id: saveDebounce
+
         interval: 180
         repeat: false
         onTriggered: writeProc.running = true
@@ -95,6 +96,7 @@ Singleton {
         id: writeProc
 
         property string jsonContent: ""
+
         command: [
             "python3",
             "-c",

@@ -24,6 +24,7 @@ Item {
 
     ColumnLayout {
         id: landscapeLayout
+
         anchors.fill: parent
         visible: !root.isPortrait
         spacing: Tokens.spacing.largeIncreased
@@ -63,6 +64,7 @@ Item {
 
     Item {
         id: portraitLayout
+
         anchors.fill: parent
         visible: root.isPortrait
         implicitWidth: grid.implicitWidth
@@ -70,6 +72,7 @@ Item {
 
         GridLayout {
             id: grid
+
             anchors.centerIn: parent
             columns: 2
             columnSpacing: Tokens.spacing.largeIncreased * 3
@@ -79,6 +82,7 @@ Item {
                 id: pPic
                 Layout.alignment: Qt.AlignHCenter
                 Layout.bottomMargin: Tokens.spacing.extraLarge * root.centerScale
+
                 centerWidth: root.centerWidth
             }
 
@@ -106,6 +110,7 @@ Item {
 
                 PasswordInput {
                     id: pInput
+
                     anchors.horizontalCenter: parent.horizontalCenter
                     centerScale: Math.max(0.8, root.centerScale)
                     centerWidth: root.centerWidth

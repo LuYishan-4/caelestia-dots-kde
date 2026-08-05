@@ -2,12 +2,12 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell.Io
+import M3Shapes
 import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
 import qs.modules.bar.components as BarComponents
-import M3Shapes
 
 StyledRect {
     id: root
@@ -282,6 +282,7 @@ PY
 
     Connections {
         target: BarComponents.GithubStore
+
         function onRefresh(): void {
             root.lastError = "";
             BarComponents.GithubStore.lastError = "";

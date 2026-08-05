@@ -1,12 +1,12 @@
 pragma ComponentBehavior: Bound
 
+import ".."
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.services
-import ".."
 
 ColumnLayout {
     id: root
@@ -20,10 +20,15 @@ ColumnLayout {
     }
 
     readonly property real masterScale: !isNaN(GlobalConfig.bar.previewScale) ? GlobalConfig.bar.previewScale : 1.0
+
     readonly property real elementOffset: GlobalConfig.bar.perElementPreviewScale ? (!isNaN(GlobalConfig.bar.previewScales.kblayout) ? GlobalConfig.bar.previewScales.kblayout : 0.0) : 0.0
+
     readonly property real barScaleOffset: GlobalConfig.bar.previewScaleWithBar ? (!isNaN(GlobalConfig.bar.scale) ? GlobalConfig.bar.scale : 1.0) : 1.0
+
     readonly property real scaleOffset: Math.max(0.1, (masterScale + elementOffset) * barScaleOffset)
+
     readonly property real elementFontOffset: GlobalConfig.bar.perElementFontScale ? (!isNaN(GlobalConfig.bar.previewFontScales.kblayout) ? GlobalConfig.bar.previewFontScales.kblayout : 0.0) : 0.0
+
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
 
     spacing: Tokens.spacing.small * scaleOffset

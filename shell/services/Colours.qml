@@ -103,11 +103,17 @@ Singleton {
     }
 
     property bool cooldownPending
+
     property real lastBaseTransparency
+
     property bool schemeLoaded: false
+
     property int schemeRetryCount: 0
+
     property int maxSchemeRetries: 20
+
     property int startupSchemePollCount: 0
+
     property int maxStartupSchemePolls: 120
 
     function getLuminance(c: color): real {
@@ -344,10 +350,14 @@ Singleton {
     // Trigger PaletteManager update when palette, light mode, or transparency changes
     Connections {
         target: root.palette
+
         function onM3primaryChanged(): void { Qt.callLater(root.updatePaletteManager); }
+
         function onM3backgroundChanged(): void { Qt.callLater(root.updatePaletteManager); }
     }
+
     onLightChanged: Qt.callLater(updatePaletteManager)
+
     onShowPreviewChanged: Qt.callLater(updatePaletteManager)
 
 

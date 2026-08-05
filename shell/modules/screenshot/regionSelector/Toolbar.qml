@@ -11,12 +11,15 @@ Item {
     property color colBackground: Colours.palette.m3surfaceContainer
     property alias spacing: toolbarLayout.spacing
     default property alias toolbarData: toolbarLayout.data
+
     implicitWidth: background.implicitWidth
     implicitHeight: background.implicitHeight
+
     property alias radius: background.radius
 
     Rectangle {
         id: background
+
         anchors.fill: parent
         color: root.colBackground
         implicitHeight: 56
@@ -25,6 +28,7 @@ Item {
 
         RowLayout {
             id: toolbarLayout
+
             spacing: 4
             anchors {
                 fill: parent

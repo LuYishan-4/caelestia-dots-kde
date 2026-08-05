@@ -19,6 +19,7 @@ Loader {
 
     Component {
         id: hyprShortcut
+
         Hypr.GlobalShortcut {
             appid: "caelestia"
             name: root.name
@@ -30,6 +31,7 @@ Loader {
 
     Component {
         id: kdeShortcut
+
         Caelestia.GlobalShortcut {
             name: root.name
             key: root.key

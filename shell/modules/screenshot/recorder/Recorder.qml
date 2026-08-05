@@ -1,15 +1,15 @@
 pragma ComponentBehavior: Bound
 
 import ".."
+import "../../../components"
+import "../../../components/controls"
+import "../../../utils"
+import "../../../services"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Caelestia.Config
-import "../../../components"
-import "../../../components/controls"
-import "../../../utils"
-import "../../../services"
 import qs.components
 import qs.services
 
@@ -18,13 +18,16 @@ Variants {
     
     PanelWindow {
         id: root
+
         required property ShellScreen modelData
+
         screen: modelData
 
         property bool active: false
         
         Connections {
             target: Visibilities.getForActive()
+
             function onScreenshotChanged() {
                 root.active = Visibilities.getForActive().screenshot;
             }
@@ -36,7 +39,9 @@ Variants {
         }
 
         visible: false
+
         color: "transparent"
+
         mask: Region {} // Capture all clicks outside
 
         anchors {
@@ -52,6 +57,7 @@ Variants {
 
         Rectangle {
             id: bg
+
             color: Colours.palette.m3scrim
             opacity: root.active ? 0.3 : 0
             anchors.fill: parent
@@ -68,6 +74,7 @@ Variants {
 
         Rectangle {
             id: panel
+
             anchors.centerIn: parent
             color: Colours.palette.m3surface
             radius: Tokens.rounding.large
@@ -87,6 +94,7 @@ Variants {
 
             ColumnLayout {
                 id: layout
+
                 anchors.centerIn: parent
                 spacing: Tokens.spacing.medium
 
@@ -153,6 +161,7 @@ Variants {
 
         component BigRecorderButton: IconButton {
             id: bigButton
+
             required property string materialSymbol
             required property string name
             

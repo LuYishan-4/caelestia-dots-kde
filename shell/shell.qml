@@ -9,13 +9,6 @@ pragma ComponentBehavior: Bound
 // //@ pragma DefaultEnv QSG_RENDER_LOOP=threaded
 // //@ pragma DefaultEnv QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
-import QtQml
-import Quickshell
-import Quickshell.Io
-import Caelestia.Config
-import qs.components.containers
-import qs.utils
-import qs.services
 import "services" as Services
 import "modules"
 import "modules/drawers"
@@ -26,6 +19,13 @@ import "modules/lock"
 import "modules/polkit"
 import "modules/screenshot/regionSelector"
 import "modules/overview"
+import QtQml
+import Quickshell
+import Quickshell.Io
+import Caelestia.Config
+import qs.components.containers
+import qs.services
+import qs.utils
 
 ShellRoot {
     settings.watchFiles: false
@@ -58,6 +58,7 @@ ShellRoot {
         id: lock
     }
     // PolkitModule {}
+
     property var regionSelector: RegionSelector {}
 
     IpcHandler {
@@ -66,15 +67,19 @@ ShellRoot {
         function screenshot(): void {
             regionSelector.screenshot()
         }
+
         function search(): void {
             regionSelector.search()
         }
+
         function ocr(): void {
             regionSelector.ocr()
         }
+
         function record(): void {
             regionSelector.record()
         }
+
         function recordWithSound(): void {
             regionSelector.recordWithSound()
         }
@@ -82,6 +87,7 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens.filter(s => (GlobalConfig.shimeji?.enabled ?? false) && (GlobalConfig.shimeji?.path?.length ?? 0) > 0 && !Strings.testRegexList(GlobalConfig.shimeji?.excludedScreens ?? [], s.name))
+
         Shimeji {
             shimejiCount: GlobalConfig.shimeji?.count ?? 1
         }
@@ -98,6 +104,7 @@ ShellRoot {
 
     Process {
         id: bbdxCheckProcess
+
         running: true
         command: ["bash", "-c", `
             IS_ENABLED=$(kreadconfig6 --file kwinrc --group Plugins --key better_blur_dxEnabled)
@@ -160,7 +167,10 @@ ShellRoot {
 
     // Force service initialization
     property var _arpcInit: DiscordRPC
+
     property var _gameModeInit: GameMode
+
     property var _updateCheckerInit: UpdateChecker
+
     property var _autoSchemeInit: AutoScheme
 }

@@ -14,6 +14,7 @@ QtObject {
 
     property Connections favConnections: Connections {
         target: GlobalConfig.launcher
+
         function onFavouriteEmojisChanged(): void {
             // No-op: getSortedItems() always reads fresh from C++
         }

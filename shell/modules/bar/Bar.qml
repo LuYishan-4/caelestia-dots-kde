@@ -32,22 +32,29 @@ Item {
     }
 
     readonly property int vPadding: Tokens.padding.large
+
     readonly property real barScale: Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0)
+
     readonly property int thickness: Math.round(Tokens.sizes.bar.innerWidth * barScale)
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
+
     readonly property real leftZoneSize: isHorizontal ? leftLayout.implicitWidth : leftLayout.implicitHeight
+
     readonly property real middleZoneSize: isHorizontal ? middleLayout.implicitWidth : middleLayout.implicitHeight
+
     readonly property real rightZoneSize: isHorizontal ? rightLayout.implicitWidth : rightLayout.implicitHeight
 
     property var leftEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && (!e.zone || e.zone === "left") && e.id !== "spacer");
     }
+
     property var middleEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && e.zone === "middle" && e.id !== "spacer");
     }
+
     property var rightEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && e.zone === "right" && e.id !== "spacer");
@@ -251,6 +258,7 @@ Item {
 
     GridLayout {
         id: leftLayout
+
         anchors.left: isHorizontal ? parent.left : undefined
         anchors.top: !isHorizontal ? parent.top : undefined
         anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
@@ -267,6 +275,7 @@ Item {
 
         Repeater {
             id: leftRepeater
+
             model: root.leftEntries
             delegate: barDelegate
         }
@@ -279,11 +288,15 @@ Item {
         anchors.horizontalCenter: !isHorizontal ? parent.horizontalCenter : undefined
 
         property real idealX: (parent.width - width) / 2
+
         property real minX: leftLayout.x + leftLayout.width + Tokens.spacing.medium
+
         property real maxX: rightLayout.x - width - Tokens.spacing.medium
 
         property real idealY: (parent.height - height) / 2
+
         property real minY: leftLayout.y + leftLayout.height + Tokens.spacing.medium
+
         property real maxY: rightLayout.y - height - Tokens.spacing.medium
 
         // Plain ternaries assigning `undefined` to x/y (a real-typed property)
@@ -300,13 +313,18 @@ Item {
         }
 
         columns: isHorizontal ? -1 : 1
+
         rows: isHorizontal ? 1 : -1
+
         flow: isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
+
         columnSpacing: Tokens.spacing.medium
+
         rowSpacing: Tokens.spacing.medium
 
         Repeater {
             id: middleRepeater
+
             model: root.middleEntries
             delegate: barDelegate
         }
@@ -314,6 +332,7 @@ Item {
 
     GridLayout {
         id: rightLayout
+
         anchors.right: isHorizontal ? parent.right : undefined
         anchors.bottom: !isHorizontal ? parent.bottom : undefined
         anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
@@ -330,6 +349,7 @@ Item {
 
         Repeater {
             id: rightRepeater
+
             model: root.rightEntries
             delegate: barDelegate
         }
@@ -337,6 +357,7 @@ Item {
 
     DelegateChooser {
         id: barDelegate
+
         role: "id"
 
             DelegateChoice {

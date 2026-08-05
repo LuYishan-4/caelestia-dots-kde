@@ -3,6 +3,7 @@ import Quickshell
 
 Region {
     id: root
+
     required property Item target
     required property Item contentItem
     property string vAnchor: (target && target["vAnchor"] !== undefined) ? target["vAnchor"] : "bottom" 

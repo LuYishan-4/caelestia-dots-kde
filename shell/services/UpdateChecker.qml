@@ -7,8 +7,8 @@ import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
-import qs.utils
 import qs.services
+import qs.utils
 
 Singleton {
     id: root
@@ -350,6 +350,7 @@ fi
     // Process to read local commit and saved branch
     Process {
         id: localCommitProcess
+
         running: GlobalConfig.general.checkUpdates
         command: ["bash", "-c", "echo \"$(cat ~/.config/quickshell/caelestia/.current_commit 2>/dev/null)|$(cat ~/.config/quickshell/caelestia/.update_branch 2>/dev/null)\""]
         stdout: StdioCollector {
@@ -367,6 +368,7 @@ fi
 
     Process {
         id: gitProcess
+
         command: []
         onExited: _code => { // qmllint disable signal-handler-parameters
             root.checkingUpdates = false;
@@ -553,21 +555,29 @@ fi
 
     Settings {
         id: updaterSettings
+
         category: "Updater"
+
         property bool deployConfigs: true
+
         property bool buildShell: true
     }
 
     property alias deployConfigs: updaterSettings.deployConfigs
+
     property alias buildShell: updaterSettings.buildShell
 
     // ---- Claude Code (the `claude` CLI backing the AI assistant) ----
     // Checked alongside the shell's own updates so the AI settings page can offer
     // "Update" or "Check for updates" without having to poll on its own.
     property string claudeCodeVersion: ""       // installed, "" when not installed
+
     property string claudeCodeLatestVersion: "" // newest published, "" when unknown
+
     property bool claudeCodeChecking: false
+
     readonly property bool claudeCodeInstalled: claudeCodeVersion !== ""
+
     readonly property bool claudeCodeHasUpdate: claudeCodeInstalled
         && claudeCodeLatestVersion !== ""
         && claudeCodeLatestVersion !== claudeCodeVersion
@@ -623,6 +633,7 @@ echo "$INSTALLED|$LATEST"
 
     Process {
         id: updateProcess
+
         command: [Paths.absolutePath("~/.local/bin/caelestia-update"), root.currentBranch]
             .concat(root.targetVersion !== "" ? [root.targetVersion] : [])
         environment: ({

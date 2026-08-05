@@ -58,6 +58,7 @@ ColumnLayout {
 
                     Rectangle {
                         id: nub
+
                         width: 24 * root.scaleOffset
                         height: 10 * root.scaleOffset
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -75,6 +76,7 @@ ColumnLayout {
 
                     Item {
                         id: batteryBody
+
                         anchors.top: parent.top
                         anchors.topMargin: 8 * root.scaleOffset
                         anchors.bottom: parent.bottom
@@ -83,6 +85,7 @@ ColumnLayout {
 
                         Item {
                             id: liquidContainer
+
                             anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -112,6 +115,7 @@ ColumnLayout {
                             // The safely clipped subtle wave
                             Item {
                                 id: waveLayer
+
                                 anchors.top: parent.top
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -124,6 +128,7 @@ ColumnLayout {
                                     if (parent.height < 40) return (parent.height - 30) / 10.0;
                                     return 1.0;
                                 }
+
                                 Behavior on opacity { NumberAnimation { duration: 300 } }
                                 
                                 Rectangle {
@@ -222,6 +227,7 @@ ColumnLayout {
 
                     Column {
                         id: child
+
                         anchors.centerIn: parent
 
                         Row {

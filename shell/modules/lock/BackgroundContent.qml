@@ -1,9 +1,9 @@
+import "weather"
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.services
-import "weather"
 
 Item {
     id: root
@@ -43,6 +43,7 @@ Item {
                     id: fetchBox
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
+
                     rootHeight: root.height
                 }
 

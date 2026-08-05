@@ -6,6 +6,7 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
+
 Item {
     id: root
 
@@ -20,9 +21,13 @@ Item {
     // extra vertical room; plain release rows (main branch) stay compact so
     // the two channels remain visually distinct at a glance.
     readonly property bool richMode: root.entries.some(e => !e.isRelease && (!!e.author || !!e.subject))
+
     readonly property int rowHeight: root.richMode ? 68 : 44
+
     readonly property int gutterWidth: 32
+
     readonly property real dotRadius: root.richMode ? 6 : 5
+
     readonly property real currentDotRadius: 10
 
     // Conventional-commit prefix → { label, colour } lookup. Gives the dev
@@ -109,6 +114,7 @@ Item {
                 radius: Tokens.rounding.extraSmall
                 color: Colours.palette.m3onSurface
                 opacity: entry.hovered && entry.isClickable ? 0.07 : 0.0
+
                 Behavior on opacity { NumberAnimation { duration: 100 } }
             }
 
@@ -139,7 +145,9 @@ Item {
             // Dot
             Rectangle {
                 id: dot
+
                 readonly property real r: entry.isCurrent ? root.currentDotRadius : root.dotRadius
+
                 x: root.gutterWidth / 2 - r
                 anchors.verticalCenter: parent.verticalCenter
                 width: r * 2
@@ -211,6 +219,7 @@ Item {
                             return entry.typeColor;
                         }
                         elide: Text.ElideRight
+
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
 
@@ -226,6 +235,7 @@ Item {
 
                         StyledText {
                             id: chipText
+
                             anchors.centerIn: parent
                             text: entry.typeInfo ? entry.typeInfo.label : ""
                             font: Tokens.font.label.small
@@ -245,6 +255,7 @@ Item {
 
                         StyledText {
                             id: mergeText
+
                             anchors.centerIn: parent
                             text: qsTr("merge")
                             font: Tokens.font.label.small

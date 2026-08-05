@@ -23,6 +23,7 @@ Searcher {
 
     Process {
         id: getPreviewColoursProc
+
         stdout: StdioCollector {
             onStreamFinished: {
                 Colours.load(text, true);
@@ -87,6 +88,7 @@ Searcher {
             description: Strings.localizeEnglishSpelling(qsTr("All colours are grayscale, no chroma."))
         }
     ]
+
     useFuzzy: GlobalConfig.launcher.useFuzzy.variants
 
     component Variant: QtObject {

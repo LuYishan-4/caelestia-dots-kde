@@ -1,5 +1,4 @@
 import "../../../utils/scripts/solartime.js" as Solar
-
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -69,6 +68,7 @@ PageBase {
             text: qsTr("None")
         }
     ]
+
     readonly property list<string> gpuValues: ["", "NVIDIA", "GENERIC", "None"]
 
     function gpuKeyToIndex(key: string): int {

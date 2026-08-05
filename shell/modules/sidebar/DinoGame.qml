@@ -7,8 +7,8 @@ import Caelestia.Services
 import qs.components
 import qs.components.controls
 import qs.components.effects
-import qs.utils
 import qs.services
+import qs.utils
 
 Item {
     id: root
@@ -16,28 +16,37 @@ Item {
     // Smoothly animated theme color
     property color activeColor: DinoGameBackend.isInverted ? Colours.palette.m3inverseOnSurface : Colours.palette.m3onSurface
     property color bgColor: DinoGameBackend.isInverted ? Colours.palette.m3inverseSurface : "transparent"
+
     Behavior on activeColor { CAnim { duration: 500 } }
     Behavior on bgColor { CAnim { duration: 500 } }
     
     // Game variables alias
     property bool isPlaying: DinoGameBackend.isPlaying
+
     property bool isGameOver: DinoGameBackend.isGameOver
+
     property bool _previousDnd: false
     
     implicitWidth: Math.max(250, parent.width * 0.8)
+
     implicitHeight: 200
+
     clip: true
+
     focus: true
     
     onWidthChanged: DinoGameBackend.width = width
+
     Component.onCompleted: DinoGameBackend.width = width
     
     Connections {
         target: DinoGameBackend
+
         function onGameStarted() {
             _previousDnd = Notifs.dnd;
             if (!Notifs.dnd) Notifs.dnd = true;
         }
+
         function onGameDied() {
             if (!_previousDnd) Notifs.dnd = false;
         }
@@ -145,9 +154,11 @@ Item {
                 source: Paths.absolutePath("root:/assets/dino.png")
                 fillMode: Image.PreserveAspectFit
                 opacity: Visibilities.isCaelestiaMode ? 0 : 1
+
                 Behavior on opacity { Anim { type: Anim.Standard } }
 
                 layer.enabled: true
+
                 layer.effect: Colouriser {
                     colorizationColor: root.activeColor
                     brightness: 1
@@ -159,6 +170,7 @@ Item {
                 width: 250
                 height: 109.375
                 opacity: Visibilities.isCaelestiaMode ? 1 : 0
+
                 Behavior on opacity { Anim { type: Anim.Standard } }
 
                 Item {
@@ -255,6 +267,7 @@ Item {
         // Parallax Clouds
         Repeater {
             model: DinoGameBackend.clouds
+
             Image {
                 x: modelData.x
                 y: modelData.y
@@ -274,6 +287,7 @@ Item {
         // Dino
         Image {
             id: dino
+
             width: DinoGameBackend.isDucking ? 59 : 44
             height: DinoGameBackend.isDucking ? 30 : 47
             source: {
@@ -307,6 +321,7 @@ Item {
         // Obstacles renderer
         Repeater {
             model: DinoGameBackend.obstacles
+
             Image {
                 width: modelData.width
                 height: modelData.height

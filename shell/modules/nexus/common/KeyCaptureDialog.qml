@@ -51,6 +51,7 @@ Popup {
         }
         Rectangle {
             id: bgRect
+
             anchors.fill: parent
             color: Colours.palette.m3surfaceContainerHigh
             radius: 16
@@ -67,17 +68,20 @@ Popup {
 
     Timer {
         id: focusTimer
+
         interval: 10
         onTriggered: focusScope.forceActiveFocus()
     }
 
     Process {
         id: blockShortcutsProc
+
         command: ["bash", "-c", "gdbus call --session --dest=org.kde.kglobalaccel --object-path=/kglobalaccel --method=org.kde.KGlobalAccel.blockGlobalShortcuts 'true'"]
     }
 
     Process {
         id: unblockShortcutsProc
+
         command: ["bash", "-c", "gdbus call --session --dest=org.kde.kglobalaccel --object-path=/kglobalaccel --method=org.kde.KGlobalAccel.blockGlobalShortcuts 'false'"]
         onExited: {
             root.unblocked()
@@ -95,6 +99,7 @@ Popup {
 
     contentItem: ColumnLayout {
         id: contentColumn
+
         spacing: 16
 
         StyledText {

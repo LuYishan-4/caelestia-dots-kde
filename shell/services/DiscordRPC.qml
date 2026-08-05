@@ -1,14 +1,14 @@
 pragma Singleton
 
 import QtQuick
-import Caelestia.Config
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia
+import Caelestia.Config
 import Caelestia.Services
-import qs.utils
 import qs.services
+import qs.utils
 
 Item {
     id: root
@@ -17,6 +17,7 @@ Item {
     property string clientId: GlobalConfig.services.arpcClientId || "1126685412586733678"
 
     property string steamGridDbKey: ""
+
     onSteamGridDbKeyChanged: {
         if (root.currentSteamAppId !== "") {
             root.currentSteamData = null;
@@ -54,6 +55,7 @@ Item {
     /// doing before you walked away. Uses the Wayland idle protocol rather than
     /// a focus-change heuristic, so it also covers sitting and reading.
     readonly property int idleTimeout: GlobalConfig.services.arpcIdleTimeout
+
     property bool userIdle: false
 
     onUserIdleChanged: {
@@ -81,12 +83,14 @@ Item {
 
     Connections {
         target: DiscordIpc
+
         function onConnectedChanged() {
             if (DiscordIpc.connected) {
                 Logger.log("Discord ARPC connected");
                 root.updatePresence();
             }
         }
+
         function onErrorOccurred(errorString) {
             Logger.log("Discord ARPC error: " + errorString);
         }
@@ -126,36 +130,54 @@ Item {
         target: KWinActiveWindowBridge
         enabled: root.active
         ignoreUnknownSignals: true
+
         function onWindowListChanged() { root.updatePresence(); }
+
         function onActiveWindowChanged() { root.updatePresence(); }
     }
 
     Connections {
         target: GlobalConfig.services
         enabled: root.active
+
         function onArpcSteamAutoDetectChanged() { root.updatePresence(); }
+
         function onArpcTargetWindowsChanged() { root.updatePresence(); }
+
         function onArpcTargetWindowLabelsChanged() { root.updatePresence(); }
+
         function onArpcCaelestiaInfoChanged() { root.updatePresence(); }
+
         function onArpcSteamBlacklistChanged() { root.updatePresence(); }
+
         function onArpcAppNameChanged() { root.updatePresence(); }
+
         function onArpcDetailsChanged() { root.updatePresence(); }
+
         function onArpcStateChanged() { root.updatePresence(); }
+
         function onArpcLargeImageChanged() { root.updatePresence(); }
+
         function onArpcSmallImageChanged() { root.updatePresence(); }
+
         function onArpcManualOverrideChanged() { root.updatePresence(); }
     }
 
     Connections {
         target: Colours
         enabled: root.active
+
         function onSchemeChanged() { root.updatePresence(); }
+
         function onLightChanged() { root.updatePresence(); }
+
         function onVariantChanged() { root.updatePresence(); }
     }
 
     property string currentSteamAppId: ""
+
     property var currentSteamData: null
+
     property bool fetchingSteam: false
 
     function updatePresence() {

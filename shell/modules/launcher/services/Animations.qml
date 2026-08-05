@@ -19,6 +19,7 @@ Searcher {
 
     Process {
         id: getAnimationsProc
+
         running: typeof KWinActiveWindowBridge === "undefined"
         command: ["sh", "-c", "ls -1 ~/.config/caelestia/animations/*.lua || true"]
         stdout: StdioCollector {

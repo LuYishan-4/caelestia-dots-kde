@@ -100,6 +100,7 @@ Singleton {
     // Native D-Bus listener — replaces the former dbus-monitor process
     Connections {
         target: BrightnessWatcher
+
         function onBrightnessChanged(): void {
             if (!dbusSyncTimer.running) {
                 dbusSyncTimer.start();
@@ -109,6 +110,7 @@ Singleton {
 
     Timer {
         id: dbusSyncTimer
+
         interval: 100
         repeat: false
         onTriggered: {

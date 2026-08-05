@@ -71,6 +71,7 @@ ColumnLayout {
 
         StyledSlider {
             id: daySlider
+
             anchors.left: parent.left
             anchors.right: parent.right
             implicitHeight: parent.implicitHeight
@@ -107,6 +108,7 @@ ColumnLayout {
 
         StyledSlider {
             id: nightSlider
+
             anchors.left: parent.left
             anchors.right: parent.right
             implicitHeight: parent.implicitHeight

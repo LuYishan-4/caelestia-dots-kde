@@ -95,15 +95,19 @@ QtObject {
     /// Connections block to forward the C++ imageReady signal to the QML world.
     property var _conn: Connections {
         target: ClipboardManager
+
         function onImageReady(id: int, path: string): void {
             root.imageReady(id, path);
         }
+
         function onClearHistoryFinished(success: bool): void {
             root.clearHistoryFinished(success);
         }
+
         function onPinFailed(id: int): void {
             root.pinFailed(id);
         }
+
         function onItemsChanged(): void {
             root.migrateFavourites();
         }

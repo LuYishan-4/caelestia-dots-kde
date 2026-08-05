@@ -1,11 +1,12 @@
 import ".."
 import QtQuick
-import qs.components
 import Caelestia.Config
+import qs.components
 import qs.services
 
 Item {
     id: root
+
     property var action
     property var selectionMode
     property bool active: false
@@ -32,6 +33,7 @@ Item {
     case RegionSelection.SnipAction.RecordWithSound:
         return qsTr("Record region");
     }
+
     property string materialSymbol: switch (root.action) {
     case RegionSelection.SnipAction.Copy:
     case RegionSelection.SnipAction.Edit:
@@ -43,6 +45,7 @@ Item {
     case RegionSelection.SnipAction.Record:
     case RegionSelection.SnipAction.RecordWithSound:
         return "videocam";
+
     default:
         return "";
     }
@@ -50,11 +53,14 @@ Item {
     property bool showDescription: true
 
     property int margins: 8
+
     implicitWidth: content.implicitWidth + margins * 2
+
     implicitHeight: content.implicitHeight + margins * 2
 
     Rectangle {
         id: content
+
         anchors.left: parent.left
         anchors.leftMargin: root.margins
         anchors.verticalCenter: parent.verticalCenter
@@ -63,21 +69,28 @@ Item {
         implicitHeight: 38
         implicitWidth: root.showDescription ? contentRow.implicitWidth + padding * 2 : implicitHeight
         width: root.active ? implicitWidth : implicitHeight
+
         Behavior on width {
             SequentialAnimation {
                 PauseAnimation { duration: root.active ? 150 : 0 }
                 Anim { type: Anim.SlowSpatial }
             }
         }
+
         clip: true
 
         topLeftRadius: 6
+
         bottomLeftRadius: implicitHeight - topLeftRadius
+
         bottomRightRadius: bottomLeftRadius
+
         topRightRadius: bottomLeftRadius
 
         color: Colours.palette.m3surfaceContainerHigh
+
         border.width: 1
+
         border.color: Colours.palette.m3outlineVariant
 
         Row {
@@ -87,6 +100,7 @@ Item {
                 left: parent.left
                 leftMargin: content.padding
             }
+
             spacing: 12
 
             MaterialIcon {
@@ -98,6 +112,7 @@ Item {
 
             StyledText {
                 id: descriptionText
+
                 anchors.verticalCenter: parent.verticalCenter
                 color: Colours.palette.m3onSurface
                 text: root.description

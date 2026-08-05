@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 pragma Singleton
+
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.synchronizer
