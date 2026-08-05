@@ -99,7 +99,7 @@ class BarStatus : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
-    CONFIG_PROPERTY(bool, showAudio, false)
+    CONFIG_PROPERTY(bool, showAudio, true)
     CONFIG_PROPERTY(bool, showMicrophone, false)
     CONFIG_PROPERTY(bool, showKbLayout, false)
     CONFIG_PROPERTY(bool, showNetwork, true)

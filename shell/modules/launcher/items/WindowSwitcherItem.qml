@@ -18,6 +18,7 @@ Item {
 
     required property var modelData
     required property var list
+
     property bool _skipOpenAnim: true
 
     function clicked(): void {
@@ -31,23 +32,17 @@ Item {
         Windows.closeWindow(root.modelData.address);
     }
 
-    Connections {
-        target: Windows
-        function onSelectedIndexChanged() {
-            root._skipOpenAnim = false;
-        }
-    }
-
-    Timer {
-        interval: 400
-        running: true
-        onTriggered: root._skipOpenAnim = false
-    }
+    width: list.itemWidth
+    implicitWidth: previewBox.maxW + Tokens.padding.largeIncreased * 2
+    implicitHeight: previewBox.maxH + label.height + Tokens.spacing.small / 2 + Tokens.padding.large + Tokens.padding.medium
+    scale: 0.5
+    opacity: 0
+    z: ListView.isCurrentItem ? 1 : 0
 
     Component.onCompleted: {
         scale = Qt.binding(() => ListView.isCurrentItem ? 1 : 0.8);
         opacity = 1;
-        
+
         if (root.modelData) {
             WinIcons.request(root.modelData.class, root.modelData.title);
         }
@@ -58,12 +53,6 @@ Item {
             }
         });
     }
-    scale: 0.5
-    opacity: 0
-    z: ListView.isCurrentItem ? 1 : 0
-    implicitWidth: previewBox.maxW + Tokens.padding.largeIncreased * 2
-    implicitHeight: previewBox.maxH + label.height + Tokens.spacing.small / 2 + Tokens.padding.large + Tokens.padding.medium
-    width: list.itemWidth
 
     HoverHandler {
         id: tileHover
@@ -75,6 +64,7 @@ Item {
         radius: Tokens.rounding.medium
         onClicked: root.clicked()
     }
+
     StyledRect {
         id: shadowRect
 
@@ -88,6 +78,7 @@ Item {
             Anim { type: Anim.FastEffects }
         }
     }
+
     StyledClippingRect {
         id: previewBox
 
@@ -100,17 +91,13 @@ Item {
             }
             return 16.0 / 9.0;
         }
+        readonly property real maxW: Tokens.sizes.launcher.windowSwitcherWidth
+        readonly property real maxH: maxW / 16 * 9
         property var streamRequest: null
         readonly property int serial: streamRequest ? streamRequest.objectSerial : 0
 
         anchors.horizontalCenter: parent.horizontalCenter
         y: Tokens.padding.large
-        color: "transparent"
-        radius: Tokens.rounding.medium
-
-        readonly property real maxW: Tokens.sizes.launcher.windowSwitcherWidth
-        readonly property real maxH: maxW / 16 * 9
-
         implicitWidth: {
             const h = maxW / windowAspect;
             if (h > maxH) return maxH * windowAspect;
@@ -121,6 +108,9 @@ Item {
             if (w > maxW) return maxW / windowAspect;
             return maxH;
         }
+        color: "transparent"
+        radius: Tokens.rounding.medium
+
         Component.onDestruction: {
             if (previewBox.streamRequest && root.modelData && root.modelData.address) {
                 ScreencastManager.releaseStream(root.modelData.address);
@@ -139,6 +129,7 @@ Item {
                 }
             }
         }
+
         IconImage {
             anchors.centerIn: parent
             implicitSize: previewBox.height * 0.5
@@ -146,6 +137,7 @@ Item {
             visible: previewBox.serial === 0
             source: root.modelData ? WinIcons.sourceFor(null, root.modelData.class, root.modelData.iconName) : ""
         }
+
         Pipewire.PipeWireSourceItem {
             anchors.centerIn: parent
             width: Math.min(parent.width, parent.height * previewBox.windowAspect)
@@ -179,11 +171,13 @@ Item {
 
             MaterialIcon {
                 id: closeIcon
+
                 anchors.centerIn: parent
                 text: "close"
             }
         }
     }
+
     StyledText {
         id: label
 
@@ -197,11 +191,27 @@ Item {
         text: root.modelData?.title ?? ""
         font: Tokens.font.body.medium
     }
+
+    Connections {
+        function onSelectedIndexChanged() {
+            root._skipOpenAnim = false;
+        }
+
+        target: Windows
+    }
+
+    Timer {
+        interval: 400
+        running: true
+        onTriggered: root._skipOpenAnim = false
+    }
+
     Behavior on scale {
         enabled: !root._skipOpenAnim
 
         Anim { type: Anim.FastSpatial }
     }
+
     Behavior on opacity {
         enabled: !root._skipOpenAnim
 
