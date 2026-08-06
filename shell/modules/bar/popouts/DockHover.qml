@@ -17,7 +17,7 @@ StyledRect {
     property var model: popouts.dockModel
     // Resolved through the same helper the taskbar tile uses, so the hover popup
     // can never disagree with the tile it belongs to.
-    readonly property string iconSource: model ? WinIcons.sourceFor(model.entry, model.appClass, model.iconName) : ""
+    readonly property string iconSource: model ? WinIcons.sourceFor(model.entry, model.appClass, model.iconName, model.pid ?? 0) : ""
     property MprisPlayer player: {
         if (!model) return null;
         return Players.list.find(p => p.identity.toLowerCase().includes(model.appClass.toLowerCase()) || (model.id && p.identity.toLowerCase().includes(model.id.toLowerCase().replace(".desktop", "")))) || null;

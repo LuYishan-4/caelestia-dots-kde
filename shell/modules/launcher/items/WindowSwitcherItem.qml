@@ -44,7 +44,7 @@ Item {
         opacity = 1;
 
         if (root.modelData) {
-            WinIcons.request(root.modelData.class, root.modelData.title);
+            WinIcons.request(root.modelData.class, root.modelData.title, root.modelData.pid ?? 0);
         }
 
         Qt.callLater(() => {
@@ -135,7 +135,7 @@ Item {
             implicitSize: previewBox.height * 0.5
             asynchronous: true
             visible: previewBox.serial === 0
-            source: root.modelData ? WinIcons.sourceFor(null, root.modelData.class, root.modelData.iconName) : ""
+            source: root.modelData ? WinIcons.sourceFor(null, root.modelData.class, root.modelData.iconName, root.modelData.pid ?? 0) : ""
         }
 
         Pipewire.PipeWireSourceItem {
