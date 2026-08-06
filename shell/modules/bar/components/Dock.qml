@@ -36,21 +36,84 @@ Item {
 
     HoverHandler { id: dockHover }
 
-    // Drives the icon-geometry publishing below. A tile's rect on screen moves
-    // for reasons no single binding can watch — the bar sliding in and out, the
+    // Re-publishes the icon geometry below. A tile's rect on screen moves for
+    // reasons no single binding can watch — the bar sliding in and out, the
     // dock list scrolling, a drag reordering tiles — and mapToItem() is a plain
     // call that never re-runs on its own. Re-reading a handful of rects twice a
     // second covers all of it, and MinimizeGeometry drops rects that have not
     // actually changed, so a steady dock sends nothing over the wire.
     Timer {
-        id: minimizeGeometryTicker
-
         interval: 500
         repeat: true
         running: root.visible
+        onTriggered: root.publishMinimizeGeometry()
     }
 
     ListModel { id: dockModel }
+
+    // Tell KWin where each app's taskbar entry sits, so minimize/restore
+    // effects animate into the dock instead of guessing from the cursor.
+    //
+    // The rects are derived from the list's own geometry and the entry's index
+    // rather than from each delegate: a delegate reports position 0 here, so
+    // asking it gave every window the same rect — whichever tile published last
+    // won, and every app animated to that one spot.
+    //
+    // This component is also instantiated where it has no bar to sit on (with
+    // no window, or laid out to zero size). Those copies have no meaningful
+    // rect to offer and would otherwise overwrite the real dock's, so they are
+    // skipped rather than allowed to publish nonsense.
+    function publishMinimizeGeometry(): void {
+        const win = QsWindow.window;
+        if (!win || listView.width <= 0 || listView.height <= 0)
+            return;
+
+        const horizontal = bar.isHorizontal;
+        const origin = listView.mapToItem(null, 0, 0);
+        const size = Math.round(container.itemSize);
+        const step = container.itemSize + root.spacing;
+        const span = horizontal ? listView.width : listView.height;
+        const scrolled = horizontal ? listView.contentX : listView.contentY;
+
+        for (let i = 0; i < root.modelDataArray.length; i++) {
+            const tops = root.modelDataArray[i]?.toplevels ?? [];
+            if (tops.length === 0)
+                continue;
+
+            // Where this entry sits along the list, accounting for scrolling,
+            // clamped to the strip the list actually occupies. A tile scrolled
+            // out of view has no rect of its own, and leaving the last one
+            // published would point the animation at wherever the dock used to
+            // be — stale across a scroll, and badly wrong across a bar move.
+            // The nearest edge is where it would scroll back in from.
+            const offset = Math.max(0, Math.min(i * step - scrolled, span - size));
+
+            let x = Math.round(horizontal ? origin.x + offset : origin.x);
+            let y = Math.round(horizontal ? origin.y : origin.y + offset);
+            let w = size;
+            let h = size;
+
+            if (Config.bar.position === "left") {
+                w = x + size;
+                x = 0;
+            } else if (Config.bar.position === "right") {
+                const winW = win ? win.width : 0;
+                w = winW > 0 ? winW - x : size;
+            } else if (Config.bar.position === "top") {
+                h = y + size;
+                y = 0;
+            } else if (Config.bar.position === "bottom") {
+                const winH = win ? win.height : 0;
+                h = winH > 0 ? winH - y : size;
+            }
+
+            for (let j = 0; j < tops.length; j++) {
+                const address = tops[j]?.address;
+                if (address)
+                    MinimizeGeometry.setGeometry(root, String(address), x, y, w, h);
+            }
+        }
+    }
 
     function saveNewOrder(): void {
         const newArr = [];
@@ -287,33 +350,6 @@ Item {
                     Drag.source: delegateItem
                     Drag.hotSpot.x: width / 2
                     Drag.hotSpot.y: height / 2
-                    Component.onCompleted: minimizeTarget.publish()
-
-                    // Tell KWin this tile is where the app's windows live in the
-                    // taskbar, so minimize/restore effects animate into it. With
-                    // nothing published, Magic Lamp has no icon geometry to aim
-                    // at and falls back to following the cursor.
-                    QtObject {
-                        id: minimizeTarget
-
-                        function publish(): void {
-                            const tops = modelData?.toplevels ?? [];
-                            for (let i = 0; i < tops.length; i++) {
-                                const address = tops[i]?.address;
-                                if (address)
-                                    MinimizeGeometry.setGeometry(delegateItem, String(address));
-                            }
-                        }
-                    }
-
-                    Connections {
-                        function onTriggered(): void {
-                            minimizeTarget.publish();
-                        }
-
-                        target: minimizeGeometryTicker
-                    }
-
                     StateLayer {
                         id: stateLayer
 

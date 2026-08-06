@@ -72,6 +72,28 @@ StyledWindow {
     }
 
     name: "drawers"
+
+    // StyledWindow hardcodes WlrLayershell.namespace to "panel" (or "desktop"
+    // for isDesktopWidget) — name above is a local label with no effect on the
+    // Wayland namespace at all, despite reading like it should be one.
+    //
+    // KWin classifies a layer-shell surface's window type from that namespace
+    // string (LayerShellV1Window::scopeToType() maps "dock" -> WindowType::Dock,
+    // anything not in its fixed list, "panel" included, -> WindowType::Normal).
+    // Effects that need to know "is this a taskbar" — Magic Lamp's minimize
+    // animation among them — key off that type, not off the published icon
+    // geometry alone. With this surface reporting as Normal, Magic Lamp's own
+    // panel lookup (stacking-order search for a window where isDock() is true
+    // and its geometry intersects the published icon rect) never finds a match,
+    // so it falls through to its "no panel found" heuristic: check whether the
+    // icon rect touches a screen edge by exact pixel equality, and default to
+    // Bottom if none do. Our published rects sit a few pixels in from the true
+    // edge (padding), so that check never passes and every orientation silently
+    // got Bottom's animation math — a barely-there warp for a bottom bar, a
+    // visibly wrong one for left/right, and a degenerate, invisible one for
+    // top, since Bottom's math assumes the icon is below the window, the
+    // opposite of where it actually is.
+    WlrLayershell.namespace: "panel"
     mask: {
         if (hasOpenOverlay) return fullRegion;
         if (hasFullscreen) return emptyRegion;

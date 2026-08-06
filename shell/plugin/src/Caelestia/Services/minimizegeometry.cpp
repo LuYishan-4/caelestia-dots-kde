@@ -36,22 +36,20 @@ MinimizeGeometry::MinimizeGeometry(QObject* parent)
         [this](const QString& uuid) { m_published.remove(uuid); });
 }
 
-void MinimizeGeometry::setGeometry(QQuickItem* tile, const QString& uuid) {
-    if (!tile || uuid.isEmpty() || tile->width() <= 0 || tile->height() <= 0) {
+void MinimizeGeometry::setGeometry(QQuickItem* anchor, const QString& uuid, int x, int y, int width, int height) {
+    if (!anchor || uuid.isEmpty() || width <= 0 || height <= 0) {
         return;
     }
 
-    auto* surface = surfaceFor(tile->window());
+    auto* surface = surfaceFor(anchor->window());
     if (!surface) {
         return;
     }
 
-    // Scene coordinates are surface coordinates: the item's window is the
+    // Scene coordinates are surface coordinates: the anchor's window is the
     // surface the rect is declared against.
-    const auto topLeft = tile->mapToScene(QPointF(0, 0));
-    const QRect rect(qRound(topLeft.x()), qRound(topLeft.y()), qRound(tile->width()), qRound(tile->height()));
-
     const auto key = PlasmaWindows::normaliseUuid(uuid);
+    const QRect rect(x, y, width, height);
     if (m_published.value(key) == rect) {
         return;
     }
@@ -69,7 +67,7 @@ void MinimizeGeometry::setGeometry(QQuickItem* tile, const QString& uuid) {
     m_published.insert(key, rect);
 }
 
-void MinimizeGeometry::clearGeometry(QQuickItem* tile, const QString& uuid) {
+void MinimizeGeometry::clearGeometry(QQuickItem* anchor, const QString& uuid) {
     if (uuid.isEmpty()) {
         return;
     }
@@ -79,7 +77,7 @@ void MinimizeGeometry::clearGeometry(QQuickItem* tile, const QString& uuid) {
         return;
     }
 
-    if (auto* surface = tile ? surfaceFor(tile->window()) : nullptr) {
+    if (auto* surface = anchor ? surfaceFor(anchor->window()) : nullptr) {
         if (auto* handle = PlasmaWindows::instance()->handleFor(key)) {
             handle->unset_minimized_geometry(surface);
         }
