@@ -36,6 +36,20 @@ Item {
 
     HoverHandler { id: dockHover }
 
+    // Drives the icon-geometry publishing below. A tile's rect on screen moves
+    // for reasons no single binding can watch — the bar sliding in and out, the
+    // dock list scrolling, a drag reordering tiles — and mapToItem() is a plain
+    // call that never re-runs on its own. Re-reading a handful of rects twice a
+    // second covers all of it, and MinimizeGeometry drops rects that have not
+    // actually changed, so a steady dock sends nothing over the wire.
+    Timer {
+        id: minimizeGeometryTicker
+
+        interval: 500
+        repeat: true
+        running: root.visible
+    }
+
     ListModel { id: dockModel }
 
     function saveNewOrder(): void {
@@ -273,6 +287,32 @@ Item {
                     Drag.source: delegateItem
                     Drag.hotSpot.x: width / 2
                     Drag.hotSpot.y: height / 2
+                    Component.onCompleted: minimizeTarget.publish()
+
+                    // Tell KWin this tile is where the app's windows live in the
+                    // taskbar, so minimize/restore effects animate into it. With
+                    // nothing published, Magic Lamp has no icon geometry to aim
+                    // at and falls back to following the cursor.
+                    QtObject {
+                        id: minimizeTarget
+
+                        function publish(): void {
+                            const tops = modelData?.toplevels ?? [];
+                            for (let i = 0; i < tops.length; i++) {
+                                const address = tops[i]?.address;
+                                if (address)
+                                    MinimizeGeometry.setGeometry(delegateItem, String(address));
+                            }
+                        }
+                    }
+
+                    Connections {
+                        function onTriggered(): void {
+                            minimizeTarget.publish();
+                        }
+
+                        target: minimizeGeometryTicker
+                    }
 
                     StateLayer {
                         id: stateLayer
