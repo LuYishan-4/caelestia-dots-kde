@@ -13,47 +13,17 @@
 //
 // The taskbar side of the plasma-window-management protocol is what Plasma's
 // own Task Manager uses for this (libtaskmanager sets it from the task
-// delegate's rect). The shell already requests org_kde_plasma_window_management
-// in its desktop file for window metadata, so no new privilege is involved.
+// delegate's rect).
 
 #include <QHash>
 #include <QObject>
 #include <QQmlEngine>
-#include <QRect>
 // Full definition, not a forward declaration: moc needs it to register the
 // Q_INVOKABLE pointer argument below as a metatype.
 #include <QQuickItem>
-#include <QtWaylandClient/QWaylandClientExtension>
-
-#include "qwayland-plasma-window-management.h"
+#include <QRect>
 
 namespace caelestia::services {
-
-/// One org_kde_plasma_window handle, held for as long as the shell has a
-/// taskbar rect to publish for that window.
-class PlasmaWindowHandle : public QObject, public QtWayland::org_kde_plasma_window {
-    Q_OBJECT
-
-public:
-    explicit PlasmaWindowHandle(::org_kde_plasma_window* window);
-    ~PlasmaWindowHandle() override;
-
-signals:
-    /// The compositor dropped the window; the handle is spent after this.
-    void unmapped();
-
-protected:
-    void org_kde_plasma_window_unmapped() override;
-};
-
-class PlasmaWindowManagement : public QWaylandClientExtensionTemplate<PlasmaWindowManagement>,
-                               public QtWayland::org_kde_plasma_window_management {
-    Q_OBJECT
-
-public:
-    explicit PlasmaWindowManagement(QObject* parent = nullptr);
-    ~PlasmaWindowManagement() override;
-};
 
 class MinimizeGeometry : public QObject {
     Q_OBJECT
@@ -81,18 +51,6 @@ public:
     Q_INVOKABLE void clearGeometry(QQuickItem* tile, const QString& uuid);
 
 private:
-    PlasmaWindowHandle* handleFor(const QString& uuid);
-    void forget(const QString& uuid);
-    /// Release every proxy while the connection is still up. See the .cpp.
-    void shutdown();
-
-    // Bound lazily and owned here rather than through a function-local static.
-    // A static is torn down from an exit handler, long after Qt has closed the
-    // Wayland connection.
-    PlasmaWindowManagement* m_management = nullptr;
-    // Parented to this, so they also go away with the service. Raw pointers
-    // rather than unique_ptr because QHash requires a copyable value type.
-    QHash<QString, PlasmaWindowHandle*> m_handles;
     QHash<QString, QRect> m_published;
 };
 

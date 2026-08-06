@@ -59,6 +59,10 @@ qml_module(caelestia-services
         windowicon.hpp
         minimizegeometry.cpp
         minimizegeometry.hpp
+        plasmawindows.cpp
+        plasmawindows.hpp
+        plasmawindowicon.cpp
+        plasmawindowicon.hpp
     LIBRARIES
         Qt::DBus
         Qt::Gui

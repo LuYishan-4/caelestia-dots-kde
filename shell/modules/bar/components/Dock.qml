@@ -697,7 +697,7 @@ Item {
                 // these (every unmapped Proton title is "steam_app_default").
                 const pid = ipc.pid || 0;
                 if (!entry)
-                    WinIcons.request(appClass, ipc.title || "", pid);
+                    WinIcons.request(appClass, ipc.title || "", pid, ipc.address ? String(ipc.address) : "");
 
                 apps.push({
                     id: appClass,

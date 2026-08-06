@@ -44,7 +44,7 @@ Item {
         opacity = 1;
 
         if (root.modelData) {
-            WinIcons.request(root.modelData.class, root.modelData.title, root.modelData.pid ?? 0);
+            WinIcons.request(root.modelData.class, root.modelData.title, root.modelData.pid ?? 0, root.modelData.address ? String(root.modelData.address) : "");
         }
 
         Qt.callLater(() => {
