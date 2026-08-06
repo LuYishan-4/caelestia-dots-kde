@@ -53,6 +53,65 @@ void KWinActiveWindowBridgeAdaptor::notifyCurrentDesktop(int desktop) {
     }
 }
 
+// The single description of a window-list entry, shared by every path that
+// produces one.
+//
+// Both the persistent bridge script and the one-shot refresh replace the same
+// m_windowList wholesale, so a field present in only one of them silently
+// disappears from the shell's view whenever that path happens to run last —
+// which is exactly how the `output` field went missing and blinded the
+// per-monitor fullscreen check after a workspace switch. Interpolated into both
+// rather than restated, so they cannot drift again.
+static const QString kWindowListJs = R"js(
+function caelestiaDesktopIndex(w) {
+    if (!w.desktops || w.desktops.length === 0) return -1;
+    let d = w.desktops[0];
+    if (!d) return -1;
+    let allD = workspace.desktops;
+    if (!allD) return -1;
+    for (let j = 0; j < allD.length; ++j) {
+        if (allD[j].id === d.id || allD[j] === d) return j + 1;
+    }
+    return -1;
+}
+
+function caelestiaWindowEntry(w) {
+    return {
+        address: w.internalId ? String(w.internalId) : "",
+        pid: w.pid || 0,
+        title: w.caption || "",
+        class: w.resourceClass || "",
+        x: w.frameGeometry ? w.frameGeometry.x : (w.x || 0),
+        y: w.frameGeometry ? w.frameGeometry.y : (w.y || 0),
+        width: w.frameGeometry ? w.frameGeometry.width : (w.width || 0),
+        height: w.frameGeometry ? w.frameGeometry.height : (w.height || 0),
+        fullscreen: w.fullScreen ? true : false,
+        maximized: (w.maximizeMode === 3) ? true : false,
+        minimized: w.minimized ? true : false,
+        floating: !w.tile,
+        output: (w.output && w.output.name) ? w.output.name : "",
+        workspace: { id: caelestiaDesktopIndex(w) }
+    };
+}
+
+function caelestiaWindowList() {
+    let arr = [];
+    let wins = workspace.windowList();
+    if (!wins) return arr;
+    for (let i = 0; i < wins.length; ++i) {
+        try {
+            let w = wins[i];
+            if (!w.normalWindow) continue;
+            if (w.resourceClass === "quickshell") continue;
+            arr.push(caelestiaWindowEntry(w));
+        } catch (e) {
+            console.info("Caelestia: Error processing window: " + e);
+        }
+    }
+    return arr;
+}
+)js";
+
 static const QString kScriptSource = R"js(
 const BUS = "dev.caelestia.KWinActiveWindow";
 const PATH = "/dev/caelestia/KWinActiveWindow";
@@ -119,52 +178,7 @@ function onActiveWindowChanged() {
 }
 
 function notifyWindowList() {
-    //console.info("Caelestia: notifyWindowList called");
-    let arr = [];
-    let wins = workspace.windowList();
-    if (!wins) return;
-    for (let i = 0; i < wins.length; ++i) {
-        try {
-            let w = wins[i];
-            if (w.normalWindow) {
-                if (w.resourceClass === "quickshell") continue;
-                let deskId = -1;
-                if (w.desktops && w.desktops.length > 0) {
-                    let d = w.desktops[0];
-                    if (d) {
-                        let allD = workspace.desktops;
-                        if (allD) {
-                            for (let j = 0; j < allD.length; ++j) {
-                                if (allD[j].id === d.id || allD[j] === d) {
-                                    deskId = j + 1;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                arr.push({
-                    address: w.internalId ? String(w.internalId) : "",
-                    pid: w.pid || 0,
-                    title: w.caption || "",
-                    class: w.resourceClass || "",
-                    x: w.frameGeometry ? w.frameGeometry.x : (w.x || 0),
-                    y: w.frameGeometry ? w.frameGeometry.y : (w.y || 0),
-                    width: w.frameGeometry ? w.frameGeometry.width : (w.width || 0),
-                    height: w.frameGeometry ? w.frameGeometry.height : (w.height || 0),
-                    fullscreen: w.fullScreen ? true : false,
-                    maximized: (w.maximizeMode === 3) ? true : false,
-                    minimized: w.minimized ? true : false,
-                    floating: !w.tile,
-                    output: (w.output && w.output.name) ? w.output.name : "",
-                    workspace: { id: deskId }
-                });
-            }
-        } catch (e) {
-            console.info("Caelestia: Error processing window: " + e);
-        }
-    }
-    callDBus(BUS, PATH, IFACE, "notifyWindowList", JSON.stringify(arr));
+    callDBus(BUS, PATH, IFACE, "notifyWindowList", JSON.stringify(caelestiaWindowList()));
 }
 
 workspace.windowActivated.connect(onActiveWindowChanged);
@@ -565,48 +579,9 @@ void KWinActiveWindowBridge::setDesktop(int desktopId) {
 }
 
 void KWinActiveWindowBridge::refreshWindows() {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        let arr = [];
-        if (wins) {
-            for (let i = 0; i < wins.length; ++i) {
-                let w = wins[i];
-                if (w.normalWindow && w.resourceClass !== "quickshell") {
-                    let deskId = -1;
-                    if (w.desktops && w.desktops.length > 0) {
-                        let d = w.desktops[0];
-                        if (d) {
-                            let allD = workspace.desktops;
-                            if (allD) {
-                                for (let j = 0; j < allD.length; ++j) {
-                                    if (allD[j].id === d.id || allD[j] === d) {
-                                        deskId = j + 1;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    arr.push({
-                        address: w.internalId ? String(w.internalId) : "",
-                        pid: w.pid || 0,
-                        title: w.caption || "",
-                        class: w.resourceClass || "",
-                        x: w.frameGeometry ? w.frameGeometry.x : w.x,
-                        y: w.frameGeometry ? w.frameGeometry.y : w.y,
-                        width: w.frameGeometry ? w.frameGeometry.width : w.width,
-                        height: w.frameGeometry ? w.frameGeometry.height : w.height,
-                        fullscreen: w.fullScreen ? true : false,
-                        maximized: w.maximized ? true : false,
-                        minimized: w.minimized ? true : false,
-                        floating: !w.tile,
-                        workspace: { id: deskId }
-                    });
-                }
-            }
-        }
-        callDBus("dev.caelestia.KWinActiveWindow", "/dev/caelestia/KWinActiveWindow", "dev.caelestia.KWinActiveWindow", "notifyWindowList", JSON.stringify(arr));
-    )");
+    QString script = kWindowListJs + R"(
+        callDBus("dev.caelestia.KWinActiveWindow", "/dev/caelestia/KWinActiveWindow", "dev.caelestia.KWinActiveWindow", "notifyWindowList", JSON.stringify(caelestiaWindowList()));
+    )";
     executeKWinScriptAction(script);
 }
 
@@ -657,7 +632,7 @@ void KWinActiveWindowBridge::injectKWinScript() {
         qWarning() << "Failed to create temporary file for KWin bridge script";
         return;
     }
-    f.write(kScriptSource.toUtf8());
+    f.write((kWindowListJs + kScriptSource).toUtf8());
     f.close();
     const QString scriptPath = f.fileName();
 
