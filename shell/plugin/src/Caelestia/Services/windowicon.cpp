@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "windowicon.hpp"
 
+#include <qbuffer.h>
 #include <qcryptographichash.h>
 #include <qdir.h>
 #include <qfile.h>
 #include <qimage.h>
+#include <qlist.h>
 #include <qloggingcategory.h>
 #include <qstandardpaths.h>
 
@@ -89,26 +91,42 @@ QString windowTitle(Display* dpy, Window win) {
     return QString();
 }
 
-bool matchesWindow(Display* dpy, Window win, const QString& wmClass, const QString& title) {
+/// The client's _NET_WM_PID, or -1 when the window does not advertise one.
+qint64 windowPid(Display* dpy, Window win) {
+    const Atom netWmPid = XInternAtom(dpy, "_NET_WM_PID", True);
+    if (netWmPid == None) {
+        return -1;
+    }
+
+    unsigned long count = 0;
+    auto* data = fetchProperty(dpy, win, netWmPid, XA_CARDINAL, &count);
+    if (!data) {
+        return -1;
+    }
+    // XGetWindowProperty hands back 32-bit CARDINALs widened to long.
+    const auto pid = static_cast<qint64>(*reinterpret_cast<const unsigned long*>(data) & 0xffffffff);
+    XFree(data);
+    return pid > 0 ? pid : -1;
+}
+
+bool matchesClass(Display* dpy, Window win, const QString& wmClass) {
     XClassHint hint {};
-    bool classMatches = false;
-
-    if (XGetClassHint(dpy, win, &hint)) {
-        const auto name = QString::fromUtf8(hint.res_name ? hint.res_name : "");
-        const auto cls = QString::fromUtf8(hint.res_class ? hint.res_class : "");
-        if (hint.res_name) {
-            XFree(hint.res_name);
-        }
-        if (hint.res_class) {
-            XFree(hint.res_class);
-        }
-        classMatches = name.compare(wmClass, Qt::CaseInsensitive) == 0 || cls.compare(wmClass, Qt::CaseInsensitive) == 0;
+    if (!XGetClassHint(dpy, win, &hint)) {
+        return false;
     }
 
-    if (classMatches) {
-        return true;
+    const auto name = QString::fromUtf8(hint.res_name ? hint.res_name : "");
+    const auto cls = QString::fromUtf8(hint.res_class ? hint.res_class : "");
+    if (hint.res_name) {
+        XFree(hint.res_name);
     }
+    if (hint.res_class) {
+        XFree(hint.res_class);
+    }
+    return name.compare(wmClass, Qt::CaseInsensitive) == 0 || cls.compare(wmClass, Qt::CaseInsensitive) == 0;
+}
 
+bool matchesTitle(Display* dpy, Window win, const QString& wmClass, const QString& title) {
     // KWin often reports the title as the "class" for these windows (Minecraft
     // shows up as "Minecraft* 1.21.11"), so fall back to matching on it.
     const auto actual = windowTitle(dpy, win);
@@ -164,23 +182,12 @@ QImage decodeLargest(const unsigned long* data, unsigned long count) {
 WindowIcon::WindowIcon(QObject* parent)
     : QObject(parent) {}
 
-QString WindowIcon::extract(const QString& wmClass, const QString& title) {
-    if (wmClass.isEmpty()) {
+QString WindowIcon::extract(const QString& wmClass, const QString& title, qint64 pid) {
+    if (wmClass.isEmpty() && pid <= 0) {
         return QString();
     }
 
-    const auto cacheRoot =
-        QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/caelestia/winicons");
-    const auto key = QString::fromLatin1(
-        QCryptographicHash::hash(wmClass.toUtf8(), QCryptographicHash::Sha256)
-            .toHex()
-            .left(16));
-    const auto path = cacheRoot + QStringLiteral("/") + key + QStringLiteral(".png");
-
-    if (QFile::exists(path)) {
-        emit extracted(wmClass, path);
-        return path;
-    }
+    const QString key = pid > 0 ? QString::number(pid) : wmClass;
 
     XDisplay display;
     if (!display.isValid()) {
@@ -202,14 +209,30 @@ QString WindowIcon::extract(const QString& wmClass, const QString& title) {
     }
     const auto* windows = reinterpret_cast<const Window*>(rawWindows);
 
-    QImage icon;
+    // Rank candidates rather than taking the first hit: the pid identifies
+    // exactly one client, while the class can name a dozen unrelated games.
+    // A pid match therefore suppresses the weaker matches outright — falling
+    // back to them is how a game ends up wearing another game's icon.
+    QList<Window> candidates;
+    bool havePidMatch = false;
     for (unsigned long i = 0; i < windowCount; ++i) {
-        if (!matchesWindow(dpy, windows[i], wmClass, title)) {
-            continue;
+        if (pid > 0 && windowPid(dpy, windows[i]) == pid) {
+            if (!havePidMatch) {
+                havePidMatch = true;
+                candidates.clear();
+            }
+            candidates.append(windows[i]);
+        } else if (!havePidMatch && !wmClass.isEmpty() &&
+                   (matchesClass(dpy, windows[i], wmClass) || matchesTitle(dpy, windows[i], wmClass, title))) {
+            candidates.append(windows[i]);
         }
+    }
+    XFree(rawWindows);
 
+    QImage icon;
+    for (const auto win : candidates) {
         unsigned long iconCount = 0;
-        auto* rawIcon = fetchProperty(dpy, windows[i], netWmIcon, XA_CARDINAL, &iconCount);
+        auto* rawIcon = fetchProperty(dpy, win, netWmIcon, XA_CARDINAL, &iconCount);
         if (!rawIcon) {
             continue;
         }
@@ -220,18 +243,40 @@ QString WindowIcon::extract(const QString& wmClass, const QString& title) {
             break;
         }
     }
-    XFree(rawWindows);
 
     if (icon.isNull()) {
         return QString();
     }
 
-    if (!QDir().mkpath(cacheRoot) || !icon.save(path, "PNG")) {
-        qCWarning(logWindowIcon) << "could not write icon cache for" << wmClass << "to" << path;
+    // Name the file after the icon's own bytes. Keying on the window class was
+    // the other half of the wrong-icon bug: "steam_app_default" hashes to one
+    // path, so whichever game ran first owned that file forever. Content
+    // addressing also collapses the duplicates a class-per-version window
+    // (Minecraft) used to leave behind.
+    QByteArray png;
+    QBuffer buffer(&png);
+    buffer.open(QIODevice::WriteOnly);
+    if (!icon.save(&buffer, "PNG")) {
+        qCWarning(logWindowIcon) << "could not encode icon for" << key;
         return QString();
     }
+    buffer.close();
 
-    emit extracted(wmClass, path);
+    const auto cacheRoot =
+        QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/caelestia/winicons");
+    const auto digest =
+        QString::fromLatin1(QCryptographicHash::hash(png, QCryptographicHash::Sha256).toHex().left(16));
+    const auto path = cacheRoot + QStringLiteral("/") + digest + QStringLiteral(".png");
+
+    if (!QFile::exists(path)) {
+        QFile file(path);
+        if (!QDir().mkpath(cacheRoot) || !file.open(QIODevice::WriteOnly) || file.write(png) != png.size()) {
+            qCWarning(logWindowIcon) << "could not write icon cache for" << key << "to" << path;
+            return QString();
+        }
+    }
+
+    emit extracted(key, path);
     return path;
 }
 

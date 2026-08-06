@@ -450,7 +450,7 @@ Item {
 
                         anchors.centerIn: parent
                         implicitSize: Math.round(((delegateItem.width || 0) * 0.7) / 2) * 2 || 0
-                        source: modelData ? WinIcons.sourceFor(modelData.entry, modelData.appClass, modelData.iconName) : ""
+                        source: modelData ? WinIcons.sourceFor(modelData.entry, modelData.appClass, modelData.iconName, modelData.pid ?? 0) : ""
                         asynchronous: true
                         visible: !(Config.bar.dock.recolourIcons ?? false)
                         
@@ -588,7 +588,8 @@ Item {
                             entry: entry,
                             toplevels: [],
                             appClass: entry.id.replace(".desktop", ""),
-                            iconName: entry.id
+                            iconName: entry.id,
+                            pid: 0
                         });
                     }
                 }
@@ -651,9 +652,12 @@ Item {
                         iconName = appClass.toLowerCase().split(/[^a-z0-9]/)[0] || appClass;
                 }
 
-                // No desktop entry — pull the icon straight from the window (_NET_WM_ICON).
+                // No desktop entry — pull the icon straight from the window
+                // (_NET_WM_ICON), keyed on the pid: appClass is not unique for
+                // these (every unmapped Proton title is "steam_app_default").
+                const pid = ipc.pid || 0;
                 if (!entry)
-                    WinIcons.request(appClass, ipc.title || "");
+                    WinIcons.request(appClass, ipc.title || "", pid);
 
                 apps.push({
                     id: appClass,
@@ -661,7 +665,8 @@ Item {
                     entry: entry,
                     toplevels: [toplevel],
                     appClass: appClass,
-                    iconName: iconName
+                    iconName: iconName,
+                    pid: pid
                 });
             }
         }

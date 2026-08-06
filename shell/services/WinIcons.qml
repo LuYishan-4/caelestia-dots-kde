@@ -17,55 +17,65 @@ import Caelestia.Services
 Singleton {
     id: root
 
-    // appClass -> extracted png path
+    // key -> extracted png path
     property var paths: ({})
 
-    // appClass -> extraction already attempted (don't re-spawn the helper)
+    // key -> extraction already attempted (don't re-spawn the helper)
     property var tried: ({})
 
-    // Ask the plugin for the icon, at most once per class. The extraction is a
+    // Icons are tracked per window, not per class. Steam reports every Proton
+    // title it cannot map to an appid as "steam_app_default", so a class-keyed
+    // map served whichever of those games happened to be extracted first to all
+    // the others. The pid is unique per running window and is what the plugin
+    // matches on; the class is only a fallback for windows that have no pid.
+    function keyFor(appClass: string, pid: int): string {
+        return pid > 0 ? String(pid) : (appClass || "");
+    }
+
+    // Ask the plugin for the icon, at most once per window. The extraction is a
     // direct XGetWindowProperty read on _NET_WM_ICON — no helper process, and no
     // python-xlib/Pillow to have installed.
-    function request(appClass: string, title: string): void {
-        if (!appClass || root.tried[appClass])
+    function request(appClass: string, title: string, pid: int): void {
+        const key = root.keyFor(appClass, pid ?? 0);
+        if (!key || root.tried[key])
             return;
 
         const t = root.tried;
-        t[appClass] = true;
+        t[key] = true;
         root.tried = t;
 
-        const path = WindowIcon.extract(appClass, title || "");
+        const path = WindowIcon.extract(appClass || "", title || "", pid ?? 0);
         if (path)
-            root.register(appClass, path);
+            root.register(key, path);
     }
 
-    // Cached hits come straight back from extract(), but a window that only
-    // appears later still reports through the signal.
+    // extract() returns the path directly; the signal carries the same result
+    // for any caller that did not go through request().
     Connections {
         target: WindowIcon
 
-        function onExtracted(appClass: string, path: string): void {
-            root.register(appClass, path);
+        function onExtracted(key: string, path: string): void {
+            root.register(key, path);
         }
     }
 
     // Record a freshly extracted icon. Reassigning a copy is what notifies the
     // bindings that read paths[...] — mutating in place would not.
-    function register(appClass: string, path: string): void {
-        if (!path || path === "" || root.paths[appClass] === path)
+    function register(key: string, path: string): void {
+        if (!path || path === "" || root.paths[key] === path)
             return;
         const m = root.paths;
-        m[appClass] = path;
+        m[key] = path;
         root.paths = Object.assign({}, m);
     }
 
     // Resolve an icon for a dock entry, in the order the taskbar tile and the
     // hover popup must agree on: desktop entry icon, then extracted window
     // icon, then the window class as a themed-icon name.
-    function sourceFor(entry: var, appClass: string, iconName: string): string {
+    function sourceFor(entry: var, appClass: string, iconName: string, pid: int): string {
         if (entry && entry.icon)
             return Quickshell.iconPath(entry.icon, "application-x-executable");
-        const wp = root.paths[appClass];
+        const wp = root.paths[root.keyFor(appClass, pid ?? 0)];
         if (wp)
             return "file://" + wp;
         return Quickshell.iconPath(iconName, "application-x-executable");

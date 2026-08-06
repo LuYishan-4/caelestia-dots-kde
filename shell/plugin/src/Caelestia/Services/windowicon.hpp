@@ -29,17 +29,27 @@ public:
     explicit WindowIcon(QObject* parent = nullptr);
 
     /**
-     * Extract the icon for the window matching @p wmClass (and optionally
-     * @p title), caching it under ~/.cache/caelestia/winicons.
+     * Extract the icon for a window, caching it under ~/.cache/caelestia/winicons.
      *
-     * Returns the cached path immediately when it already exists, so a repeat
-     * call costs nothing. Returns an empty string when no window matches or the
-     * window carries no icon; extracted() is emitted on success either way.
+     * @p pid is the strongest identifier and is tried first against
+     * _NET_WM_PID: the window class is not unique for the very windows this
+     * exists to serve — every Proton title Steam cannot map to an appid is
+     * reported as "steam_app_default" — so matching on class alone hands one
+     * game's icon to the next. @p wmClass and @p title are only consulted when
+     * no window carries the pid (native Wayland clients, or a launcher that
+     * never set the property).
+     *
+     * Cache files are named after the icon's own content hash, so a class that
+     * covers several games can never resolve to a previously cached stranger.
+     *
+     * Returns an empty string when no window matches or it carries no icon;
+     * extracted() is emitted on success, keyed the same way as the return.
      */
-    Q_INVOKABLE QString extract(const QString& wmClass, const QString& title = QString());
+    Q_INVOKABLE QString extract(const QString& wmClass, const QString& title = QString(), qint64 pid = 0);
 
 signals:
-    void extracted(const QString& wmClass, const QString& path);
+    /// @p key is the pid as a string when one was given, else the window class.
+    void extracted(const QString& key, const QString& path);
 };
 
 } // namespace caelestia::services
