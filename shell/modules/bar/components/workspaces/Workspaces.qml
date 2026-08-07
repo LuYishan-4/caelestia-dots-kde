@@ -89,7 +89,6 @@ Item {
             anchors.fill: parent
             scale: container.onSpecial ? 0.8 : 1
             opacity: container.onSpecial ? 0.5 : 1
-            visible: !root.fullscreen
             layer.enabled: container.blur > 0
             layer.effect: MultiEffect {
                 blurEnabled: true

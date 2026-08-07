@@ -369,7 +369,6 @@ Item {
             DelegateChoice {
                 roleValue: "workspaces"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Workspaces {
                         bar: root
                         screen: root.screen
@@ -380,7 +379,6 @@ Item {
             DelegateChoice {
                 roleValue: "dock"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Dock {
                         bar: root
                     }
@@ -389,7 +387,6 @@ Item {
             DelegateChoice {
                 roleValue: "activeWindow"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: ActiveWindow {
                         bar: root
                         monitor: Brightness.getMonitorForScreen(root.screen)
@@ -399,7 +396,6 @@ Item {
             DelegateChoice {
                 roleValue: "tray"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Tray {
                         popouts: root.popouts
                     }
@@ -408,77 +404,73 @@ Item {
             DelegateChoice {
                 roleValue: "clock"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Clock {}
                 }
             }
             DelegateChoice {
                 roleValue: "statusIcons"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: StatusIcons {}
                 }
             }
             DelegateChoice {
                 roleValue: "kbLayoutIndicator"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && (Hypr.kbLayout || "").length > 0
+                    visible: enabled && (Hypr.kbLayout || "").length > 0
                     sourceComponent: KbLayoutIndicator {}
                 }
             }
             DelegateChoice {
                 roleValue: "notificationsIndicator"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: NotificationsIndicator {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfCpu"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Cpu.name.length > 0
+                    visible: enabled && Cpu.name.length > 0
                     sourceComponent: PerfCpu {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfMemory"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Memory.total > 1
+                    visible: enabled && Memory.total > 1
                     sourceComponent: PerfMemory {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfStorage"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Storage.disks.length > 0
+                    visible: enabled && Storage.disks.length > 0
                     sourceComponent: PerfStorage {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfNetwork"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: PerfNetwork {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfGpu"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Gpu.type !== Gpu.None
+                    visible: enabled && Gpu.type !== Gpu.None
                     sourceComponent: PerfGpu {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfBattery"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && UPower.displayDevice.isLaptopBattery
+                    visible: enabled && UPower.displayDevice.isLaptopBattery
                     sourceComponent: PerfBattery {}
                 }
             }
             DelegateChoice {
                 roleValue: "github"
                 delegate: WrappedLoader {
-                    visible: enabled && !root.fullscreen && GithubStore.available
+                    visible: enabled && GithubStore.available
                     sourceComponent: GithubActivity {
                         popouts: root.popouts
                     }
@@ -487,7 +479,6 @@ Item {
             DelegateChoice {
                 roleValue: "showDesktop"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: ShowDesktop {}
                 }
             }

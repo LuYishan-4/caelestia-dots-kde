@@ -140,7 +140,7 @@ Item {
     Loader {
         id: content
 
-        active: root.shouldBeVisible || root.visible
+        active: true
         sourceComponent: root.isHorizontal ? horizontalBar : verticalBar
         width: root.isHorizontal ? root.width : root.contentWidth
         height: root.isHorizontal ? root.contentWidth : root.height
