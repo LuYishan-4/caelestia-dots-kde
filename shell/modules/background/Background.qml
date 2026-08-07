@@ -84,7 +84,7 @@ Variants {
         Loader {
             id: clockLoader
 
-            readonly property int clockBarZone: Visibilities.bars.get(win.modelData.name)?.exclusiveZone ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
+            readonly property int clockBarZone: Visibilities.bars.get(win.modelData.name)?.visualThickness ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
             readonly property int clockBaseMargin: Tokens.padding.extraLargeIncreased
 
             asynchronous: true
@@ -200,7 +200,7 @@ Variants {
         Loader {
             id: lyricsLoader
 
-            readonly property int lyricsBarZone: Visibilities.bars.get(win.modelData.name)?.exclusiveZone ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
+            readonly property int lyricsBarZone: Visibilities.bars.get(win.modelData.name)?.visualThickness ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
             readonly property int lyricsBaseMargin: Tokens.padding.large * 2
 
             asynchronous: true

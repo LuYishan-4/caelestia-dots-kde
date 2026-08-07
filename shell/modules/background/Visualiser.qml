@@ -37,7 +37,7 @@ Item {
         let bar = name ? Visibilities.bars.get(name) : undefined;
         return bar;
     }
-    readonly property int barExclusiveZone: barWrapper ? barWrapper.exclusiveZone : 0
+    readonly property int barExclusiveZone: barWrapper ? barWrapper.visualThickness : 0
     readonly property real visualiserSpacing: Tokens.spacing.small * Config.background.visualiser.spacing
     readonly property real fallbackMargin: Tokens.padding.large + Tokens.spacing.small
 

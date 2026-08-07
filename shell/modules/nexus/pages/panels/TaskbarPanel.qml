@@ -55,6 +55,22 @@ PageBase {
             onToggled: GlobalConfig.bar.persistent = checked
         }
 
+        ToggleRow {
+            text: qsTr("Dodge windows")
+            subtext: qsTr("Retract the bar while a window covers it, and let windows sit underneath")
+            enabled: GlobalConfig.bar.persistent
+            checked: GlobalConfig.bar.dodgeWindows
+            onToggled: GlobalConfig.bar.dodgeWindows = checked
+        }
+
+        ToggleRow {
+            text: qsTr("Dodge focused window only")
+            subtext: qsTr("Ignore background windows over the bar, and dodge only what you are using")
+            enabled: GlobalConfig.bar.persistent && GlobalConfig.bar.dodgeWindows
+            checked: GlobalConfig.bar.dodgeFocusedOnly
+            onToggled: GlobalConfig.bar.dodgeFocusedOnly = checked
+        }
+
         SelectRow {
             Layout.fillWidth: true
             label: qsTr("Position")

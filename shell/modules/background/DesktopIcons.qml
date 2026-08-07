@@ -108,7 +108,7 @@ Item {
 
         anchors.fill: parent
         
-        readonly property int barZone: Visibilities.bars.get(root.screenData.name)?.exclusiveZone ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
+        readonly property int barZone: Visibilities.bars.get(root.screenData.name)?.visualThickness ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
 
         readonly property int baseMargin: Tokens.padding.large * 2
         

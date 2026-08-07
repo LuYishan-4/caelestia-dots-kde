@@ -199,6 +199,43 @@ Singleton {
         return false;
     }
 
+    // Whether any window on `screenName` overlaps the given rect, which is in
+    // the same absolute multi-monitor coordinates KWin reports geometry in.
+    //
+    // Used by the bar's dodge mode. Minimized windows are skipped, and so are
+    // windows on other virtual desktops — a window you cannot see should not
+    // push the bar away. Returns false off KDE: the Hyprland path has no
+    // equivalent window list here, and reporting "nothing overlaps" leaves the
+    // bar visible rather than stuck hidden.
+    function hasWindowOverlapping(screenName: string, x: real, y: real, width: real, height: real, focusedOnly: bool): bool {
+        if (typeof KWinActiveWindowBridge === "undefined")
+            return false;
+
+        const wins = KWinActiveWindowBridge.windowList || [];
+        const activeWsId = (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeId : -1;
+        const activeAddr = focusedOnly ? String(KWinActiveWindowBridge.activeWindow?.address ?? "") : "";
+
+        // Nothing focused means nothing to dodge, rather than everything.
+        if (focusedOnly && !activeAddr)
+            return false;
+
+        for (let i = 0; i < wins.length; i++) {
+            const win = wins[i];
+            if (win.minimized === true)
+                continue;
+            if (focusedOnly && String(win.address) !== activeAddr)
+                continue;
+            if (screenName && win.output !== screenName)
+                continue;
+            if (activeWsId !== -1 && win.workspace?.id !== activeWsId)
+                continue;
+            // Touching edges are not an overlap, hence the strict comparisons.
+            if (win.x < x + width && win.x + win.width > x && win.y < y + height && win.y + win.height > y)
+                return true;
+        }
+        return false;
+    }
+
     function dispatch(request: string): void {
         const isKDE = typeof KWinActiveWindowBridge !== "undefined";
 

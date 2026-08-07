@@ -45,7 +45,7 @@ StyledWindow {
         let bar = name ? Visibilities.bars.get(name) : undefined;
         return bar;
     })()
-    readonly property real floorOffset: Config.bar.position === "bottom" ? (barWrapper ? barWrapper.exclusiveZone : 0) : 0
+    readonly property real floorOffset: Config.bar.position === "bottom" ? (barWrapper ? barWrapper.visualThickness : 0) : 0
 
     function getImgPath(): string {
         if (!modelData)
