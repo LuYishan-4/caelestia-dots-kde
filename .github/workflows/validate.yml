@@ -280,6 +280,28 @@ jobs:
         run: actionlint -shellcheck= -color
 
   # ═══════════════════════════════════════════════════════════
+  # Job 13: Wayland static lifetime - catch exit-time SIGSEGVs
+  # ═══════════════════════════════════════════════════════════
+  # A class inheriting QWaylandClientExtensionTemplate<T> or QtWayland::* owns
+  # a live wl_proxy. Holding one as a function-local (or other) static by
+  # value tears it down from an exit handler after Qt's closed the display,
+  # which segfaults the shell on quit - see windowscreencast.cpp/plasmawindows.cpp
+  # for the fix pattern (leak the pointer instead).
+  wayland-static-lifetime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check for value-typed statics of Wayland proxy-wrapping types
+        run: python3 .github/scripts/check_wayland_static_lifetime.py
+
+  # ═══════════════════════════════════════════════════════════
   # Final gate: require all non-skippable jobs to pass
   # ═══════════════════════════════════════════════════════════
   validate-gate:
@@ -296,6 +318,7 @@ jobs:
       - embedded-bash
       - config-cross-ref
       - actionlint
+      - wayland-static-lifetime
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -317,6 +340,7 @@ jobs:
           job_results[embedded-bash]="${{ needs.embedded-bash.result }}"
           job_results[config-cross-ref]="${{ needs.config-cross-ref.result }}"
           job_results[actionlint]="${{ needs.actionlint.result }}"
+          job_results[wayland-static-lifetime]="${{ needs.wayland-static-lifetime.result }}"
 
           all_passed=true
           # Jobs with pre-existing violations that don't block the gate
