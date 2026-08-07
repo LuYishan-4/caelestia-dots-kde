@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Caelestia.Config
 
 Region {
     required property real bX
@@ -15,15 +16,15 @@ Region {
     Region {
         // Horizontal
         x: bX
-        y: inTop
+        y: GlobalConfig.appearance.blurMask ? inTop : bY
         width: Math.max(0, bW)
-        height: Math.max(0, inBottom - inTop)
+        height: GlobalConfig.appearance.blurMask ? Math.max(0, inBottom - inTop) : Math.max(0, bH)
     }
     Region {
         // Vertical
         x: inLeft
         y: bY
-        width: Math.max(0, inRight - inLeft)
-        height: Math.max(0, bH)
+        width: GlobalConfig.appearance.blurMask ? Math.max(0, inRight - inLeft) : 0
+        height: GlobalConfig.appearance.blurMask ? Math.max(0, bH) : 0
     }
 }

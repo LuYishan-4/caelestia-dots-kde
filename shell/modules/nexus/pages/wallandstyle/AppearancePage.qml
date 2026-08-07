@@ -171,6 +171,15 @@ PageBase {
                 Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
                 Layout.fillWidth: true
             }
+            ToggleRow {
+                text: qsTr("High Quality Blur Masks")
+                subtext: qsTr("Disable this to use high performance Wayland/KWin blur")
+                checked: GlobalConfig.appearance.blurMask
+                enabled: GlobalConfig.appearance.transparency.enabled && GlobalConfig.appearance.blur
+                onToggled: GlobalConfig.appearance.blurMask = checked
+                Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
+                Layout.fillWidth: true
+            }
             Settings {
                 id: blurSettings
 

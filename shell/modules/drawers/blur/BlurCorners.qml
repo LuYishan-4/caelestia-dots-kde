@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Caelestia.Config
 
 Region {
     required property string vAnchor
@@ -17,7 +18,7 @@ Region {
     property int steps: Math.max(1, blurQuality)
 
     function getM(i) { return Math.ceil(i * steps / 100); }
-    function isActive(i) { return getM(i) > getM(i - 1); }
+    function isActive(i) { return GlobalConfig.appearance.blurMask && getM(i) > getM(i - 1); }
     function getYo(i) { return getM(i) / steps; }
     function getXVal(i) { return Math.sqrt(1 - Math.pow(getYo(i), 2)); }
 
