@@ -155,6 +155,17 @@ public:
         : ConfigObject(parent) {}
 };
 
+class BarPerformance : public ConfigObject {
+    Q_OBJECT
+    QML_ANONYMOUS
+
+    CONFIG_PROPERTY(bool, showText, true)
+
+public:
+    explicit BarPerformance(QObject* parent = nullptr)
+        : ConfigObject(parent) {}
+};
+
 class BarPreviewScales : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
@@ -244,6 +255,7 @@ class BarConfig : public ConfigObject {
     CONFIG_SUBOBJECT(BarClock, clock)
     CONFIG_SUBOBJECT(BarDock, dock)
     CONFIG_SUBOBJECT(BarGithub, github)
+    CONFIG_SUBOBJECT(BarPerformance, performance)
     CONFIG_PROPERTY(QVariantList, entries,
         {
             vmap({ { u"id"_s, u"logo"_s }, { u"enabled"_s, true }, { u"zone"_s, u"left"_s } }),
@@ -280,7 +292,8 @@ public:
         , m_status(new BarStatus(this))
         , m_clock(new BarClock(this))
         , m_dock(new BarDock(this))
-        , m_github(new BarGithub(this)) {}
+        , m_github(new BarGithub(this))
+        , m_performance(new BarPerformance(this)) {}
 };
 
 } // namespace caelestia::config
