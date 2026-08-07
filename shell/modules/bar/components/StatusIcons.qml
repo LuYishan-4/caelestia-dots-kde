@@ -26,17 +26,13 @@ StyledRect {
     readonly property bool isHovering: hoverPos !== -1
     property real currentHoverExpansion: isHovering ? hoverExpansion : 0
 
-    Behavior on currentHoverExpansion { Anim { type: Anim.DefaultEffects } }
-
     color: Colours.tPalette.m3surfaceContainer
-
     radius: Tokens.rounding.full
-
     clip: true
-
     implicitWidth: isHorizontal ? (iconColumn.implicitWidth + Tokens.padding.medium * 2 + currentHoverExpansion) : barThickness
-
     implicitHeight: isHorizontal ? barThickness : (iconColumn.implicitHeight + Tokens.padding.medium * 2 + currentHoverExpansion)
+
+    Behavior on currentHoverExpansion { Anim { type: Anim.DefaultEffects } }
 
     GridLayout {
         id: iconColumn
@@ -233,12 +229,11 @@ StyledRect {
 
                 // Bluetooth icon
                 MaterialIcon {
+                    visible: !Bluetooth.defaultAdapter?.enabled || !Bluetooth.devices.values.some(d => d.state !== BluetoothDeviceState.Disconnected) // qmllint disable unresolved-type
                     animate: true
                     text: {
                         if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
                             return "bluetooth_disabled";
-                        if (Bluetooth.devices.values.some(d => d.connected)) // qmllint disable unresolved-type
-                            return "bluetooth_connected";
                         return "bluetooth";
                     }
                     color: root.colour
