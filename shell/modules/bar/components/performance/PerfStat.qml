@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.services
 
 StyledRect {
@@ -14,10 +15,17 @@ StyledRect {
     property color textColor: Colours.palette.m3onSurface
     property color iconColor: accent
     property real widthFactor: 2.35
-    property string maxText: "100%"
+    property string maxText: "100"
+    property bool showText: typeof Config.bar.performance !== "undefined" && Config.bar.performance.showText !== undefined ? Config.bar.performance.showText : true
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
-    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
+    readonly property int baseThickness: Tokens.sizes.bar.innerWidth
+    readonly property int effectiveThickness: rawScale < 1.0 ? baseThickness : barThickness
+    readonly property int iconSize: Math.round(effectiveThickness * 0.42)
+    readonly property int textSize: Math.round(effectiveThickness * 0.32)
     readonly property real progress: isNaN(value) ? 0 : Math.max(0, Math.min(1, value))
     readonly property int hPadding: Tokens.padding.medium
     readonly property int vPadding: Tokens.padding.extraSmall
@@ -28,17 +36,17 @@ StyledRect {
     radius: Tokens.rounding.full
     clip: true
 
+    implicitWidth: isHorizontal ? Math.max(contentRow.implicitWidth + hPadding * 2, Math.round(barThickness * widthFactor)) : barThickness
+    implicitHeight: isHorizontal ? barThickness : Math.max(verticalCol.implicitHeight + vPadding * 2, Math.round(barThickness * widthFactor))
+
     StyledText {
         id: dummyText
 
         text: root.maxText
-        font: Tokens.font.body.builders.small.weight(Font.DemiBold).build()
+        font: Tokens.font.body.builders.small.size(root.textSize).weight(Font.DemiBold).build()
         visible: false
     }
 
-    implicitWidth: isHorizontal ? Math.max(contentRow.implicitWidth + hPadding * 2, Math.round(barThickness * widthFactor)) : barThickness
-
-    implicitHeight: isHorizontal ? barThickness : Math.max(contentCol.implicitHeight + vPadding * 2, barThickness)
     Item {
         id: progressTrack
 
@@ -68,7 +76,6 @@ StyledRect {
 
             anchors.left: parent.left
             anchors.bottom: parent.bottom
-
             width: root.width
             height: root.height
             color: Qt.alpha(root.accent, 0.25)
@@ -79,60 +86,51 @@ StyledRect {
     RowLayout {
         id: contentRow
 
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
+        anchors.fill: parent
         anchors.leftMargin: root.hPadding
         anchors.rightMargin: root.hPadding
-        anchors.topMargin: root.vPadding
-        anchors.bottomMargin: root.vPadding
         visible: root.isHorizontal
         spacing: Tokens.spacing.small
 
         Item {
-            Layout.preferredWidth: 0
             Layout.fillWidth: true
         }
 
         MaterialIcon {
+            Layout.alignment: Qt.AlignVCenter
+            fontStyle: Tokens.font.icon.builders.small.size(root.iconSize).build()
             text: root.icon
             color: root.iconColor
             fill: 1
         }
 
         StyledText {
-            Layout.preferredWidth: dummyText.implicitWidth
+            Layout.alignment: Qt.AlignVCenter
+            Layout.preferredWidth: root.showText ? dummyText.implicitWidth : 0
             horizontalAlignment: Text.AlignHCenter
             text: root.valueText
             color: root.textColor
-            font: Tokens.font.body.builders.small.weight(Font.DemiBold).build()
-            elide: Text.ElideRight
+            font: Tokens.font.body.builders.small.size(root.textSize).weight(Font.DemiBold).build()
+            elide: Text.ElideNone
             maximumLineCount: 1
+            visible: root.showText
         }
 
         Item {
-            Layout.preferredWidth: 0
             Layout.fillWidth: true
         }
     }
 
     ColumnLayout {
-        id: contentCol
+        id: verticalCol
 
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: root.vPadding
-        anchors.rightMargin: root.vPadding
-        anchors.topMargin: root.vPadding
-        anchors.bottomMargin: root.vPadding
+        anchors.centerIn: parent
         visible: !root.isHorizontal
         spacing: Tokens.spacing.extraSmall
 
         MaterialIcon {
             Layout.alignment: Qt.AlignHCenter
+            fontStyle: Tokens.font.icon.builders.small.size(root.iconSize).build()
             text: root.icon
             color: root.iconColor
             fill: 1
@@ -140,9 +138,11 @@ StyledRect {
 
         StyledText {
             Layout.alignment: Qt.AlignHCenter
+            horizontalAlignment: Text.AlignHCenter
             text: root.valueText
             color: root.textColor
-            font: Tokens.font.body.builders.small.weight(Font.DemiBold).build()
+            font: Tokens.font.body.builders.small.size(root.textSize).weight(Font.DemiBold).build()
+            visible: root.showText
         }
     }
 }

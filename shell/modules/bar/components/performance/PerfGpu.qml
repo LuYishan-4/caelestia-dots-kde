@@ -6,7 +6,7 @@ PerfStat {
     icon: "desktop_windows"
     accent: Colours.palette.m3secondary
     value: Gpu.percentage
-    valueText: isNaN(Gpu.percentage) ? "..." : Math.round(Gpu.percentage * 100) + "%"
+    valueText: isNaN(Gpu.percentage) ? "..." : Math.round(Gpu.percentage * 100)
 
     ServiceRef {
         service: Gpu
