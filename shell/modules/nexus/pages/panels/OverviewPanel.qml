@@ -140,41 +140,32 @@ PageBase {
             visible: !GlobalConfig.overview.showOnHover
         }
         SectionHeader {
-            text: qsTr("Please disable KDE's adjacent Screen corner settings to avoid conflicts")
+            text: qsTr("Corners")
         }
+        // Enabling a corner takes it off KWin for as long as it stays enabled;
+        // whatever KDE had bound there comes back untouched when it's turned
+        // off, on shell exit, or on the next start after a crash.
         ToggleRow {
             first: true
             text: qsTr("Top-Left corner")
             checked: GlobalConfig.overview.hoverTopLeft
-            onToggled: {
-                GlobalConfig.overview.hoverTopLeft = checked
-                Quickshell.execDetached(["kwriteconfig6", "--notify", "--file", "kwinrc", "--group", "ElectricBorders", "--key", "TopLeft", checked ? "None" : "Overview"])
-            }
+            onToggled: GlobalConfig.overview.hoverTopLeft = checked
         }
         ToggleRow {
             text: qsTr("Top-Right corner")
             checked: GlobalConfig.overview.hoverTopRight
-            onToggled: {
-                GlobalConfig.overview.hoverTopRight = checked
-                Quickshell.execDetached(["kwriteconfig6", "--notify", "--file", "kwinrc", "--group", "ElectricBorders", "--key", "TopRight", checked ? "None" : "Overview"])
-            }
+            onToggled: GlobalConfig.overview.hoverTopRight = checked
         }
         ToggleRow {
             text: qsTr("Bottom-Left corner")
             checked: GlobalConfig.overview.hoverBottomLeft
-            onToggled: {
-                GlobalConfig.overview.hoverBottomLeft = checked
-                Quickshell.execDetached(["kwriteconfig6", "--notify", "--file", "kwinrc", "--group", "ElectricBorders", "--key", "BottomLeft", checked ? "None" : "Overview"])
-            }
+            onToggled: GlobalConfig.overview.hoverBottomLeft = checked
         }
         ToggleRow {
             last: true
             text: qsTr("Bottom-Right corner")
             checked: GlobalConfig.overview.hoverBottomRight
-            onToggled: {
-                GlobalConfig.overview.hoverBottomRight = checked
-                Quickshell.execDetached(["kwriteconfig6", "--notify", "--file", "kwinrc", "--group", "ElectricBorders", "--key", "BottomRight", checked ? "None" : "Overview"])
-            }
+            onToggled: GlobalConfig.overview.hoverBottomRight = checked
         }
         SectionHeader {
             text: qsTr("Behaviour")

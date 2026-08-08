@@ -95,6 +95,7 @@ ShellRoot {
 
     ConfigToasts {}
     Shortcuts {}
+    ScreenCorners {}
 
     Component.onCompleted: {
         Qt.callLater(() => { Weather.reload(); });
