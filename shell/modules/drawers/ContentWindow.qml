@@ -319,7 +319,7 @@ StyledWindow {
             implicitWidth: bar.width
             implicitHeight: bar.height
             radius: Tokens.rounding.extraLarge
-            deformScale: (0.1 * Config.appearance.deformScale) / 10000
+            deformScale: (GlobalConfig.appearance.blurMask || !GlobalConfig.appearance.transparency.enabled) ? ((0.1 * Config.appearance.deformScale) / 10000) : 0
         }
         PanelBg {
             id: dashBg
@@ -638,19 +638,6 @@ StyledWindow {
         }
     }
 
-    component PanelBg: BlobRect {
-        required property Item panel
-        property real deformAmount: 0.15
-
-        group: panel.visible ? blobGroup : null
-        x: panel.x + panels.leftMargin
-        y: panel.y + panels.topMargin
-        implicitWidth: panel.width
-        implicitHeight: panel.height
-        radius: Tokens.rounding.extraLarge
-        deformScale: (deformAmount * Config.appearance.deformScale) / 10000
-        Config.screen: root.screen.name
-    }
     Config.screen: screen.name
     BackgroundEffect.blurRegion: Region {
         Region { x: -10; y: -10; width: 1; height: 1 } // Prevent fallback to full-window blur when empty
@@ -853,4 +840,18 @@ StyledWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (actualFullscreen && (hasOpenOverlay || fsTransitionProg < 1)) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    component PanelBg: BlobRect {
+        required property Item panel
+        property real deformAmount: 0.15
+
+        group: panel.visible ? blobGroup : null
+        x: panel.x + panels.leftMargin
+        y: panel.y + panels.topMargin
+        implicitWidth: panel.width
+        implicitHeight: panel.height
+        radius: Tokens.rounding.extraLarge
+        deformScale: (GlobalConfig.appearance.blurMask || !GlobalConfig.appearance.transparency.enabled) ? ((deformAmount * Config.appearance.deformScale) / 10000) : 0
+        Config.screen: root.screen.name
+    }
 }

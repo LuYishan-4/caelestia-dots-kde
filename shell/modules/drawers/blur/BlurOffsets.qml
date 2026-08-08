@@ -44,23 +44,24 @@ Item {
     // Deform scale factors from the jelly matrix (m11=horizontal, m22=vertical).
     // The centered deform matrix layout is: translate(cx,cy) * scale * translate(-cx,-cy),
     // so the translation components encode the offset to center; we read scale directly.
-    property real dm11: deformMatrix.m11 > 0 ? deformMatrix.m11 : 1
-    property real dm22: deformMatrix.m22 > 0 ? deformMatrix.m22 : 1
+    property bool useMasks: GlobalConfig.appearance.blurMask
+    property real dm11: (useMasks && deformMatrix.m11 > 0) ? deformMatrix.m11 : 1
+    property real dm22: (useMasks && deformMatrix.m22 > 0) ? deformMatrix.m22 : 1
     // The translate-back component moves the origin, so the visual top-left shifts by (cx*(1-dm11), cy*(1-dm22))
-    property real deformOffsetX: (tW / 2) * (1 - dm11)
-    property real deformOffsetY: (tH / 2) * (1 - dm22)
-    property real bX: tX + deformOffsetX + sLeft * dm11
-    property real bY: tY + deformOffsetY + sTop * dm22
-    property real bW: isActive ? Math.max(0, tW * dm11 - sLeft * dm11 - sRight * dm11) : 0
-    property real bH: isActive ? Math.max(0, tH * dm22 - sTop * dm22 - sBottom * dm22) : 0
-    property real r: isActive ? Tokens.rounding.extraLarge * animScale : 0
+    property real deformOffsetX: useMasks ? (tW / 2) * (1 - dm11) : 0
+    property real deformOffsetY: useMasks ? (tH / 2) * (1 - dm22) : 0
+    property real bX: useMasks ? tX + deformOffsetX + sLeft * dm11 : 0
+    property real bY: useMasks ? tY + deformOffsetY + sTop * dm22 : 0
+    property real bW: (isActive && useMasks) ? Math.max(0, tW * dm11 - sLeft * dm11 - sRight * dm11) : 0
+    property real bH: (isActive && useMasks) ? Math.max(0, tH * dm22 - sTop * dm22 - sBottom * dm22) : 0
+    property real r: (isActive && useMasks) ? Tokens.rounding.extraLarge * animScale : 0
     property bool isIsland: GlobalConfig.appearance.islands
     property real rTop: (!isIsland && (vAnchor === "top" || vAnchor === "both")) ? 0 : r
     property real rBottom: (!isIsland && (vAnchor === "bottom" || vAnchor === "both")) ? 0 : r
     property real rLeft: (!isIsland && (hAnchor === "left" || hAnchor === "both")) ? 0 : r
     property real rRight: (!isIsland && (hAnchor === "right" || hAnchor === "both")) ? 0 : r
-    property real inLeft: bX + rLeft
-    property real inRight: bX + bW - rRight
-    property real inTop: bY + rTop
-    property real inBottom: bY + bH - rBottom
+    property real inLeft: useMasks ? bX + rLeft : 0
+    property real inRight: useMasks ? bX + bW - rRight : 0
+    property real inTop: useMasks ? bY + rTop : 0
+    property real inBottom: useMasks ? bY + bH - rBottom : 0
 }

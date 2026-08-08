@@ -16,15 +16,15 @@ Region {
     Region {
         // Horizontal
         x: bX
-        y: GlobalConfig.appearance.blurMask ? inTop : bY
+        y: inTop
         width: Math.max(0, bW)
-        height: GlobalConfig.appearance.blurMask ? Math.max(0, inBottom - inTop) : Math.max(0, bH)
+        height: Math.max(0, inBottom - inTop)
     }
     Region {
         // Vertical
         x: inLeft
         y: bY
-        width: GlobalConfig.appearance.blurMask ? Math.max(0, inRight - inLeft) : 0
-        height: GlobalConfig.appearance.blurMask ? Math.max(0, bH) : 0
+        width: Math.max(0, inRight - inLeft)
+        height: Math.max(0, bH)
     }
 }
