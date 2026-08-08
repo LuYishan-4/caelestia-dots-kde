@@ -23,26 +23,16 @@ Item {
     required property bool fullscreen
     property Item currentHoveredItem: null
 
-    function resetHover(): void {
-        if (currentHoveredItem) {
-            if (currentHoveredItem.hasOwnProperty("hoverPos"))
-                currentHoveredItem.hoverPos = -1;
-            currentHoveredItem = null;
-        }
-    }
-
     readonly property int vPadding: Tokens.padding.large
 
-    readonly property real barScale: Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0)
-
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real barScale: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
     readonly property int thickness: Math.round(Tokens.sizes.bar.innerWidth * barScale)
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
 
     readonly property real leftZoneSize: isHorizontal ? leftLayout.implicitWidth : leftLayout.implicitHeight
-
     readonly property real middleZoneSize: isHorizontal ? middleLayout.implicitWidth : middleLayout.implicitHeight
-
     readonly property real rightZoneSize: isHorizontal ? rightLayout.implicitWidth : rightLayout.implicitHeight
 
     property var leftEntries: {
@@ -58,6 +48,14 @@ Item {
     property var rightEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && e.zone === "right" && e.id !== "spacer");
+    }
+
+    function resetHover(): void {
+        if (currentHoveredItem) {
+            if (currentHoveredItem.hasOwnProperty("hoverPos"))
+                currentHoveredItem.hoverPos = -1;
+            currentHoveredItem = null;
+        }
     }
 
     function getLoaderAt(x, y) {
@@ -284,20 +282,20 @@ Item {
     GridLayout {
         id: middleLayout
 
+        property real idealX: (parent.width - width) / 2
+        property real minX: leftLayout.x + leftLayout.width + Tokens.spacing.medium
+        property real maxX: rightLayout.x - width - Tokens.spacing.medium
+        property real idealY: (parent.height - height) / 2
+        property real minY: leftLayout.y + leftLayout.height + Tokens.spacing.medium
+        property real maxY: rightLayout.y - height - Tokens.spacing.medium
+
         anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
         anchors.horizontalCenter: !isHorizontal ? parent.horizontalCenter : undefined
-
-        property real idealX: (parent.width - width) / 2
-
-        property real minX: leftLayout.x + leftLayout.width + Tokens.spacing.medium
-
-        property real maxX: rightLayout.x - width - Tokens.spacing.medium
-
-        property real idealY: (parent.height - height) / 2
-
-        property real minY: leftLayout.y + leftLayout.height + Tokens.spacing.medium
-
-        property real maxY: rightLayout.y - height - Tokens.spacing.medium
+        columns: isHorizontal ? -1 : 1
+        rows: isHorizontal ? 1 : -1
+        flow: isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
+        columnSpacing: Tokens.spacing.medium
+        rowSpacing: Tokens.spacing.medium
 
         // Plain ternaries assigning `undefined` to x/y (a real-typed property)
         // trigger "Unable to assign [undefined] to y/x" warnings even though
@@ -307,20 +305,11 @@ Item {
             when: isHorizontal
             value: Math.max(middleLayout.minX, Math.min(middleLayout.idealX, middleLayout.maxX))
         }
+
         Binding on y {
             when: !isHorizontal
             value: Math.max(middleLayout.minY, Math.min(middleLayout.idealY, middleLayout.maxY))
         }
-
-        columns: isHorizontal ? -1 : 1
-
-        rows: isHorizontal ? 1 : -1
-
-        flow: isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
-
-        columnSpacing: Tokens.spacing.medium
-
-        rowSpacing: Tokens.spacing.medium
 
         Repeater {
             id: middleRepeater

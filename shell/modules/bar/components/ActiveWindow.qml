@@ -14,6 +14,14 @@ Item {
     required property Brightness.Monitor monitor
     property color colour: Colours.palette.m3primary
 
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
+    readonly property int baseThickness: Tokens.sizes.bar.innerWidth
+    readonly property int effectiveThickness: rawScale < 1.0 ? baseThickness : barThickness
+    readonly property int iconSize: Math.round(effectiveThickness * 0.42)
+    readonly property int textSize: Math.round(effectiveThickness * 0.32)
+
     readonly property string windowTitle: {
         const hr = new Date().getHours();
         const msg = hr < 12 ? "Good Morning" : hr < 18 ? "Good Afternoon" : hr < 22 ? "Good Evening" : "Good Night";
@@ -69,6 +77,7 @@ Item {
         anchors.horizontalCenter: bar.isHorizontal ? undefined : parent.horizontalCenter
         anchors.verticalCenter: bar.isHorizontal ? parent.verticalCenter : undefined
 
+        fontStyle: Tokens.font.icon.builders.small.size(root.iconSize).build()
         animate: true
         text: "waving_hand"
         color: root.colour

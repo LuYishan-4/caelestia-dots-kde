@@ -18,7 +18,12 @@ StyledRect {
     readonly property alias items: iconColumn
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
-    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
+    readonly property int baseThickness: Tokens.sizes.bar.innerWidth
+    readonly property int effectiveThickness: rawScale < 1.0 ? baseThickness : barThickness
+    readonly property int iconSize: Math.round(effectiveThickness * 0.42)
 
     property real hoverPos: -1
     property real hoverExpansion: 30 // Fixed px amount to expand the tray area when hovered

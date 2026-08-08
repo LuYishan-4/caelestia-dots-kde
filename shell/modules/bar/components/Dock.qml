@@ -19,9 +19,6 @@ import qs.utils
 Item {
     id: root
 
-    implicitWidth: bar.isHorizontal ? container.width : container.implicitWidth
-    implicitHeight: bar.isHorizontal ? container.implicitHeight : container.height
-
     required property var bar
 
     property int modelUpdateTrigger: 0
@@ -33,6 +30,16 @@ Item {
     property real spacing: Tokens.spacing.medium
 
     property real padding: Tokens.padding.medium
+
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
+    readonly property int baseThickness: Tokens.sizes.bar.innerWidth
+    readonly property int effectiveThickness: rawScale < 1.0 ? baseThickness : barThickness
+    readonly property real configuredItemSize: Math.max(16, Math.min(effectiveThickness, Config.bar.dock.iconSize || 32))
+
+    implicitWidth: bar.isHorizontal ? container.width : container.implicitWidth
+    implicitHeight: bar.isHorizontal ? container.implicitHeight : container.height
 
     HoverHandler { id: dockHover }
 
@@ -148,7 +155,6 @@ Item {
         root.modelDataArray = newArr;
     }
 
-    readonly property real configuredItemSize: Math.max(16, Math.min(bar.thickness, Config.bar.dock.iconSize || 32))
     StyledRect {
         id: container
 
