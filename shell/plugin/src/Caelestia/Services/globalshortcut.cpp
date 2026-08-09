@@ -13,6 +13,7 @@
 #include <QJsonObject>
 #include <QKeySequence>
 #include <QProcess>
+#include <QTextStream>
 #include <cstdlib>
 
 Q_GLOBAL_STATIC(GlobalShortcutDispatcher, s_dispatcher)
@@ -53,6 +54,31 @@ QStringList buildRestoreArgs(const QString& component, const QString& action, co
     };
 }
 
+bool isLockscreen() {
+    static bool checked = false;
+    static bool result = false;
+    if (!checked) {
+        checked = true;
+        
+        QFile cmdline(QStringLiteral("/proc/self/cmdline"));
+        if (cmdline.open(QIODevice::ReadOnly)) {
+            QByteArray data = cmdline.readAll();
+            QList<QByteArray> args = data.split('\0');
+            for (const QByteArray& arg : args) {
+                if (arg.endsWith("lockscreen.qml")) {
+                    result = true;
+                    break;
+                }
+            }
+        }
+        
+        if (result) {
+            qDebug() << "[Caelestia] Running as lockscreen — global shortcut stealing disabled";
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 GlobalShortcutDispatcher* GlobalShortcutDispatcher::instance() {
@@ -64,10 +90,11 @@ GlobalShortcutDispatcher* GlobalShortcutDispatcher::instance() {
     static bool recovered = false;
     if (!recovered) {
         recovered = true;
-        QString path = stolenShortcutsPath();
-        QFile file(path);
-        if (file.open(QIODevice::ReadOnly)) {
-            QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        if (!isLockscreen()) {
+            QString path = stolenShortcutsPath();
+            QFile file(path);
+            if (file.open(QIODevice::ReadOnly)) {
+                QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
             file.close();
             if (doc.isArray()) {
                 const QJsonArray entries = doc.array();
@@ -103,12 +130,15 @@ GlobalShortcutDispatcher* GlobalShortcutDispatcher::instance() {
             // Remove recovery file — crash recovery is done
             QFile::remove(path);
         }
+        } // close if (!isLockscreen())
 
         // Register clean exit handler to delete the recovery file
         if (QCoreApplication::instance()) {
             QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [] {
-                QFile::remove(stolenShortcutsPath());
-                qDebug() << "[Caelestia] Removed stolen-shortcuts recovery file on clean exit";
+                if (!isLockscreen()) {
+                    QFile::remove(stolenShortcutsPath());
+                    qDebug() << "[Caelestia] Removed stolen-shortcuts recovery file on clean exit";
+                }
             });
         }
     }
@@ -285,6 +315,9 @@ QList<GlobalShortcut*> GlobalShortcut::allShortcuts() {
 }
 
 void GlobalShortcut::updateShortcut() {
+    if (isLockscreen())
+        return;
+
     if (m_name.isEmpty()) {
         return;
     }
@@ -381,10 +414,6 @@ void GlobalShortcut::updateShortcut() {
             m_stolenShortcuts.append({ info.componentUniqueName(), info.uniqueName(), info.keys(),
                 info.componentFriendlyName(), info.friendlyName(), seq });
 
-            if (caelestia::config::GlobalConfig::instance()->general()->debugLogs()) {
-                qDebug() << "[Caelestia] Unbinding shortcut" << seq.toString()
-                         << "from component:" << info.componentUniqueName();
-            }
 
             stealCmds.append({
                 QStringLiteral("call"),

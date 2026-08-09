@@ -6,6 +6,10 @@ import Quickshell
 import Caelestia.Config
 
 ShellRoot {
+    Component.onCompleted: {
+        Qt.application.name = "caelestia-lockscreen";
+    }
+
     Variants {
         model: Quickshell.screens
         
