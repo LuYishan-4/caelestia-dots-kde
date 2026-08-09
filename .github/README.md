@@ -132,6 +132,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | — | 0 |
 | — | 0 |
 | — | 0 |
+| — | 0 |
 
 </td>
 <td width="50%">
