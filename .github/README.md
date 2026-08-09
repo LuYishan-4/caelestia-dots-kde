@@ -124,11 +124,10 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | PRs |
 | --- | ---: |
-| [WinTone01](https://github.com/WinTone01) | 38 |
+| [WinTone01](https://github.com/WinTone01) | 39 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
-| — | 0 |
 | — | 0 |
 | — | 0 |
 | — | 0 |
@@ -144,12 +143,11 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | [0x0nYx](https://github.com/0x0nYx) | 101 |
 | [Kyedae](https://github.com/Kyedae) | 16 |
 | [bubbleo0](https://github.com/bubbleo0) | 11 |
-| [Utkarsh-tiwari27](https://github.com/Utkarsh-tiwari27) | 10 |
+| [RaceConditionWinner](https://github.com/RaceConditionWinner) | 10 |
 | [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
+| [arceus4526](https://github.com/arceus4526) | 6 |
 | [RealNath](https://github.com/RealNath) | 6 |
-| [Chiku-09](https://github.com/Chiku-09) | 5 |
-| [26heij](https://github.com/26heij) | 5 |
-| [arceus4526](https://github.com/arceus4526) | 4 |
+| [francisco-tato](https://github.com/francisco-tato) | 5 |
 
 </td>
 </tr></table>
