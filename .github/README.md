@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 <img src="assets/caelestia.svg" width="64" alt="Caelestia logo" />
 
@@ -8,6 +8,7 @@
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793d1?logo=arch-linux&logoColor=white&style=flat-square)](https://archlinux.org)
 [![Fedora](https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=white&style=flat-square)](https://fedoraproject.org)
+[![Debian](https://img.shields.io/badge/Debian-A81D33?logo=debian&logoColor=white&style=flat-square)](https://debian.org)
 [![KDE Plasma](https://img.shields.io/badge/Plasma_6-1D99F3?logo=kde&logoColor=white&style=flat-square)](https://kde.org/plasma-desktop)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-86dbce?style=flat-square)](LICENSE)
 
@@ -22,7 +23,7 @@ A community port of the [Caelestia Hyprland dotfiles](https://github.com/caelest
 
 ## Installation
 
-**Requirements:** Arch-based distro or Fedora · KDE Plasma 6.0+
+**Requirements:** Arch-based distro, Fedora, or Debian · KDE Plasma 6.0+
 
 ```bash
 git clone -b main --single-branch --depth 1 https://github.com/ladybug-me/caelestia-dots-kde ~/caelestia-dots-kde
@@ -123,10 +124,11 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | PRs |
 | --- | ---: |
-| [WinTone01](https://github.com/WinTone01) | 26 |
+| [WinTone01](https://github.com/WinTone01) | 38 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
+| — | 0 |
 | — | 0 |
 | — | 0 |
 | — | 0 |
@@ -139,8 +141,9 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | Issues |
 | --- | ---: |
-| [0x0nYx](https://github.com/0x0nYx) | 87 |
-| [bubbleo0](https://github.com/bubbleo0) | 10 |
+| [0x0nYx](https://github.com/0x0nYx) | 101 |
+| [Kyedae](https://github.com/Kyedae) | 16 |
+| [bubbleo0](https://github.com/bubbleo0) | 11 |
 | [Utkarsh-tiwari27](https://github.com/Utkarsh-tiwari27) | 10 |
 | [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
 | [RealNath](https://github.com/RealNath) | 6 |
@@ -155,7 +158,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 ## Credits
 
-- [Caelestia](https://github.com/caelestia) - original design language and dotfiles
+- [Caelestia](https://github.com/caelestia-dots) - original design language and dotfiles
 - [ladybug-me](https://github.com/ladybug-me) - KDE port lead & maintainer
 - [0xSolanaceae](https://github.com/0xSolanaceae) - maintainer
 - [dim-ghub](https://github.com/dim-ghub/caelestia-shell) - v2.0.0 features
