@@ -33,6 +33,7 @@ ColumnLayout {
 
         RowLayout {
             id: header
+
             width: parent.width
 
             spacing: Tokens.spacing.largeIncreased

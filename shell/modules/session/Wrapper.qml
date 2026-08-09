@@ -10,8 +10,7 @@ Item {
     required property DrawerVisibilities visibilities
     required property bool sidebarVisible
     readonly property real nonAnimWidth: content.implicitWidth
-
-    readonly property bool shouldBeActive: visibilities.session && Config.session.enabled
+    readonly property bool shouldBeActive: visibilities.session && Config.session.enabled && !visibilities.overview
     property real offsetScale: shouldBeActive ? 0 : 1
     property real sidebarOffset: sidebarVisible ? 14 : 0
 
@@ -25,15 +24,12 @@ Item {
     Behavior on offsetScale {
         Anim {}
     }
-
     Loader {
         id: content
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
-
         active: root.shouldBeActive || root.visible
-
         sourceComponent: Content {
             visibilities: root.visibilities
         }

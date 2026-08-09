@@ -4,6 +4,7 @@ import qs.services
 
 PerfStat {
     readonly property real totalSpeed: (NetworkUsage.downloadSpeed ?? 0) + (NetworkUsage.uploadSpeed ?? 0)
+
     widthFactor: 3.5
     maxText: "999.9 MB/s"
 

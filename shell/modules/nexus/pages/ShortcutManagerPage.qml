@@ -14,8 +14,11 @@ PageBase {
     title: qsTr("Shortcuts")
 
     property var shellShortcuts: []
+
     property var appShortcuts: []
+
     property var workspaceShortcuts: []
+
     property var tilingShortcuts: []
 
     function updateLists() {
@@ -71,6 +74,7 @@ PageBase {
 
         Connections {
             target: KeybindsModel
+
             function onKeybindsChanged() {
                 updateLists()
             }
@@ -78,6 +82,7 @@ PageBase {
 
         Loader {
             id: dialogLoader
+
             active: false
             sourceComponent: KeyCaptureDialog {
                 onConfirm: (name, newKey) => {

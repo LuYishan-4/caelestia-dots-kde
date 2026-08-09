@@ -40,6 +40,10 @@ Singleton {
     property real _initialTxBytes: 0
     property bool _initialized: false
 
+    // Regex to skip loopback and virtual/tunnel/container interfaces
+    // to avoid double-counting VPN/container/VM traffic.
+    readonly property var _virtualIfaceRegex: /^(lo|veth|docker\d*|br-|virbr|vnet|tun|tap|wg\d*|ppp|lxc|cali|flannel|kube|cni)/
+
     function formatBytes(bytes: real): var {
         // Handle negative or invalid values
         if (bytes < 0 || isNaN(bytes) || !isFinite(bytes)) {
@@ -119,8 +123,7 @@ Singleton {
                 continue;
 
             const iface = parts[0].replace(":", "");
-            // Skip loopback interface
-            if (iface === "lo")
+            if (_virtualIfaceRegex.test(iface))
                 continue;
 
             const rxBytes = parseFloat(parts[1]) || 0;

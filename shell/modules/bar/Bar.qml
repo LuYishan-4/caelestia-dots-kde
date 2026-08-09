@@ -23,19 +23,14 @@ Item {
     required property bool fullscreen
     property Item currentHoveredItem: null
 
-    function resetHover(): void {
-        if (currentHoveredItem) {
-            if (currentHoveredItem.hasOwnProperty("hoverPos"))
-                currentHoveredItem.hoverPos = -1;
-            currentHoveredItem = null;
-        }
-    }
-
     readonly property int vPadding: Tokens.padding.large
-    readonly property real barScale: Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0)
+
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real barScale: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
     readonly property int thickness: Math.round(Tokens.sizes.bar.innerWidth * barScale)
 
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
+
     readonly property real leftZoneSize: isHorizontal ? leftLayout.implicitWidth : leftLayout.implicitHeight
     readonly property real middleZoneSize: isHorizontal ? middleLayout.implicitWidth : middleLayout.implicitHeight
     readonly property real rightZoneSize: isHorizontal ? rightLayout.implicitWidth : rightLayout.implicitHeight
@@ -44,13 +39,23 @@ Item {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && (!e.zone || e.zone === "left") && e.id !== "spacer");
     }
+
     property var middleEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && e.zone === "middle" && e.id !== "spacer");
     }
+
     property var rightEntries: {
         let entries = Config.bar.entries || [];
         return entries.filter(e => e.enabled && e.zone === "right" && e.id !== "spacer");
+    }
+
+    function resetHover(): void {
+        if (currentHoveredItem) {
+            if (currentHoveredItem.hasOwnProperty("hoverPos"))
+                currentHoveredItem.hoverPos = -1;
+            currentHoveredItem = null;
+        }
     }
 
     function getLoaderAt(x, y) {
@@ -226,8 +231,13 @@ Item {
             const specialWs = mon?.lastIpcObject.specialWorkspace.name;
             if (specialWs?.length > 0)
                 Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
-            else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
-                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+            else {
+                const activeId = typeof KWinWorkspaceState !== "undefined"
+                    ? KWinWorkspaceState.activeId
+                    : Hypr.activeWsId;
+                if (angleDelta.y < 0 || activeId > 1)
+                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+            }
         } else if ((isHorizontal ? pos < screen.width / 2 : pos < screen.height / 2) && Config.bar.scrollActions.volume) {
             if (angleDelta.y > 0)
                 Audio.incrementVolume();
@@ -246,6 +256,7 @@ Item {
 
     GridLayout {
         id: leftLayout
+
         anchors.left: isHorizontal ? parent.left : undefined
         anchors.top: !isHorizontal ? parent.top : undefined
         anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
@@ -262,6 +273,7 @@ Item {
 
         Repeater {
             id: leftRepeater
+
             model: root.leftEntries
             delegate: barDelegate
         }
@@ -270,16 +282,20 @@ Item {
     GridLayout {
         id: middleLayout
 
-        anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
-        anchors.horizontalCenter: !isHorizontal ? parent.horizontalCenter : undefined
-
         property real idealX: (parent.width - width) / 2
         property real minX: leftLayout.x + leftLayout.width + Tokens.spacing.medium
         property real maxX: rightLayout.x - width - Tokens.spacing.medium
-
         property real idealY: (parent.height - height) / 2
         property real minY: leftLayout.y + leftLayout.height + Tokens.spacing.medium
         property real maxY: rightLayout.y - height - Tokens.spacing.medium
+
+        anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
+        anchors.horizontalCenter: !isHorizontal ? parent.horizontalCenter : undefined
+        columns: isHorizontal ? -1 : 1
+        rows: isHorizontal ? 1 : -1
+        flow: isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
+        columnSpacing: Tokens.spacing.medium
+        rowSpacing: Tokens.spacing.medium
 
         // Plain ternaries assigning `undefined` to x/y (a real-typed property)
         // trigger "Unable to assign [undefined] to y/x" warnings even though
@@ -289,19 +305,15 @@ Item {
             when: isHorizontal
             value: Math.max(middleLayout.minX, Math.min(middleLayout.idealX, middleLayout.maxX))
         }
+
         Binding on y {
             when: !isHorizontal
             value: Math.max(middleLayout.minY, Math.min(middleLayout.idealY, middleLayout.maxY))
         }
 
-        columns: isHorizontal ? -1 : 1
-        rows: isHorizontal ? 1 : -1
-        flow: isHorizontal ? GridLayout.LeftToRight : GridLayout.TopToBottom
-        columnSpacing: Tokens.spacing.medium
-        rowSpacing: Tokens.spacing.medium
-
         Repeater {
             id: middleRepeater
+
             model: root.middleEntries
             delegate: barDelegate
         }
@@ -309,6 +321,7 @@ Item {
 
     GridLayout {
         id: rightLayout
+
         anchors.right: isHorizontal ? parent.right : undefined
         anchors.bottom: !isHorizontal ? parent.bottom : undefined
         anchors.verticalCenter: isHorizontal ? parent.verticalCenter : undefined
@@ -325,6 +338,7 @@ Item {
 
         Repeater {
             id: rightRepeater
+
             model: root.rightEntries
             delegate: barDelegate
         }
@@ -332,6 +346,7 @@ Item {
 
     DelegateChooser {
         id: barDelegate
+
         role: "id"
 
             DelegateChoice {
@@ -343,7 +358,6 @@ Item {
             DelegateChoice {
                 roleValue: "workspaces"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Workspaces {
                         bar: root
                         screen: root.screen
@@ -354,7 +368,6 @@ Item {
             DelegateChoice {
                 roleValue: "dock"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Dock {
                         bar: root
                     }
@@ -363,7 +376,6 @@ Item {
             DelegateChoice {
                 roleValue: "activeWindow"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: ActiveWindow {
                         bar: root
                         monitor: Brightness.getMonitorForScreen(root.screen)
@@ -373,7 +385,6 @@ Item {
             DelegateChoice {
                 roleValue: "tray"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Tray {
                         popouts: root.popouts
                     }
@@ -382,77 +393,73 @@ Item {
             DelegateChoice {
                 roleValue: "clock"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: Clock {}
                 }
             }
             DelegateChoice {
                 roleValue: "statusIcons"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: StatusIcons {}
                 }
             }
             DelegateChoice {
                 roleValue: "kbLayoutIndicator"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && (Hypr.kbLayout || "").length > 0
+                    visible: enabled && (Hypr.kbLayout || "").length > 0
                     sourceComponent: KbLayoutIndicator {}
                 }
             }
             DelegateChoice {
                 roleValue: "notificationsIndicator"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: NotificationsIndicator {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfCpu"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Cpu.name.length > 0
+                    visible: enabled && Cpu.name.length > 0
                     sourceComponent: PerfCpu {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfMemory"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Memory.total > 1
+                    visible: enabled && Memory.total > 1
                     sourceComponent: PerfMemory {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfStorage"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Storage.disks.length > 0
+                    visible: enabled && Storage.disks.length > 0
                     sourceComponent: PerfStorage {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfNetwork"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: PerfNetwork {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfGpu"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && Gpu.type !== Gpu.None
+                    visible: enabled && Gpu.type !== Gpu.None
                     sourceComponent: PerfGpu {}
                 }
             }
             DelegateChoice {
                 roleValue: "perfBattery"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen && UPower.displayDevice.isLaptopBattery
+                    visible: enabled && UPower.displayDevice.isLaptopBattery
                     sourceComponent: PerfBattery {}
                 }
             }
             DelegateChoice {
                 roleValue: "github"
                 delegate: WrappedLoader {
-                    visible: enabled && !root.fullscreen && GithubStore.available
+                    visible: enabled && GithubStore.available
                     sourceComponent: GithubActivity {
                         popouts: root.popouts
                     }
@@ -461,7 +468,6 @@ Item {
             DelegateChoice {
                 roleValue: "showDesktop"
                 delegate: WrappedLoader {
-                    visible: !root.fullscreen
                     sourceComponent: ShowDesktop {}
                 }
             }

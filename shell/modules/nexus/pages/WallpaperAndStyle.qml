@@ -125,7 +125,7 @@ PageBase {
                     id: wallImg
 
                     anchors.fill: parent
-                    source: Wallpapers.current
+                    source: Wallpapers.thumbFor(Wallpapers.current)
                     preventInit: wallIndicatorLoader.opacity > 0
                     fadeOutAnim: Anim.DefaultEffects
                     fadeInAnim: Anim.SlowEffects

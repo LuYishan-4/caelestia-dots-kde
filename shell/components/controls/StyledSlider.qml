@@ -170,7 +170,9 @@ Slider {
         onPressed: e => {
             widthBehavior.enabled = false;
             pressStartX = e.x;
-            pressStartPos = root.visualPosition;
+            pressStartPos = CUtils.clamp(e.x / width, 0, 1);
+            if (root.interactionOnMove)
+                root.interaction(pressStartPos);
         }
         onPositionChanged: e => {
             dragMovement = (e.x - pressStartX) / width;

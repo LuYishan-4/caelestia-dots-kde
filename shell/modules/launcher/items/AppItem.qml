@@ -154,6 +154,7 @@ Item {
 
             Process {
                 id: checkPinnedProc
+
                 command: ["sh", "-c", "test -f ~/Desktop/\"$1\" || test -f ~/Desktop/\"$1.desktop\"", "--", root.modelData?.id ?? ""]
                 running: true
                 onExited: code => {

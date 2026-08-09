@@ -97,6 +97,7 @@ StyledRect {
 
             TrayItem {
                 required property int index
+
                 trayIndex: index
                 popouts: root.popouts
                 isHorizontal: root.isHorizontal
@@ -125,6 +126,7 @@ StyledRect {
         sourceComponent: Item {
             implicitWidth: isHorizontal ? (expandIconInner.implicitWidth - Tokens.padding.small * 2) : expandIconInner.implicitWidth
             implicitHeight: isHorizontal ? expandIconInner.implicitHeight : (expandIconInner.implicitHeight - Tokens.padding.small * 2)
+
             TapHandler {
                 onTapped: {
                     root.pinned = !root.pinned;

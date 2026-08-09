@@ -1,4 +1,3 @@
-
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -6,6 +5,7 @@ import qs.utils
 
 Item {
     id: root
+
     Component.onCompleted: {
         console.log("StartupTasks Loaded!");
         Quickshell.execDetached(["bash", "-c", `
@@ -20,6 +20,7 @@ Item {
             TASKS=(
                 "01-magic-lamp"
                 "02-krohnkite-setup"
+                "03-wallpaper-fill"
             )
             
             for script_name in "\${TASKS[@]}"; do

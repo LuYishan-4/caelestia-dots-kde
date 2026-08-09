@@ -33,6 +33,7 @@ Item {
 
     Loader {
         id: loader
+
         active: BadApplePlayer.shouldPlay
         anchors.fill: parent
         sourceComponent: Component {
@@ -41,6 +42,7 @@ Item {
 
                 MediaPlayer {
                     id: mediaPlayer
+
                     source: `${Quickshell.shellDir}/assets/badapple.mp4`
                     videoOutput: videoOutput
                     audioOutput: audioOut
@@ -49,6 +51,7 @@ Item {
 
                 VideoOutput {
                     id: videoOutput
+
                     anchors.fill: parent
                     fillMode: VideoOutput.Stretch
                     layer.enabled: true
@@ -56,6 +59,7 @@ Item {
 
                 AudioOutput {
                     id: audioOut
+
                     muted: !root.isFirstInstance
                 }
             }

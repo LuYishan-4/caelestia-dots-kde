@@ -63,7 +63,9 @@ Column {
             source: Paths.absolutePath(Config.paths.sessionGif)
             fillMode: AnimatedImage.PreserveAspectFit
             opacity: Visibilities.isCaelestiaMode ? 0 : 1
+
             Behavior on opacity { Anim { type: Anim.Standard } }
+
             visible: Config.paths.sessionGif !== ""
         }
 
@@ -76,9 +78,11 @@ Column {
             source: Paths.absolutePath("root:/assets/dino.gif")
             fillMode: AnimatedImage.PreserveAspectFit
             opacity: Visibilities.isCaelestiaMode ? 1 : 0
+
             Behavior on opacity { Anim { type: Anim.Standard } }
             
             layer.enabled: true
+
             layer.effect: Colouriser {
                 colorizationColor: Colours.palette.m3onSurface
                 sourceColor: "white"
@@ -94,9 +98,11 @@ Column {
             source: Paths.absolutePath("root:/assets/dino.gif")
             fillMode: AnimatedImage.PreserveAspectFit
             opacity: Visibilities.isCaelestiaMode ? 1 : 0
+
             Behavior on opacity { Anim { type: Anim.Standard } }
             
             layer.enabled: true
+
             layer.effect: Colouriser {
                 colorizationColor: Colours.palette.m3onSurface
                 sourceColor: "white"

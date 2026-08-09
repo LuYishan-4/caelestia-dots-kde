@@ -6,8 +6,8 @@ import Quickshell
 import Caelestia
 import Caelestia.Config
 import Caelestia.Services
-import qs.components
 import Caelestia.Services
+import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
@@ -155,7 +155,11 @@ ColumnLayout {
         verticalPadding: Tokens.padding.small * root.scaleOffset
         text: qsTr("End task")
         icon: "close"
-        visible: model && model.toplevels && model.toplevels.length > 0
+        visible: {
+            if (!model || !model.toplevels || model.toplevels.length === 0) return false;
+            // Hide for Nexus since it's an internal shell window managed differently
+            return !model.toplevels.some(t => t.title && String(t.title).startsWith("Nexus"));
+        }
 
         onClicked: {
             for (const toplevel of model.toplevels) {

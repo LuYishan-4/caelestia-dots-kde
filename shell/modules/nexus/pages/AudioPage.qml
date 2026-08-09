@@ -168,7 +168,7 @@ PageBase {
             value: GlobalConfig.audio.sounds.sfxVolume
             enabled: GlobalConfig.audio.sounds.enabled
             onMoved: v => GlobalConfig.audio.sounds.sfxVolume = v
-            onInteraction: v => Audio.playEffectTick()
+            onReleased: v => Audio.playEffectTick()
         }
 
         ToggleRow {

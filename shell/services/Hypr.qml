@@ -2,8 +2,8 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Io
+import Quickshell.Wayland
 import Caelestia
 import Caelestia.Config
 import Caelestia.Internal
@@ -61,6 +61,7 @@ Singleton {
                         property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
                         property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
                         property var lastIpcObject: null
+
                         Component.onCompleted: lastIpcObject = this
                     }
                 `, root, "monitorMock");
@@ -112,7 +113,13 @@ Singleton {
         if (keys.length > 0) return root._monitorCache[keys[0]];
         return null;
     }
-    readonly property int activeWsId: focusedWorkspace?.id ?? root.mockActiveWs
+    // On KDE, use KWinWorkspaceState.activeId so workspace switches invalidate
+    // any binding that reads this property (e.g. ContentWindow.hasFullscreen).
+    readonly property int activeWsId: {
+        if (typeof KWinWorkspaceState !== "undefined")
+            return KWinWorkspaceState.activeId;
+        return focusedWorkspace?.id ?? root.mockActiveWs;
+    }
 
     readonly property bool capsLock: CUtils.capsLock
     readonly property bool numLock: CUtils.numLock
@@ -130,15 +137,180 @@ Singleton {
 
     signal configReloaded
 
+    function hasFullscreen(): bool {
+        if (typeof KWinActiveWindowBridge !== "undefined") {
+            const wins = KWinActiveWindowBridge.windowList || [];
+            // KWin serialises fullscreen as a boolean, not Hyprland's integer
+            // level (0/1/2), so `> 1` is always false. Use === true instead.
+            for (let i = 0; i < wins.length; i++) {
+                if (wins[i].fullscreen === true)
+                    return true;
+            }
+            return false;
+        }
+        const monVals = root.monitors.values || [];
+        for (let i = 0; i < monVals.length; i++) {
+            const toplevels = monVals[i]?.activeWorkspace?.toplevels?.values || [];
+            for (let j = 0; j < toplevels.length; j++) {
+                if ((toplevels[j]?.lastIpcObject?.fullscreen ?? 0) > 1)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // Per-monitor fullscreen check for multi-monitor setups.
+    // On KDE, each window entry carries an `output` field (screen name) and a
+    // `workspace.id` that matches KWinWorkspaceState.activeId, so we scope the
+    // check to windows on this output AND the currently active workspace.
+    // On Hyprland, monitor.activeWorkspace already provides workspace scoping.
+    // Falls back to the global check if no screen name is given.
+    function hasFullscreenOn(screenName: string): bool {
+        if (!screenName)
+            return hasFullscreen();
+        if (typeof KWinActiveWindowBridge !== "undefined") {
+            const wins = KWinActiveWindowBridge.windowList || [];
+            const activeWsId = (typeof KWinWorkspaceState !== "undefined")
+                ? KWinWorkspaceState.activeId : -1;
+            for (let i = 0; i < wins.length; i++) {
+                if (!wins[i].fullscreen)
+                    continue;
+                if (wins[i].output !== screenName)
+                    continue;
+                // Only count windows on the active workspace (ignore other desktops).
+                if (activeWsId !== -1 && wins[i].workspace?.id !== activeWsId)
+                    continue;
+                return true;
+            }
+            return false;
+        }
+        const monVals = root.monitors.values || [];
+        for (let i = 0; i < monVals.length; i++) {
+            const mon = monVals[i];
+            if (mon?.lastIpcObject?.name !== screenName)
+                continue;
+            // activeWorkspace already scopes to the current workspace on Hyprland.
+            const toplevels = mon?.activeWorkspace?.toplevels?.values || [];
+            for (let j = 0; j < toplevels.length; j++) {
+                if ((toplevels[j]?.lastIpcObject?.fullscreen ?? 0) > 1)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    // Whether any window on `screenName` overlaps the given rect, which is in
+    // the same absolute multi-monitor coordinates KWin reports geometry in.
+    //
+    // Used by the bar's dodge mode. Minimized windows are skipped, and so are
+    // windows on other virtual desktops — a window you cannot see should not
+    // push the bar away. Returns false off KDE: the Hyprland path has no
+    // equivalent window list here, and reporting "nothing overlaps" leaves the
+    // bar visible rather than stuck hidden.
+    function hasWindowOverlapping(screenName: string, x: real, y: real, width: real, height: real, focusedOnly: bool): bool {
+        if (typeof KWinActiveWindowBridge === "undefined")
+            return false;
+
+        const wins = KWinActiveWindowBridge.windowList || [];
+        const activeWsId = (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeId : -1;
+        const activeAddr = focusedOnly ? String(KWinActiveWindowBridge.activeWindow?.address ?? "") : "";
+
+        // Nothing focused means nothing to dodge, rather than everything.
+        if (focusedOnly && !activeAddr)
+            return false;
+
+        for (let i = 0; i < wins.length; i++) {
+            const win = wins[i];
+            if (win.minimized === true)
+                continue;
+            if (focusedOnly && String(win.address) !== activeAddr)
+                continue;
+            if (screenName && win.output !== screenName)
+                continue;
+            if (activeWsId !== -1 && win.workspace?.id !== activeWsId)
+                continue;
+            // Touching edges are not an overlap, hence the strict comparisons.
+            if (win.x < x + width && win.x + win.width > x && win.y < y + height && win.y + win.height > y)
+                return true;
+        }
+        return false;
+    }
+
     function dispatch(request: string): void {
+        const isKDE = typeof KWinActiveWindowBridge !== "undefined";
+
+        // ── workspace (absolute) ──────────────────────────────────────
         if (request.startsWith("workspace ")) {
-            const ws = request.split(" ")[1];
-            if (typeof KWinWorkspaceState !== "undefined") {
-                KWinWorkspaceState.switchTo(ws);
+            const ws = request.split(" ").slice(1).join(" ");
+            if (isKDE) {
+                // Relative workspace scrolling: "r+1" / "r-1"
+                if (/^r[+-]\d+$/.test(ws)) {
+                    if (ws.charAt(1) === "+")
+                        KWinActiveWindowBridge.nextDesktop();
+                    else
+                        KWinActiveWindowBridge.previousDesktop();
+                } else {
+                    KWinWorkspaceState.switchTo(ws);
+                }
             }
             return;
         }
-        console.log("Unhandled dispatch: " + request);
+
+        // ── focuswindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("focuswindow address:0x")) {
+            if (isKDE) {
+                const prefix = "focuswindow address:0x";
+                KWinActiveWindowBridge.focusWindow(request.slice(prefix.length).trim());
+            }
+            return;
+        }
+
+        // ── closewindow address:0x<hex> ───────────────────────────────
+        if (request.startsWith("closewindow address:0x")) {
+            if (isKDE) {
+                const prefix = "closewindow address:0x";
+                KWinActiveWindowBridge.closeWindow(request.slice(prefix.length).trim());
+            }
+            return;
+        }
+
+        // ── movetoworkspace <id>,address:0x<hex> ─────────────────────
+        const moveMatch = request.match(/^movetoworkspace\s+(\S+),address:0x/);
+        if (moveMatch) {
+            if (isKDE) {
+                const desktopId = parseInt(moveMatch[1], 10);
+                const addr = request.slice(moveMatch[0].length).trim();
+                if (!isNaN(desktopId))
+                    KWinActiveWindowBridge.setWindowDesktop(addr, desktopId);
+            }
+            return;
+        }
+
+        // ── dpms off / dpms on ───────────────────────────────────────
+        if (request === "dpms off" || request === "dpms on") {
+            if (isKDE) {
+                const enable = request === "dpms on";
+                KWinActiveWindowBridge.runArbitraryScript(
+                    `var outs = workspace.outputs(); ` +
+                    `for (var i = 0; i < outs.length; i++) outs[i].setEnabled(${enable});`
+                );
+            }
+            return;
+        }
+
+        // ── togglespecialworkspace ────────────────────────────────────
+        // KDE has no special/scratchpad workspace concept; log and ignore.
+        if (request.startsWith("togglespecialworkspace")) {
+            if (!isKDE) {
+                // On actual Hyprland this would be handled by the IPC, but
+                // we no longer have a socket — log for visibility.
+                console.log("Hypr.dispatch: special workspace toggle not supported on KDE");
+            }
+            return;
+        }
+
+        // ── unrecognised ──────────────────────────────────────────────
+        console.log("Hypr.dispatch: unhandled request: " + request);
     }
 
     function cycleSpecialWorkspace(direction: string): void {
@@ -318,6 +490,7 @@ Singleton {
 
     HyprExtras {
         id: extras
+
         usingLua: false
     }
 }

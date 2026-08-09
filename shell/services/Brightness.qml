@@ -86,16 +86,21 @@ Singleton {
 
         command: ["ddcutil", "detect", "--brief"]
         stdout: StdioCollector {
-            onStreamFinished: root.ddcMonitors = text.trim().split("\n\n").filter(d => d.startsWith("Display ")).map(d => ({
-                        busNum: d.match(/I2C bus:[ ]*\/dev\/i2c-([0-9]+)/)[1],
-                        connector: d.match(/DRM connector:\s+(.*)/)[1].replace(/^card\d+-/, "") // strip "card1-"
-                    }))
+            onStreamFinished: root.ddcMonitors = text.trim().split("\n\n").filter(d => d.startsWith("Display ")).map(d => {
+                    const busMatch = d.match(/I2C bus:[ ]*\/dev\/i2c-([0-9]+)/);
+                    const connMatch = d.match(/DRM connector:\s+(.*)/);
+                    return {
+                        busNum: busMatch ? busMatch[1] : "",
+                        connector: connMatch ? connMatch[1].replace(/^card\d+-/, "") : ""
+                    };
+                }).filter(m => m.busNum !== "")
         }
     }
 
     // Native D-Bus listener — replaces the former dbus-monitor process
     Connections {
         target: BrightnessWatcher
+
         function onBrightnessChanged(): void {
             if (!dbusSyncTimer.running) {
                 dbusSyncTimer.start();
@@ -105,6 +110,7 @@ Singleton {
 
     Timer {
         id: dbusSyncTimer
+
         interval: 100
         repeat: false
         onTriggered: {

@@ -16,6 +16,7 @@ Window {
     color: "black"
 
     readonly property real lockHeight: Math.min(root.screen?.width ?? 0, root.screen?.height ?? 0)
+
     readonly property bool isPortrait: (root.screen?.width ?? 0) < (root.screen?.height ?? 0)
 
     contentItem.Config.screen: screen.name
@@ -29,6 +30,7 @@ Window {
 
     Loader {
         id: wallpaperLoader
+
         anchors.fill: parent
         asynchronous: true
         active: true
@@ -61,6 +63,7 @@ Window {
 
         ShaderEffectSource {
             id: bgSource
+
             anchors.fill: lockBg
             sourceItem: wallpaperLoader
             sourceRect: Qt.rect(lockContent.x, lockContent.y, lockContent.width, lockContent.height)

@@ -49,10 +49,15 @@ StackView {
         property real perfOpenStartedAt: 0
 
     readonly property real masterScale: !isNaN(GlobalConfig.bar.previewScale) ? GlobalConfig.bar.previewScale : 1.0
+
     readonly property real elementOffset: GlobalConfig.bar.perElementPreviewScale ? (!isNaN(GlobalConfig.bar.previewScales.trayMenu) ? GlobalConfig.bar.previewScales.trayMenu : 0.0) : 0.0
+
     readonly property real barScaleOffset: GlobalConfig.bar.previewScaleWithBar ? (!isNaN(GlobalConfig.bar.scale) ? GlobalConfig.bar.scale : 1.0) : 1.0
+
     readonly property real scaleOffset: Math.max(0.1, (masterScale + elementOffset) * barScaleOffset)
+
     readonly property real elementFontOffset: GlobalConfig.bar.perElementFontScale ? (!isNaN(GlobalConfig.bar.previewFontScales.trayMenu) ? GlobalConfig.bar.previewFontScales.trayMenu : 0.0) : 0.0
+
     readonly property real fontScale: Math.max(0.1, scaleOffset + (!isNaN(GlobalConfig.bar.fontScaleOffset) ? GlobalConfig.bar.fontScaleOffset : 0.0) + elementFontOffset)
 
         padding: Tokens.padding.small * scaleOffset
@@ -82,6 +87,7 @@ StackView {
 
         QsMenuOpener {
             id: menuOpener
+
             menu: menu.handle
         }
 
@@ -124,6 +130,7 @@ StackView {
 
         Timer {
             id: groupUpdateDebounce
+
             interval: 0
             repeat: false
             onTriggered: menu.updateGroups()
@@ -131,6 +138,7 @@ StackView {
 
         Instantiator {
             id: groupInstantiator
+
             model: menuOpener.children
             
             Item {
@@ -140,8 +148,10 @@ StackView {
             }
 
             onObjectAdded: menu.queueUpdateGroups()
+
             onObjectRemoved: menu.queueUpdateGroups()
             // In case the model itself changes completely
+
             onModelChanged: menu.queueUpdateGroups()
         }
 

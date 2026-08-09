@@ -38,14 +38,17 @@ Item {
         target: Clipboard
 
         function onClearHistoryFinished(success: bool): void {
-            if (success)
-                Toaster.toast(qsTr("Clipboard history cleared"), "", "delete");
-            else
+            if (success) {
+                if (GlobalConfig.utilities.toasts.clipboardChanged)
+                    Toaster.toast(qsTr("Clipboard history cleared"), "", "delete");
+            } else {
                 Toaster.toast(qsTr("Failed to clear clipboard history"), "", "error");
+            }
         }
     }
 
     implicitWidth: listWrapper.width + padding * 2
+
     implicitHeight: listWrapper.height + sessionFooter.height + searchWrapper.height + listWrapper.anchors.bottomMargin + sessionFooter.anchors.bottomMargin + searchWrapper.anchors.bottomMargin
 
     Item {

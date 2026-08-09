@@ -18,32 +18,59 @@ PageBase {
     isSubPage: true
 
     property bool pywal: false
+
     property bool pywalLight: false
+
     property real lightBlendMultiplier: 0.85
+
     property real darkBlendMultiplier: 0.5
+
     property bool sierraBreezeButtonsColor: false
+
     property bool disableKonsole: false
+
     property int konsoleOpacity: 20
+
     property int konsoleOpacityDark: 20
+
     property bool konsoleBlur: true
+
     property bool titlebarOpacityOverride: false
+
     property int titlebarOpacity: 100
+
     property int titlebarOpacityDark: 100
+
     property int toolbarOpacity: 100
+
     property int toolbarOpacityDark: 100
+
     property bool klassyWindecoOutline: false
+
     property bool useStartupDelay: false
+
     property int startupDelay: 5
+
     property int mainLoopDelay: 1
+
     property int screenshotDelay: 2
+
     property bool onceAfterChange: false
+
     property bool pauseMode: false
+
     property real chromaMultiplier: 1.0
+
     property real toneMultiplier: 1.0
+
     property real frameContrast: 0.2
+
     property real contrastLevel: 0.0
+
     property bool manualFetch: false
+
     property int specVersion: 2025
+
     property bool kdeRoundedCornersEffectOutline: false
 
     function parseConfig(text: string): void {
@@ -101,6 +128,7 @@ PageBase {
 
     ColumnLayout {
         id: contentLayout
+
         width: root.cappedWidth
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -108,6 +136,7 @@ PageBase {
 
         FileView {
             id: configFile
+
             path: `${Paths.config}/kde-material-you-colors/config.conf`
             watchChanges: true
             onLoaded: root.parseConfig(text())

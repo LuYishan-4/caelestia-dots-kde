@@ -1,7 +1,5 @@
 import ".."
 import "../../../components/controls"
-import qs.services
-import qs.utils
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.synchronizer
@@ -9,9 +7,12 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia.Services
+import qs.services
+import qs.utils
 
 PanelWindow {
     id: root
+
     visible: false
     color: "transparent"
     WlrLayershell.namespace: "osd"
@@ -28,27 +29,46 @@ PanelWindow {
     // Modes
     // TODO: Ask: sidebar AI
     enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound } 
+
     enum SelectionMode { RectCorners, Circle }
+
     enum Phase { Select, Post }
+
     property var action: RegionSelection.SnipAction.Copy
+
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
+
     property var phase: RegionSelection.Phase.Select
+
     signal dismiss()
 
     // Styles
     property string screenshotDir: `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/caelestia-screenshot`
+
     property color overlayColor: Qt.rgba("#000000".r, "#000000".g, "#000000".b, 1.0 - 0.4)
+
     property color brightText: true ? Colours.palette.m3onSurface : Colours.palette.m3surface
+
     property color brightSecondary: true ? Colours.palette.m3secondary : Colours.palette.m3onSecondary
+
     property color brightTertiary: true ? Colours.palette.m3tertiary : Qt.lighter(Colours.palette.m3primary)
+
     property color selectionBorderColor: brightSecondary
+
     property color selectionFillColor: "#33ffffff"
+
     property color windowBorderColor: brightSecondary
+
     property color windowFillColor: Qt.rgba(windowBorderColor.r, windowBorderColor.g, windowBorderColor.b, 1.0 - 0.85)
+
     property color imageBorderColor: brightTertiary
+
     property color imageFillColor: Qt.rgba(imageBorderColor.r, imageBorderColor.g, imageBorderColor.b, 1.0 - 0.85)
+
     property color onBorderColor: "#ff000000"
+
     property real targetRegionOpacity: 0.6
+
     property bool contentRegionOpacity: false
 
     // Vars for indicators
@@ -60,26 +80,44 @@ PanelWindow {
             return a.floating ? -1 : 1;
         });
     }
+
     readonly property var layers: ({})
+
     readonly property real falsePositivePreventionRatio: 0.5
 
     // Screen & interaction vars
     readonly property real monitorScale: (frozenImage.sourceSize.width > 0 && root.screen.width > 0) ? (frozenImage.sourceSize.width / root.screen.width) : (screen.devicePixelRatio || 1.0)
+
     readonly property real monitorOffsetX: screen.x || 0
+
     readonly property real monitorOffsetY: screen.y || 0
+
     property string activeWorkspaceId: ""
+
     property string screenshotPath: `${root.screenshotDir}/image-${screen.name}.png`
+
     property real dragStartX: 0
+
     property real dragStartY: 0
+
     property real draggingX: 0
+
     property real draggingY: 0
+
     property real dragDiffX: 0
+
     property real dragDiffY: 0
+
     property bool draggedAway: (dragDiffX !== 0 || dragDiffY !== 0)
+
     property bool dragging: false
+
     property var points: []
+
     property var mouseButton: null
+
     property var imageRegions: []
+
     readonly property var windowRegions: RegionFunctions.filterWindowRegionsByLayers(
         root.windows,
         root.layerRegions
@@ -91,6 +129,7 @@ PanelWindow {
             title: window.title,
         }
     })
+
     readonly property var layerRegions: {
         const layersOfThisMonitor = undefined
         const topLayers = undefined
@@ -116,19 +155,28 @@ PanelWindow {
 
     // Config
     property bool isCircleSelection: (root.selectionMode === RegionSelection.SelectionMode.Circle)
+
     property bool showWindowOutlines: false
+
     property bool enableWindowRegions: showWindowOutlines && !isCircleSelection
+
     property bool enableLayerRegions: true && !isCircleSelection
+
     property bool enableContentRegions: false
 
     // Target
     property real targetedRegionX: -1
+
     property real targetedRegionY: -1
+
     property real targetedRegionWidth: 0
+
     property real targetedRegionHeight: 0
+
     function targetedRegionValid() {
         return (root.targetedRegionX >= 0 && root.targetedRegionY >= 0)
     }
+
     function setRegionToTargeted() {
         const padding = 0; // Make borders not cut off n stuff
         root.regionX = root.targetedRegionX - padding;
@@ -181,13 +229,17 @@ PanelWindow {
     }
 
     property real regionWidth: Math.abs(draggingX - dragStartX)
+
     property real regionHeight: Math.abs(draggingY - dragStartY)
+
     property real regionX: Math.min(dragStartX, draggingX)
+
     property real regionY: Math.min(dragStartY, draggingY)
 
     // Screenshot stuff
     TempScreenshotProcess {
         id: screenshotProc
+
         running: true
         screen: root.screen
         screenshotDir: root.screenshotDir
@@ -197,10 +249,13 @@ PanelWindow {
             root.preparationDone = !checkRecordingProc.running;
         }
     }
+
     property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound
+
     property bool recordingShouldStop: false
     Process {
         id: checkRecordingProc
+
         running: isRecording
         command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && test -f $HOME/.local/state/caelestia/record/recording.mp4"]
         onExited: (exitCode, exitStatus) => {
@@ -208,8 +263,11 @@ PanelWindow {
             root.recordingShouldStop = (exitCode === 0);
         }
     }
+
     property bool preparationDone: false
+
     property string frozenImageSource: ""
+
     onPreparationDoneChanged: {
         if (!preparationDone) return;
         if (root.isRecording && root.recordingShouldStop) {
@@ -229,12 +287,14 @@ PanelWindow {
 
     Process {
         id: imageDetectionProcess
+
         command: ["bash", "-c", `${"~/.config/caelestia/scripts"}/images/find-regions-venv.sh ` 
             + `--image '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' ` 
             + `--max-width ${Math.round(root.screen.width * root.falsePositivePreventionRatio)} ` 
             + `--max-height ${Math.round(root.screen.height * root.falsePositivePreventionRatio)} `]
         stdout: StdioCollector {
             id: imageDimensionCollector
+
             onStreamFinished: {
                 imageRegions = RegionFunctions.filterImageRegions(
                     JSON.parse(imageDimensionCollector.text),
@@ -313,6 +373,7 @@ PanelWindow {
 
     Image { // For freezing
         id: frozenImage
+
         anchors.fill: parent
         source: root.frozenImageSource
         cache: false
@@ -328,6 +389,7 @@ PanelWindow {
 
     MouseArea {
         id: mouseArea
+
         anchors.fill: parent
         cursorShape: root.draggedAway ? Qt.ArrowCursor : Qt.CrossCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -427,6 +489,7 @@ PanelWindow {
             }
             delegate: TargetRegion {
                 z: 2
+
                 required property var modelData
                 clientDimensions: modelData
                 showIcon: true
@@ -460,6 +523,7 @@ PanelWindow {
             }
             delegate: TargetRegion {
                 z: 3
+
                 required property var modelData
                 clientDimensions: modelData
                 targeted: !root.draggedAway &&
@@ -489,6 +553,7 @@ PanelWindow {
             }
             delegate: TargetRegion {
                 z: 4
+
                 required property var modelData
                 clientDimensions: modelData
                 targeted: !root.draggedAway &&
@@ -507,6 +572,7 @@ PanelWindow {
         // Controls
         Row {
             id: regionSelectionControls
+
             z: 10
             visible: root.phase === RegionSelection.Phase.Select
             anchors {
@@ -515,8 +581,10 @@ PanelWindow {
                 bottomMargin: -height
             }
             opacity: 0
+
             Connections {
                 target: root
+
                 function onVisibleChanged() {
                     if (!visible) return;
                     regionSelectionControls.anchors.bottomMargin = 8;
@@ -529,6 +597,7 @@ PanelWindow {
             Behavior on anchors.bottomMargin {
                 animation: NumberAnimation { duration: 300; easing.type: Easing.OutQuad }
             }
+
             spacing: 6
 
             OptionsToolbar {
@@ -538,6 +607,7 @@ PanelWindow {
                 Synchronizer on selectionMode {
                     property alias source: root.selectionMode
                 }
+
                 onDismiss: root.dismiss();
             }
             IconButton {
@@ -550,6 +620,7 @@ PanelWindow {
                     root.regionHeight = root.screen.height;
                     root.snip();
                 }
+
                 Tooltip {
                     target: parent
                     text: qsTr("Full Screen Screenshot")
@@ -561,6 +632,7 @@ PanelWindow {
                 visible: root.regionConfirmPending
                 icon: "check"
                 onClicked: root.snip();
+
                 Tooltip {
                     target: parent
                     text: qsTr("Snip selected region (Enter)")
@@ -579,6 +651,7 @@ PanelWindow {
                         root.dismiss();
                     }
                 }
+
                 Tooltip {
                     target: parent
                     text: root.regionConfirmPending ? qsTr("Clear selection") : qsTr("Close")

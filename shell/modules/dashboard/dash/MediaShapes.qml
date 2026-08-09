@@ -83,6 +83,7 @@ Item {
         
         Connections {
             target: Audio.beatTracker
+
             function onBeat(bpm) {
                 materialShape.morph();
             }
@@ -94,7 +95,9 @@ Item {
 
         SequentialAnimation on scale {
             id: beatAnim
+
             running: false
+
             NumberAnimation { to: 1.15; duration: 80 * materialShape.speedMultiplier; easing.type: Easing.OutQuad }
             NumberAnimation { to: 1.0; duration: 170 * materialShape.speedMultiplier; easing.type: Easing.InOutQuad }
         }

@@ -19,15 +19,7 @@ SCRIPTS_DIR="$BUNDLE_DIR/scripts"
 export BUNDLE_DIR
 export INSTALL_START_EPOCH="$(date +%s)"
 
-# Prevent concurrent setup runs from racing on git/CMake/config writes.
-# Only the true outer (pre-tmux) invocation acquires this lock. The
-# script re-execs itself inside a tmux session (CAELESTIA_TMUX_MASTER=1)
-# to run the actual install, and that inner process is a *child* of the
-# outer one, which is still alive (blocked on `tmux attach-session`) and
-# still holding fd 9 — so if the inner process tried to flock the same
-# file it would always fail against its own parent. Concurrency is
-# already fully protected by the outer instance holding the lock for
-# its entire lifetime.
+# Prevent concurrent runs.
 if [[ "${CAELESTIA_TMUX_MASTER:-0}" == "0" ]]; then
     exec 9>"${XDG_RUNTIME_DIR:-/tmp}/caelestia-setup.lock"
     flock -n 9 || { echo "Another Caelestia setup is already running."; exit 1; }
@@ -46,11 +38,16 @@ detect_base_distro() {
             fedora|nobara|bazzite|rhel|centos|almalinux|rocky)
                 detected="fedora"
                 ;;
+            debian|ubuntu|pop|mint|kali|raspbian|elementary|zorin|deepin|devuan)
+                detected="debian"
+                ;;
             *)
                 if echo "${ID_LIKE:-}" | grep -iq "arch"; then
                     detected="arch"
                 elif echo "${ID_LIKE:-}" | grep -iq "fedora"; then
                     detected="fedora"
+                elif echo "${ID_LIKE:-}" | grep -iq -E "debian|ubuntu"; then
+                    detected="debian"
                 fi
                 ;;
         esac
@@ -61,10 +58,46 @@ detect_base_distro() {
             detected="arch"
         elif command -v dnf >/dev/null 2>&1; then
             detected="fedora"
+        elif command -v apt-get >/dev/null 2>&1; then
+            detected="debian"
         fi
     fi
 
     echo "$detected"
+}
+
+# Race geo-IP services in parallel, cache result for 24h.
+detect_country() {
+    local cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-country"
+    local cache_ttl=86400
+
+    if [[ -f "$cache_file" ]]; then
+        local cache_age
+        cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)))
+        if (( cache_age < cache_ttl )); then
+            cat "$cache_file"
+            return 0
+        fi
+    fi
+
+    local country=""
+    country=$(
+        {
+            curl -fsSL --max-time 2 'https://am.i.mullvad.net/country'                     2>/dev/null &
+            curl -fsSL --max-time 2 'https://ipinfo.io/country'                            2>/dev/null &
+            curl -fsSL --max-time 2 'https://ifconfig.co/json'                             2>/dev/null | grep -oP '"country"\s*:\s*"\K[^"]+' &
+            wait
+        } 2>/dev/null | grep -m1 -E '^[A-Za-z]{2,3}$' || true
+    )
+
+    if [[ -n "$country" ]]; then
+        mkdir -p "$(dirname "$cache_file")"
+        printf '%s' "$country" > "$cache_file"
+        printf '%s' "$country"
+        return 0
+    fi
+
+    return 1
 }
 
 silent_refresh_pacman_sources() {
@@ -76,11 +109,7 @@ silent_refresh_pacman_sources() {
     if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
         have_root=1
     else
-        # Ask for sudo up front (this prompts interactively if there's no
-        # cached/NOPASSWD ticket) instead of silently skipping every step
-        # below with `sudo -n`. A single successful `sudo -v` here caches
-        # credentials for the rest of this function (and the real install
-        # steps later), so the user is only prompted once.
+        # Ask for sudo once upfront; sudo -v caches the ticket.
         echo "[INFO]  Requesting sudo access to refresh/rank pacman mirrors..."
         if sudo -v; then
             have_root=1
@@ -90,10 +119,7 @@ silent_refresh_pacman_sources() {
     fi
 
     if (( have_root )); then
-        # Use sudo -n (non-interactive) for all subsequent commands — the
-        # upfront sudo -v above already cached the credential ticket, so
-        # -n will succeed silently without re-prompting. If the ticket
-        # expires, individual steps degrade gracefully via || true.
+        # Cached sudo — non-interactive from here on.
         as_root() {
             if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
                 "$@"
@@ -109,17 +135,8 @@ silent_refresh_pacman_sources() {
         fi
 
         if command -v reflector >/dev/null 2>&1; then
-            # Without a --country filter, reflector's candidate pool is every
-            # mirror on earth (it only filters by "recently synced", not by
-            # distance) - it then speed-ranks whatever it picked, but a mirror
-            # halfway around the world can still "win" the rate test yet be
-            # unreliable/overloaded/blocked in practice, leaving pacman to churn
-            # through dead UK/AU/CN/etc. mirrors during the real download. Best-
-            # effort geolocate to scope candidates to the local country; silently
-            # fall back to the previous global behaviour if that lookup fails
-            # (offline, API down, etc.) rather than hard-failing the install.
             local reflector_country
-            reflector_country=$(curl -fsSL --max-time 3 https://ipapi.co/country_name/ 2>/dev/null || true)
+            reflector_country=$(detect_country)
             local -a reflector_args=(--latest 20 --protocol https --sort rate)
             if [[ -n "$reflector_country" ]]; then
                 echo "[INFO]  Ranking pacman mirrors by download speed (country: $reflector_country)..."
@@ -131,20 +148,13 @@ silent_refresh_pacman_sources() {
             as_root reflector "${reflector_args[@]}" --save /etc/pacman.d/mirrorlist >/dev/null 2>&1 || echo "[WARN]  reflector failed, continuing with current mirrors."
         fi
 
-        # CachyOS-based installs pull their (differently-versioned) packages
-        # from a separate cachyos-mirrorlist that reflector above never
-        # touches. cachyos-rate-mirrors re-ranks that (and
-        # cachyos-v3/v4-mirrorlist) with proper geoip + real throughput
-        # testing - without this, installs can be stuck on a slow/
-        # oversubscribed default mirror even on a fast connection.
+        # Re-rank CachyOS-specific mirrors (separate from Arch mirrorlist).
         if command -v cachyos-rate-mirrors >/dev/null 2>&1; then
             echo "[INFO]  Ranking CachyOS mirrors by download speed..."
             as_root cachyos-rate-mirrors >/dev/null 2>&1 || echo "[WARN]  cachyos-rate-mirrors failed, continuing with current mirrors."
         fi
 
-        # Pre-install dos2unix if it's missing, so the CRLF-normalization
-        # step later (normalize_line_endings_first) doesn't need to
-        # re-prompt for sudo when it calls run_arch_pacman_install.
+        # Pre-install dos2unix for CRLF normalization later.
         if ! command -v dos2unix >/dev/null 2>&1; then
             as_root pacman -Sy --noconfirm dos2unix >/dev/null 2>&1 || true
         fi
@@ -182,9 +192,7 @@ run_arch_pacman_install() {
 
 export BASE_DISTRO="$(detect_base_distro)"
 
-# Mirror refresh and CRLF normalization only run in the outer (pre-tmux)
-# shell. The script re-execs itself inside a tmux session later, and
-# those steps are pointless (and re-prompt for sudo) the second time.
+# Only run in the outer (pre-tmux) invocation.
 if [[ "${CAELESTIA_TMUX_MASTER:-0}" == "0" ]]; then
     silent_refresh_pacman_sources
 fi
@@ -218,6 +226,9 @@ normalize_line_endings_first() {
                             ;;
                         fedora)
                             sudo dnf install -y dos2unix || return 1
+                            ;;
+                        debian)
+                            sudo apt-get update && sudo apt-get install -y dos2unix || return 1
                             ;;
                         *)
                             echo "[WARN]  Could not detect distro for automatic dos2unix installation."
@@ -302,6 +313,12 @@ if [[ "${CAELESTIA_TMUX_MASTER:-0}" == "0" ]]; then
             else
                 sudo dnf install -y gcc-c++ cmake make
             fi
+        elif [[ "$BASE_DISTRO" == "debian" ]]; then
+            if [[ "${CAELESTIA_USE_TMUX:-1}" == "1" ]]; then
+                sudo apt-get update && sudo apt-get install -y build-essential g++ cmake make tmux
+            else
+                sudo apt-get update && sudo apt-get install -y build-essential g++ cmake make
+            fi
         else
             echo "Could not auto-install build tools. Please install manually: ${MISSING_PKGS[*]}"
             exit 1
@@ -379,12 +396,7 @@ if [[ -z "${TMUX:-}" && "${CAELESTIA_NO_TMUX:-0}" == "0" && "${CAELESTIA_USE_TMU
     mkfifo /tmp/caelestia_cmd
     mkfifo /tmp/caelestia_status
     
-    # Build a wrapper script instead of an inline command string. This
-    # guarantees that no matter how (or how fast) the inner script/binary
-    # exits or crashes, the tmux pane ALWAYS prints a clear message and
-    # waits for a keypress before the pane's shell exits — so the pane
-    # (and therefore the session and the attached terminal) can never
-    # vanish silently before the user can read what happened.
+    # Wrapper keeps the tmux pane alive after exit/crash for diagnostics.
     WRAPPER_SCRIPT="/tmp/caelestia_tmux_wrapper.sh"
     printf -v args_str '%q ' "$0" "$@"
     cat > "$WRAPPER_SCRIPT" <<WRAPPER_EOF
@@ -403,19 +415,14 @@ WRAPPER_EOF
     chmod +x "$WRAPPER_SCRIPT"
 
     tmux new-session -d -s caelestia_install "bash $WRAPPER_SCRIPT"
-    # Keep the dead pane visible if the wrapper's process exits with a
-    # non-zero code (crash, etc.), so a catastrophic/instant failure can
-    # still be inspected instead of the session vanishing outright. A
-    # clean, successful run (exit 0) still closes the session normally.
+    # Keep pane visible on failure; close normally on success.
     tmux set-option -t caelestia_install remain-on-exit failed
     tmux set-option -t caelestia_install mouse on
     
     tmux attach-session -t caelestia_install
     _tmux_exit=$?
 
-    # If the tmux session ended, the inner script may have left a log.
-    # Check it here in the outer terminal so the user sees the diagnostic
-    # even though the tmux window already closed.
+    # Surface inner-script diagnostics in the outer terminal.
     _needs_pause=0
     if [[ -s /tmp/caelestia_installer_err.log ]]; then
         _reached_done=0
@@ -450,10 +457,7 @@ WRAPPER_EOF
         _needs_pause=1
     fi
 
-    # Never let the terminal window auto-close before the user can read
-    # the diagnostic above — some terminal emulators close instantly when
-    # the launching shell exits, which is what caused the "flash and vanish"
-    # behavior previously.
+    # Prevent terminal from auto-closing before the user can read output.
     if [[ $_needs_pause -eq 1 ]]; then
         echo "Press Enter to close this window..."
         read -r
@@ -462,33 +466,23 @@ WRAPPER_EOF
     exit $_tmux_exit
 fi
 
-# Verify the compiled binary exists and is executable before we try to run it
 if [[ ! -x "$BIN" ]]; then
     echo ""
     echo "============================================================"
-    echo "  FATAL: Installer binary missing or not executable"
-    echo "  Expected at: $BIN"
+    echo "  FATAL: Installer binary missing: $BIN"
+    echo "  C++ compilation likely failed — check g++, cmake, make."
     echo "============================================================"
-    echo ""
-    echo "This usually means the C++ compilation step failed silently."
-    echo "Check that g++, cmake, and make are installed correctly."
     echo ""
     echo "Press Enter to close this window..."
     read -r
     exit 1
 fi
 
-# Run the installer, capturing stderr so error messages survive terminal reset
 _installer_start=$(date +%s)
 "$BIN" "$@" 2>/tmp/caelestia_installer_err.log
 _exit_code=$?
-_installer_end=$(date +%s)
-_installer_elapsed=$((_installer_end - _installer_start))
+_installer_elapsed=$(($(date +%s) - _installer_start))
 
-# Determine if the installer completed normally.
-# A real install takes minutes; anything under 3 seconds is a premature exit.
-# Also check that the "done (success)" marker appears in stderr — if the binary
-# exits 0 without ever printing it, something went wrong before phase 6.
 _reached_done=0
 if grep -q '\[installer\] done (success)' /tmp/caelestia_installer_err.log 2>/dev/null; then
     _reached_done=1

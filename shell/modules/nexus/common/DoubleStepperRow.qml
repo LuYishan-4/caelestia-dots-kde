@@ -49,6 +49,7 @@ ConnectedRect {
             StyledText {
                 id: label
                 Layout.fillWidth: true
+
                 font: Tokens.font.body.small
                 elide: Text.ElideRight
             }
@@ -65,6 +66,7 @@ ConnectedRect {
 
         CustomSpinBox {
             id: scaleBox
+
             min: root.scaleFrom
             max: root.scaleTo
             step: root.scaleStepSize
@@ -74,6 +76,7 @@ ConnectedRect {
         
         CustomSpinBox {
             id: fontBox
+
             min: root.fontFrom
             max: root.fontTo
             step: root.fontStepSize
@@ -84,11 +87,13 @@ ConnectedRect {
 
     Connections {
         target: root
+
         function onScaleValueChanged() {
             if (scaleBox.value !== root.scaleValue) {
                 scaleBox.value = root.scaleValue;
             }
         }
+
         function onFontValueChanged() {
             if (fontBox.value !== root.fontValue) {
                 fontBox.value = root.fontValue;

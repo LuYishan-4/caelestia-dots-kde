@@ -6,8 +6,8 @@ import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
 import qs.components
-import qs.components.effects
 import qs.components.controls
+import qs.components.effects
 import qs.services
 import qs.modules.nexus.common
 
@@ -19,13 +19,21 @@ PageBase {
     scrollable: true
 
     property bool isGlobalDragging: false
+
     property string globalDragSourceList: ""
+
     property int globalDragSourceIndex: -1
+
     property string globalDragHoveredList: ""
+
     property var pendingSaveEntries: []
+
     property real perfLoadStartedAt: 0
+
     property real perfSaveStartedAt: 0
+
     readonly property real zonePadding: Tokens.padding.medium
+
     readonly property real emptyZoneHeight: Math.max(root.height - 120, 72)
 
     property var componentMeta: ({
@@ -121,6 +129,7 @@ PageBase {
 
     RowLayout {
         id: mainLayout
+
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
         spacing: Tokens.spacing.large
@@ -140,6 +149,7 @@ PageBase {
 
         Timer {
             id: saveDebounce
+
             interval: 180
             repeat: false
             onTriggered: root.flushSave()
@@ -147,6 +157,7 @@ PageBase {
 
         AddShortcutDialog {
             id: addShortcutDialog
+
             onSaved: (label, cmd, icon) => {
                 let id = "custom_" + Date.now();
                 libraryModel.append({
@@ -218,6 +229,7 @@ PageBase {
 
                 ListView {
                     id: activeList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -262,6 +274,7 @@ PageBase {
 
                 TextButton {
                     id: addShortcutBtn
+
                     text: qsTr("Add Shortcut...")
                     type: TextButton.Filled
                     ToolTip.text: qsTr("Create a custom shortcut entry")
@@ -311,6 +324,7 @@ PageBase {
 
                 ListView {
                     id: libList
+
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.medium
                     orientation: ListView.Vertical
@@ -330,6 +344,7 @@ PageBase {
     property Component panelDelegate: Component {
         Item {
             id: delegateWrapper
+
             required property int index
             required property string compId
             required property bool isPlaceholder
@@ -344,6 +359,7 @@ PageBase {
             Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             
             property bool isDraggingThis: activeDragArea.drag.active
+
             z: isDraggingThis ? 100 : 1
 
             DropArea {
@@ -376,6 +392,7 @@ PageBase {
 
             StyledRect {
                 id: activeDelegate
+
                 width: delegateWrapper.width
                 height: 50
                 color: isDraggingThis ? Colours.layer(Colours.palette.m3surfaceContainerHighest, 2) : (sourceList !== "library" ? Colours.palette.m3surfaceContainerHigh : Colours.palette.m3surfaceContainer)
@@ -386,6 +403,7 @@ PageBase {
 
                 MouseArea {
                     id: activeDragArea
+
                     anchors.fill: parent
                     hoverEnabled: true
                     drag.target: isPlaceholder ? null : activeDelegate
@@ -440,6 +458,7 @@ PageBase {
                     acceptedButtons: Qt.NoButton
                     color: Colours.palette.m3onSurface
                     opacity: activeDragArea.containsMouse && !isPlaceholder && !isDraggingThis ? 0.08 : 0
+
                     Behavior on opacity { NumberAnimation { duration: 150 } }
                 }
 
@@ -488,6 +507,7 @@ PageBase {
 
                 states: State {
                     when: activeDragArea.drag.active
+
                     ParentChange { target: activeDelegate; parent: root.flickable.contentItem }
                     PropertyChanges { target: activeDelegate; scale: 1.05 }
                 }

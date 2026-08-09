@@ -2,17 +2,17 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
+import Caelestia
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.components.containers
 import qs.components.controls
 import qs.components.images
-import qs.modules.nexus.common
 import qs.services
-import Quickshell
-import Quickshell.Widgets
-import Caelestia.Services
-import Caelestia
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -23,6 +23,7 @@ PageBase {
 
     ColumnLayout {
         id: mainLayout
+
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
         spacing: Tokens.spacing.extraSmall / 2
@@ -44,6 +45,7 @@ PageBase {
 
             RowLayout {
                 id: contentRow
+
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
@@ -77,6 +79,7 @@ PageBase {
                     
                     StyledTextField {
                         id: customInput
+
                         anchors.fill: parent
                         anchors.leftMargin: Tokens.padding.medium
                         anchors.rightMargin: Tokens.padding.medium
@@ -143,6 +146,7 @@ PageBase {
 
             ListView {
                 id: targetList
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 orientation: ListView.Vertical
@@ -155,6 +159,7 @@ PageBase {
 
                 delegate: StyledRect {
                     id: delegateRect
+
                     required property string modelData
                     required property int index
 
@@ -165,6 +170,7 @@ PageBase {
 
                     RowLayout {
                         id: itemLayout
+
                         anchors.fill: parent
                         anchors.leftMargin: Tokens.padding.medium
                         anchors.rightMargin: Tokens.padding.medium
@@ -259,6 +265,7 @@ PageBase {
 
                         Connections {
                             target: KWinActiveWindowBridge
+
                             function onWindowListChanged() {
                                 list.updateModel();
                             }

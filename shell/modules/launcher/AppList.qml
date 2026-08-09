@@ -102,13 +102,16 @@ StyledListView {
     }
 
     property string _debouncedSearchText: search.text
+
     Timer {
         id: searchDebounceTimer
+
         interval: 80
         onTriggered: root._debouncedSearchText = search.text
     }
     Connections {
         target: search
+
         function onTextChanged(): void {
             if (root.state === "emoji") {
                 searchDebounceTimer.restart();
@@ -146,6 +149,7 @@ StyledListView {
 
     Timer {
         id: previewTimer
+
         interval: 100
         onTriggered: {
             if (!root.currentItem || !root.currentItem.modelData) return;

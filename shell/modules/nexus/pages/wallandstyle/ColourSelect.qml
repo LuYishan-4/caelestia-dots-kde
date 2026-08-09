@@ -8,8 +8,8 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
-import qs.modules.nexus.common
 import qs.modules.launcher.services
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -42,6 +42,7 @@ PageBase {
             
             RowLayout {
                 id: row
+
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
@@ -57,6 +58,7 @@ PageBase {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Tokens.spacing.extraSmall
+
                     StyledText {
                         text: "Advanced Material You Settings"
                         font: Tokens.font.title.small
@@ -107,6 +109,7 @@ PageBase {
 
                 StyledRect {
                     id: modeDelegateRect
+
                     required property var modelData
 
                     readonly property bool isSelected: (modelData?.mode === "light") === Colours.light
@@ -127,6 +130,7 @@ PageBase {
 
                     RowLayout {
                         id: modeCol
+
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -180,6 +184,7 @@ PageBase {
                 
                 StyledRect {
                     id: delegateRect
+
                     required property var modelData
                     
                     readonly property bool isSelected: `${modelData?.name} ${modelData?.flavour}` === Schemes.currentScheme
@@ -199,6 +204,7 @@ PageBase {
                     
                     RowLayout {
                         id: schemeRow
+
                         anchors.fill: parent
                         anchors.margins: Tokens.padding.large
                         spacing: Tokens.spacing.large
@@ -282,6 +288,7 @@ PageBase {
                 
                 StyledRect {
                     id: varDelegateRect
+
                     required property var modelData
                     
                     readonly property bool isSelected: modelData?.variant === Schemes.currentVariant
@@ -302,6 +309,7 @@ PageBase {
                     
                     RowLayout {
                         id: varCol
+
                         anchors.top: parent.top
                         anchors.left: parent.left
                         anchors.right: parent.right

@@ -2,21 +2,21 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import Caelestia
 import Caelestia.Config
 import Caelestia.Services
-import Quickshell
-import Quickshell.Io
 import qs.components
 import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
 
-
 PageBase {
     id: root
 
     property bool showLogout: false
+
     title: qsTr("Window Tiling")
     isSubPage: true
 
@@ -59,6 +59,7 @@ PageBase {
             
             Process {
                 id: restartProcess
+
                 command: ["bash", "-c", "nohup bash -c 'qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logout 2>/dev/null || true' >/dev/null 2>&1"]
             }
         }
@@ -225,6 +226,7 @@ PageBase {
 
             ColumnLayout {
                 id: colLayout
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 anchors.leftMargin: Tokens.padding.largeIncreased

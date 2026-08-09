@@ -20,8 +20,11 @@ PageBase {
     title: qsTr("Select wallpaper")
 
     property color sortColor: "transparent"
+
     property var colorDistances: ({})
+
     property int sortVersion: 0
+
     property var wallpaperColors: ({})
 
     readonly property var sortColors: ["#e53935" // Red
@@ -350,6 +353,7 @@ PageBase {
                 menuItems: [
                     MenuItem {
                         property string filterValue: "all"
+
                         text: qsTr("All")
                         icon: "collections"
                         onClicked: {
@@ -358,6 +362,7 @@ PageBase {
                     },
                     MenuItem {
                         property string filterValue: "image"
+
                         text: qsTr("Images")
                         icon: "image"
                         onClicked: {
@@ -366,6 +371,7 @@ PageBase {
                     },
                     MenuItem {
                         property string filterValue: "gif"
+
                         text: qsTr("GIFs")
                         icon: "gif"
                         onClicked: {
@@ -374,6 +380,7 @@ PageBase {
                     },
                     MenuItem {
                         property string filterValue: "video"
+
                         text: qsTr("Videos")
                         icon: "movie"
                         onClicked: {

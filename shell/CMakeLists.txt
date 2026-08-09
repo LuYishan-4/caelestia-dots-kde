@@ -22,7 +22,7 @@ if(NOT DEFINED VERSION)
 
     # Last resort hardcoded
     if("${VERSION}" STREQUAL "" OR "${VERSION}" STREQUAL "rolling")
-        set(VERSION "2.2.4")
+        set(VERSION "2.3.0")
     endif()
 endif()
 

@@ -199,7 +199,8 @@ MouseArea {
     }
 
     Process {
-        running: true
+        // hyprctl cursorpos is Hyprland-only; skip on KDE.
+        running: typeof KWinActiveWindowBridge === "undefined"
         command: ["hyprctl", "cursorpos", "-j"]
         stdout: StdioCollector {
             onStreamFinished: {

@@ -1,76 +1,71 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.services
 
-Item {
+StyledRect {
     id: root
 
-    required property ShellScreen screen
     property string clientAddress: ""
-
-    property HyprlandToplevel client: {
-        if (clientAddress !== "") {
-            for (const t of Hypr.toplevels.values) {
-                if (t.address === clientAddress) {
-                    return t;
+    property var client: {
+        if (typeof KWinActiveWindowBridge !== "undefined" && KWinActiveWindowBridge.windowList) {
+            if (clientAddress !== "") {
+                for (let i = 0; i < KWinActiveWindowBridge.windowList.length; ++i) {
+                    if (KWinActiveWindowBridge.windowList[i].address === clientAddress) {
+                        return KWinActiveWindowBridge.windowList[i];
+                    }
+                }
+            } else {
+                for (let i = 0; i < KWinActiveWindowBridge.windowList.length; ++i) {
+                    if (KWinActiveWindowBridge.activeWindow && KWinActiveWindowBridge.windowList[i].address === KWinActiveWindowBridge.activeWindow.address) {
+                        return KWinActiveWindowBridge.windowList[i];
+                    }
                 }
             }
         }
-        return Hypr.activeToplevel;
+        return null;
     }
 
-    implicitWidth: child.implicitWidth
-    implicitHeight: screen.height * Tokens.sizes.winfo.heightMult
+    signal closeRequested()
+
+    color: Colours.tPalette.m3surfaceContainer
+    radius: Tokens.rounding.large
+    clip: true
+    implicitWidth: 1100
+    implicitHeight: 650
 
     RowLayout {
         id: child
 
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
-
         spacing: Tokens.spacing.medium
 
         Preview {
-            screen: root.screen
             client: root.client
+            Layout.fillWidth: true
+            Layout.fillHeight: true
         }
-
         ColumnLayout {
             spacing: Tokens.spacing.medium
 
-            Layout.preferredWidth: Tokens.sizes.winfo.detailsWidth
-            Layout.fillHeight: true
-
-            StyledRect {
+            Details {
+                client: root.client
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-
-                color: Colours.tPalette.m3surfaceContainer
-                radius: Tokens.rounding.large
-                clip: true
-
-                Details {
-                    client: root.client
-                }
             }
+            Buttons {
+                id: buttons
 
-            StyledRect {
+                client: root.client
+                onCloseRequested: root.closeRequested()
                 Layout.fillWidth: true
-                Layout.preferredHeight: buttons.implicitHeight
-
-                color: Colours.tPalette.m3surfaceContainer
-                radius: Tokens.rounding.large
-
-                Buttons {
-                    id: buttons
-
-                    client: root.client
-                }
             }
+            Layout.preferredWidth: 420
+            Layout.fillHeight: true
         }
     }
 }

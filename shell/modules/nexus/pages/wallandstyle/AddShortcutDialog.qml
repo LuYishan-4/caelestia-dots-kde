@@ -18,6 +18,7 @@ Popup {
     modal: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
     property var targetItem: null
     parent: Overlay.overlay
 
@@ -41,6 +42,7 @@ Popup {
         }
         Rectangle {
             id: bgRect
+
             anchors.fill: parent
             color: Colours.palette.m3surfaceContainerHigh
             radius: 16
@@ -51,6 +53,7 @@ Popup {
 
     contentItem: ColumnLayout {
         id: contentColumn
+
         spacing: 8
 
         Text {
@@ -64,18 +67,21 @@ Popup {
         Controls.StyledTextField {
             id: labelField
             Layout.fillWidth: true
+
             placeholderText: qsTr("Label (e.g. Firefox)")
         }
 
         Controls.StyledTextField {
             id: commandField
             Layout.fillWidth: true
+
             placeholderText: qsTr("Command (e.g. firefox)")
         }
 
         Controls.StyledTextField {
             id: iconField
             Layout.fillWidth: true
+
             placeholderText: qsTr("Icon (e.g. firefox)")
         }
 

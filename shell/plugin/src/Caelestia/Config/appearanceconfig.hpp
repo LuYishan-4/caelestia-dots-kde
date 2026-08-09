@@ -319,6 +319,7 @@ class AppearanceConfig : public ConfigObject {
     CONFIG_GLOBAL_PROPERTY(bool, pitchBlack, false)
     CONFIG_GLOBAL_PROPERTY(bool, islands, false)
     CONFIG_GLOBAL_PROPERTY(bool, blur, true)
+    CONFIG_GLOBAL_PROPERTY(bool, blurMask, true)
 
 public:
     explicit AppearanceConfig(QObject* parent = nullptr)

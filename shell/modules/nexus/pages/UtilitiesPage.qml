@@ -160,6 +160,7 @@ PageBase {
 
         Repeater {
             id: toggleRepeater
+
             model: [
                 { id: "wifi",           label: qsTr("Wi-Fi") },
                 { id: "bluetooth",      label: qsTr("Bluetooth") },

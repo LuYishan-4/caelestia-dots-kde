@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Widgets
 import Caelestia.Config
@@ -11,7 +12,6 @@ import qs.components.containers
 import qs.components.controls
 import qs.services
 import qs.utils
-import Qt.labs.folderlistmodel
 
 ColumnLayout {
     id: root

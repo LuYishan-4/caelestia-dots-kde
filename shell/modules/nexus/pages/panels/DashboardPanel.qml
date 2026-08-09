@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Caelestia.Config
 import M3Shapes
+import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.utils
@@ -19,50 +19,62 @@ PageBase {
     readonly property list<MenuItem> dashboardShapeItems: [
         MenuItem {
             property int value: MaterialShape.Circle
+
             text: qsTr("Circle")
         },
         MenuItem {
             property int value: MaterialShape.Square
+
             text: qsTr("Square")
         },
         MenuItem {
             property int value: MaterialShape.Pill
+
             text: qsTr("Pill")
         },
         MenuItem {
             property int value: MaterialShape.Diamond
+
             text: qsTr("Diamond")
         },
         MenuItem {
             property int value: MaterialShape.ClamShell
+
             text: qsTr("Clam Shell")
         },
         MenuItem {
             property int value: MaterialShape.Pentagon
+
             text: qsTr("Pentagon")
         },
         MenuItem {
             property int value: MaterialShape.Gem
+
             text: qsTr("Gem")
         },
         MenuItem {
             property int value: MaterialShape.Cookie4Sided
+
             text: qsTr("Cookie 4-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie6Sided
+
             text: qsTr("Cookie 6-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie7Sided
+
             text: qsTr("Cookie 7-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie9Sided
+
             text: qsTr("Cookie 9-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie12Sided
+
             text: qsTr("Cookie 12-Sided")
         }
     ]
@@ -70,50 +82,62 @@ PageBase {
     readonly property list<MenuItem> lockShapeItems: [
         MenuItem {
             property int value: MaterialShape.Circle
+
             text: qsTr("Circle")
         },
         MenuItem {
             property int value: MaterialShape.Square
+
             text: qsTr("Square")
         },
         MenuItem {
             property int value: MaterialShape.Pill
+
             text: qsTr("Pill")
         },
         MenuItem {
             property int value: MaterialShape.Diamond
+
             text: qsTr("Diamond")
         },
         MenuItem {
             property int value: MaterialShape.ClamShell
+
             text: qsTr("Clam Shell")
         },
         MenuItem {
             property int value: MaterialShape.Pentagon
+
             text: qsTr("Pentagon")
         },
         MenuItem {
             property int value: MaterialShape.Gem
+
             text: qsTr("Gem")
         },
         MenuItem {
             property int value: MaterialShape.Cookie4Sided
+
             text: qsTr("Cookie 4-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie6Sided
+
             text: qsTr("Cookie 6-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie7Sided
+
             text: qsTr("Cookie 7-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie9Sided
+
             text: qsTr("Cookie 9-Sided")
         },
         MenuItem {
             property int value: MaterialShape.Cookie12Sided
+
             text: qsTr("Cookie 12-Sided")
         }
     ]
@@ -257,9 +281,9 @@ PageBase {
         ToggleRow {
             Layout.fillWidth: true
             last: true
-            text: qsTr("Hyprland splash")
-            //visible: Quickshell.env("XDG_CURRENT_DESKTOP").includes("Hyprland")
-            subtext: qsTr("Show the current Hyprland splash text")
+            text: qsTr("Welcome splash")
+            visible: typeof KWinActiveWindowBridge === "undefined"
+            subtext: qsTr("Show a welcome message on the dashboard")
             checked: Config.dashboard.showHyprlandSplash
             onToggled: GlobalConfig.dashboard.showHyprlandSplash = checked
         }

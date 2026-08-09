@@ -1,10 +1,10 @@
 import ".."
-import qs.services
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Io
 import qs.components.misc
+import qs.services
 
 Scope {
     id: root
@@ -16,13 +16,16 @@ Scope {
     }
 
     property var action: RegionSelection.SnipAction.Copy
+
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
     
     Variants {
         model: Quickshell.screens
         delegate: Loader {
             id: regionSelectorLoader
+
             required property var modelData
+
             active: root.screenshotActive && modelData.name === Hypr.focusedMonitor.name
 
             sourceComponent: RegionSelection {

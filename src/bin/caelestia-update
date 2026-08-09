@@ -44,6 +44,10 @@ if [ -n "$TARGET_REF" ]; then
 fi
 UPD_DIR="$HOME/.config/caelestia-update"
 
+# Prevent concurrent update runs from racing on git/CMake/config writes.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/caelestia-update.lock"
+flock -n 9 || { echo "Another Caelestia update is already running."; exit 1; }
+
 echo "---------------------------------------------"
 if [ -n "$TARGET_REF" ]; then
     echo "  Caelestia Update (Branch: $BRANCH, Target: $TARGET_REF)"
@@ -217,6 +221,9 @@ if command -v pacman >/dev/null; then
 elif command -v dnf >/dev/null; then
     info "Running system update via dnf..."
     sudo dnf upgrade --refresh -y || warn "System update was canceled or failed. Continuing with non-sudo parts..."
+elif command -v apt-get >/dev/null; then
+    info "Running system update via apt..."
+    sudo apt-get update && sudo apt-get upgrade -y || warn "System update was canceled or failed. Continuing with non-sudo parts..."
 fi
 
 # 3. Build script now handles GUI privilege escalation natively.

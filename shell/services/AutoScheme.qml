@@ -1,7 +1,6 @@
 pragma Singleton
 
 import "../utils/scripts/solartime.js" as Solar
-
 import QtQuick
 import Quickshell
 import Caelestia.Config
@@ -100,8 +99,11 @@ Singleton {
         enabled: root.enabled
 
         function onAutoSchemeModeChanged(): void { root.apply(true); }
+
         function onAutoSchemeLightTimeChanged(): void { root.apply(true); }
+
         function onAutoSchemeDarkTimeChanged(): void { root.apply(true); }
+
         function onWeatherLocationChanged(): void { root.apply(true); }
     }
 }

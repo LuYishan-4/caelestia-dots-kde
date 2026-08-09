@@ -46,6 +46,9 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     elif command -v dnf >/dev/null; then
         info "Installing via dnf..."
         sudo dnf install qt6-qtwayland qt6-qtwayland-devel kf6-kglobalaccel-devel kf6-kwindowsystem-devel qt6-qtbase-private-devel kf6-kpipewire kf6-kpipewire-devel -y || warn "qt6-qtwayland qt6-qtwayland-devel kf6-kglobalaccel-devel qt6-qtbase-private-devel install failed..."
+    elif command -v apt-get >/dev/null; then
+        info "Installing via apt..."
+        sudo apt-get update && sudo apt-get install -y qt6-wayland qt6-wayland-dev libkf6globalaccel-dev libkf6windowsystem-dev qt6-base-private-dev libkf6kpipewire-dev || warn "apt install failed..."
     fi
     
     if [[ "${CAELESTIA_SKIP_DEPLOY:-0}" == "0" ]]; then
@@ -155,8 +158,18 @@ sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
 USER_HOME="$1"
 USER_CACHE="$2"
 
-ln -sf /usr/lib/libopencv_imgproc.so.5.0.0 /usr/lib/libopencv_imgproc.so.413 2>/dev/null || echo "[WARN] Failed to link opencv imgproc"
-ln -sf /usr/lib/libopencv_core.so.5.0.0 /usr/lib/libopencv_core.so.413 2>/dev/null || echo "[WARN] Failed to link opencv core"
+OPENCV_IMGPROC=$(ldconfig -p 2>/dev/null | awk '/libopencv_imgproc\.so\.5/ {print $NF; exit}')
+OPENCV_CORE=$(ldconfig -p 2>/dev/null | awk '/libopencv_core\.so\.5/ {print $NF; exit}')
+if [ -n "$OPENCV_IMGPROC" ]; then
+    ln -sf "$OPENCV_IMGPROC" "$(dirname "$OPENCV_IMGPROC")/libopencv_imgproc.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv imgproc"
+else
+    echo "[WARN] libopencv_imgproc.so.5 not found via ldconfig - recording may not work"
+fi
+if [ -n "$OPENCV_CORE" ]; then
+    ln -sf "$OPENCV_CORE" "$(dirname "$OPENCV_CORE")/libopencv_core.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv core"
+else
+    echo "[WARN] libopencv_core.so.5 not found via ldconfig - recording may not work"
+fi
 
 if ! python3 -c '
 import sys, os, glob, re
@@ -312,6 +325,75 @@ else:
 else
     mkdir -p "$USER_HOME/.cache/caelestia-kde" 2>/dev/null || true
     echo "Caelestia CLI path-based config resolution patch failed" >> "$USER_HOME/.cache/caelestia-kde/failed_patches.txt" 2>/dev/null || true
+fi
+EOF
+
+info "Patching caelestia-cli wallpaper.py for video support (requires root)..."
+sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
+USER_HOME="$1"
+USER_CACHE="$2"
+
+if ! python3 -c '
+import sys, os, glob
+search_paths = sys.path + glob.glob("'"$USER_HOME"'/.local/lib/python*/site-packages")
+file_path = None
+for p in search_paths:
+    candidate = os.path.join(p, "caelestia", "utils", "wallpaper.py")
+    if os.path.exists(candidate):
+        file_path = candidate
+        break
+if not file_path:
+    print("Could not find caelestia/utils/wallpaper.py to patch")
+    sys.exit(1)
+try:
+    with open(file_path, "r") as f: code = f.read()
+
+    # Patch is_valid_image
+    old_is_valid = "return path.is_file() and path.suffix in [\".jpg\", \".jpeg\", \".png\", \".webp\", \".tif\", \".tiff\", \".gif\"]"
+    new_is_valid = "return path.is_file() and path.suffix.lower() in [\".jpg\", \".jpeg\", \".png\", \".webp\", \".tif\", \".tiff\", \".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"]"
+    code = code.replace(old_is_valid, new_is_valid)
+
+    # Patch convert_gif to convert_animated
+    code = code.replace("def convert_gif(wall: Path) -> Path:", "def convert_animated(wall: Path) -> Path:")
+    
+    old_convert = """        with Image.open(wall) as img:
+            try:
+                img.seek(0)
+            except EOFError:
+                pass
+
+            img = img.convert("RGB")
+            img.save(output_path, "PNG")"""
+    new_convert = """        if wall.suffix.lower() == ".gif":
+            with Image.open(wall) as img:
+                try:
+                    img.seek(0)
+                except EOFError:
+                    pass
+                img = img.convert("RGB")
+                img.save(output_path, "PNG")
+        else:
+            import subprocess
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wall), "-vf", "thumbnail,scale=640:-1", "-frames:v", "1", str(output_path)], stderr=subprocess.DEVNULL)"""
+    code = code.replace(old_convert, new_convert)
+
+    # Patch get_colours_for_wall
+    old_gif_check = "if wall.suffix.lower() == \".gif\":"
+    new_animated_check = "if wall.suffix.lower() in [\".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"]:"
+    code = code.replace(old_gif_check, new_animated_check)
+    code = code.replace("wall = convert_gif(wall)", "wall = convert_animated(wall)")
+
+    # Patch set_wallpaper
+    old_wall_cache = "wall_cache = convert_gif(wall) if wall.suffix.lower() == \".gif\" else wall"
+    new_wall_cache = "wall_cache = convert_animated(wall) if wall.suffix.lower() in [\".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"] else wall"
+    code = code.replace(old_wall_cache, new_wall_cache)
+
+    with open(file_path, "w") as f: f.write(code)
+except Exception as e:
+    print(f"Failed to patch wallpaper.py: {e}")
+    sys.exit(1)
+'; then
+    echo "Caelestia CLI Wallpaper Patch" >> "$USER_CACHE/caelestia-kde/failed_patches.txt"
 fi
 EOF
 

@@ -5,10 +5,10 @@ import QtQuick.Layouts
 import Quickshell
 import M3Shapes
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.services
 import qs.utils
-import Caelestia.Services
 
 GridLayout {
     id: root
@@ -20,7 +20,9 @@ GridLayout {
 
     readonly property bool isWorkspace: true // Flag for finding workspace children
     readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
-    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
+    readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+    readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+    readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
 
     // Unanimated prop for others to use as reference
     readonly property int size: isHorizontal ? (implicitWidth + (hasWindows ? Tokens.padding.extraSmall : 0)) : (implicitHeight + (hasWindows ? Tokens.padding.extraSmall : 0))
@@ -30,6 +32,11 @@ GridLayout {
     readonly property bool isOccupied: occupied[ws] ?? false
     readonly property bool hasWindows: isOccupied && Config.bar.workspaces.showWindows
     property var kwinWindowList: KWinActiveWindowBridge.windowList
+
+    // Cache window-icon lists per layout so the Repeater only rebuilds
+    // when the set of window identities actually changes, not on every
+    // geometry update (e.g. during drag).
+    property var _cache: ({ colKeys: "", colIcons: [], rowKeys: "", rowIcons: [] })
 
     columns: isHorizontal ? -1 : 1
     rows: isHorizontal ? 1 : -1
@@ -284,7 +291,12 @@ GridLayout {
                             }
                         }
                         const maxIcons = root.Config.bar.workspaces.maxWindowIcons;
-                        return maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
+                        windows = maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
+                        const keys = windows.map(w => w.address || w["class"]).sort().join(",");
+                        if (keys === root._cache.colKeys) return root._cache.colIcons;
+                        root._cache.colKeys = keys;
+                        root._cache.colIcons = windows;
+                        return windows;
                     }
                 }
 
@@ -347,7 +359,12 @@ GridLayout {
                             }
                         }
                         const maxIcons = root.Config.bar.workspaces.maxWindowIcons;
-                        return maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
+                        windows = maxIcons > 0 ? windows.slice(0, maxIcons) : windows;
+                        const keys = windows.map(w => w.address || w["class"]).sort().join(",");
+                        if (keys === root._cache.rowKeys) return root._cache.rowIcons;
+                        root._cache.rowKeys = keys;
+                        root._cache.rowIcons = windows;
+                        return windows;
                     }
                 }
 

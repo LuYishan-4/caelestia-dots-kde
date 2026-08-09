@@ -59,16 +59,6 @@ else
     echo "  [OK]  $TARGET_USER already in 'input' group."
 fi
 
-SUDOERS_FILE="/etc/sudoers.d/ydotoold-nopasswd"
-EXPECTED_RULE="$TARGET_USER ALL=(root) NOPASSWD: /usr/bin/ydotoold"
-if [[ ! -f "$SUDOERS_FILE" ]] || ! grep -qF "$EXPECTED_RULE" "$SUDOERS_FILE" 2>/dev/null; then
-    echo "$EXPECTED_RULE" > "$SUDOERS_FILE"
-    chmod 440 "$SUDOERS_FILE"
-    echo "  [OK]  sudoers NOPASSWD rule configured for ydotoold."
-else
-    echo "  [OK]  sudoers NOPASSWD rule already up to date."
-fi
-
 if [[ -e /dev/uinput ]]; then
     UINPUT_PERMS=$(stat -c "%a" /dev/uinput 2>/dev/null)
     UINPUT_GROUP=$(stat -c "%G" /dev/uinput 2>/dev/null)
@@ -83,29 +73,39 @@ EOF
 mkdir -p "$HOME/.local/bin"
 cat > "$HOME/.local/bin/ydotoold-wrapper" << 'WRAPPER'
 #!/bin/bash
-# ydotoold-wrapper  starts ydotoold via sudo with uinput access
+# ydotoold-wrapper  starts ydotoold with uinput access (user is in 'input' group)
 SOCKET="${YDOTOOL_SOCKET:-/run/user/$(id -u)/.ydotool_socket}"
 if [ -S "$SOCKET" ] && pidof ydotoold > /dev/null 2>&1; then
     exit 0
 fi
-exec sudo /usr/bin/ydotoold \
+exec /usr/bin/ydotoold \
     --socket-path="$SOCKET" \
-    --socket-perm=0666
+    --socket-perm=0660
 WRAPPER
 chmod +x "$HOME/.local/bin/ydotoold-wrapper"
 echo "  [OK]  ydotoold-wrapper deployed to ~/.local/bin."
 
 # Deploy and enable ydotoold systemd user service
-if [[ -f "${BUNDLE_DIR:-$(dirname "$(dirname "$0")")}/src/systemd/ydotoold.service" ]]; then
-    SVCFILE="${BUNDLE_DIR:-$(dirname "$(dirname "$0")")}/src/systemd/ydotoold.service"
-    mkdir -p "$HOME/.config/systemd/user"
-    cp "$SVCFILE" "$HOME/.config/systemd/user/"
-    systemctl --user daemon-reload
-    systemctl --user enable ydotoold.service 2>/dev/null || true
-    # Try to start it now (will succeed because of the sudoers rule above)
-    systemctl --user start ydotoold.service 2>/dev/null || \
-        echo "  [INFO] ydotoold will start on next login."
-    echo "  [OK]  ydotoold service configured."
-fi
+mkdir -p "$HOME/.config/systemd/user"
+cat > "$HOME/.config/systemd/user/ydotoold.service" << 'UNIT'
+[Unit]
+Description=ydotoold key injection daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/ydotoold-wrapper
+Restart=on-failure
+Environment=YDOTOOL_SOCKET=/run/user/%U/.ydotool_socket
+
+[Install]
+WantedBy=graphical-session.target
+UNIT
+systemctl --user daemon-reload
+systemctl --user enable ydotoold.service 2>/dev/null || true
+systemctl --user start ydotoold.service 2>/dev/null || \
+    echo "  [INFO] ydotoold will start on next login."
+echo "  [OK]  ydotoold service configured."
 
 echo "[OK]  Services configured."

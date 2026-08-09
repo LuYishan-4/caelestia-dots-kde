@@ -16,7 +16,6 @@ Item {
     required property BarPopouts.Wrapper popouts
     property real horizontalStretch
     property matrix4x4 deformMatrix
-
     readonly property PersistentProperties props: PersistentProperties {
         property bool recordingListExpanded: false
         property string recordingConfirmDelete
@@ -24,7 +23,7 @@ Item {
 
         reloadableId: "utilities"
     }
-    readonly property bool shouldBeActive: visibilities.utilities && Config.utilities.enabled && !(visibilities.session && Config.session.enabled)
+    readonly property bool shouldBeActive: visibilities.utilities && Config.utilities.enabled && !(visibilities.session && Config.session.enabled) && !visibilities.overview
     readonly property real totalPadding: content.anchors.margins + CUtils.clamp(content.anchors.margins - Config.border.thickness, 0, content.anchors.margins)
     readonly property real nonAnimHeight: ((content.item as Content)?.nonAnimHeight ?? 0) + totalPadding
     property real offsetScale: shouldBeActive ? 0 : 1
@@ -36,7 +35,6 @@ Item {
     implicitHeight: content.implicitHeight + totalPadding
     implicitWidth: sidebar.width * (1 - sidebar.offsetScale) * horizontalStretch * sidebarLerp + Tokens.sizes.utilities.width * (1 - sidebarLerp)
     opacity: 1 - offsetScale
-
     states: State {
         name: "attachedToSidebar"
         when: root.visibilities.sidebar
@@ -45,7 +43,6 @@ Item {
             root.sidebarLerp: 1
         }
     }
-
     transitions: [
         Transition {
             from: ""
@@ -70,17 +67,14 @@ Item {
     Behavior on offsetScale {
         Anim {}
     }
-
     Loader {
         id: content
 
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.margins: Tokens.padding.large
-
         asynchronous: true
         active: true
-
         onStatusChanged: {
             if (status === Loader.Error) {
                 if (asynchronous) {
@@ -95,7 +89,6 @@ Item {
                 console.log("[Preload] Utilities loaded successfully.");
             }
         }
-
         sourceComponent: Content {
             implicitWidth: root.implicitWidth - root.totalPadding
             props: root.props

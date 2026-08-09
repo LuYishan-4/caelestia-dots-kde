@@ -170,12 +170,18 @@ run_elevated() {
     fi
 }
 
-# This script deploys Python bridges and mock hyprctl which the shell needs.
-# Its internal sudo calls will reuse the cached credential without re-prompting.
+# Apply config updates and rebuild the shell UI.  The native C++ plugin
+# backend talks directly to KWin/Wayland — no Python daemon or mock
+# hyprctl binary is involved.
 bash "$BUNDLE_DIR/scripts/03-deploy-configs.sh" || die "Config deployment failed."
 
 info "Building Caelestia Shell UI..."
 bash "$BUNDLE_DIR/scripts/08-build-shell.sh" || die "Shell build failed."
+
+# Re-apply idempotent system tweaks (KDE settings, CLI patches, etc.)
+# so they survive package upgrades that may have overwritten patches.
+info "Re-applying system tweaks..."
+bash "$BUNDLE_DIR/scripts/09-system-tweaks.sh" || warn "System tweaks step reported errors (non-fatal)."
 
 # Kill the keepalive background process now that sudo is no longer needed
 if [ -n "${SUDO_KEEPER_PID:-}" ] && kill -0 "$SUDO_KEEPER_PID" 2>/dev/null; then
@@ -184,7 +190,8 @@ fi
 
 section "Update Completed Successfully"
 echo
-info "The core shell and bridge scripts have been updated without touching your personal KDE settings."
+info "The core shell and bridge scripts have been updated."
+info "System tweaks (OSD, desktops, CLI patches) have been re-applied to keep KDE in sync."
 echo
 echo "Restarting bridge and shell to apply changes..."
 

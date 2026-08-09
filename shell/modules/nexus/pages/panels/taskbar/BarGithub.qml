@@ -2,14 +2,14 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import Caelestia.Config
 import qs.components
 import qs.components.controls
-import qs.modules.nexus.common
 import qs.services
 import qs.modules.bar.components as BarComponents
-import Quickshell
-import Quickshell.Io
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -28,6 +28,7 @@ PageBase {
 
     property Process saveProc: Process {
         id: saveProc
+
         onExited: code => {
             if (code === 0)
                 BarComponents.GithubStore.refresh();
@@ -36,6 +37,7 @@ PageBase {
 
     property Process readTokenProc: Process {
         id: readTokenProc
+
         command: ["secret-tool", "lookup", "service", "caelestia-shell", "account", "github"]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -72,12 +74,14 @@ PageBase {
 
             ConnectedRect {
                 id: bg
+
                 anchors.fill: parent
                 last: true
             }
 
             RowLayout {
                 id: contentRow
+
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
@@ -111,6 +115,7 @@ PageBase {
                     
                     StyledTextField {
                         id: tokenInput
+
                         anchors.fill: parent
                         anchors.leftMargin: Tokens.padding.medium
                         anchors.rightMargin: Tokens.padding.medium

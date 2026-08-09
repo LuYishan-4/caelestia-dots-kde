@@ -194,6 +194,22 @@ qdbus6 org.kde.KWin /KWin reconfigure
 
 If the desktop file is missing, re-run `scripts/10-autostart.sh`.
 
+### 3.3.1 Screen Sharing / Camera Freezes Vesktop (or other apps)
+
+Some NVIDIA + KWin setups cannot handle two separate clients using KWin's
+privileged `zkde_screencast_unstable_v1` protocol at the same time. Caelestia
+uses this protocol for live taskbar/overview/alt-tab window thumbnails, which
+can conflict with another app's screencast (e.g. Vesktop screen share with
+audio, or camera) using the same KWin subsystem via xdg-desktop-portal-kde,
+causing that app to freeze or crash.
+
+**Fix:** Disable live window previews:
+- Nexus -> Taskbar -> "Live window previews" toggle, or
+- Set `"bar": { "livePreviews": false }` in `shell.json` and reload
+
+This falls back to static app icons for thumbnails instead of live video and
+avoids Caelestia's use of the protocol entirely.
+
 ### 3.4 Material You Colors Not Working
 
 | Symptom | Fix |

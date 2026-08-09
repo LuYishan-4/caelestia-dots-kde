@@ -1,12 +1,12 @@
 pragma ComponentBehavior: Bound
 
+import "items"
+import "services"
 import QtQuick
 import Quickshell
 import Caelestia.Config
 import qs.components.controls
 import qs.services
-import "items"
-import "services"
 
 ListView {
     id: root
@@ -71,6 +71,7 @@ ListView {
     Component.onDestruction: {}
 
     function incrementCurrentIndex() { Windows.triggerCycleNext(); }
+
     function decrementCurrentIndex() { Windows.triggerCyclePrev(); }
 
     implicitWidth: Math.min(numItems, count) * itemWidth

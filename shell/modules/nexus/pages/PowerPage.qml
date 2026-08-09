@@ -3,8 +3,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
-import qs.modules.nexus.common
 import qs.services
+import qs.modules.nexus.common
 
 PageBase {
     id: root

@@ -1,18 +1,18 @@
 import QtQuick
 import QtQuick.Layouts
-import Caelestia.Config
-import qs.components
-import qs.components.controls
-import qs.components.containers
-import qs.components.images
-import qs.utils
-import qs.services
-import qs.modules.nexus.common
 import Quickshell
-import Quickshell.Widgets
 import Quickshell.Io
-import Caelestia.Services
+import Quickshell.Widgets
 import Caelestia
+import Caelestia.Config
+import Caelestia.Services
+import qs.components
+import qs.components.containers
+import qs.components.controls
+import qs.components.images
+import qs.services
+import qs.utils
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -30,6 +30,7 @@ PageBase {
 
     property Process readTokenProc: Process {
         id: readTokenProc
+
         command: ["secret-tool", "lookup", "service", "caelestia-shell", "account", "steamgriddb"]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -42,6 +43,7 @@ PageBase {
 
     ColumnLayout {
         id: layout
+
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         width: root.cappedWidth
@@ -102,6 +104,7 @@ PageBase {
 
             ConnectedRect {
                 id: bg
+
                 anchors.fill: parent
                 first: true
                 last: true
@@ -109,6 +112,7 @@ PageBase {
 
             RowLayout {
                 id: contentRow
+
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
@@ -142,6 +146,7 @@ PageBase {
                     
                     StyledTextField {
                         id: tokenInput
+
                         anchors.fill: parent
                         anchors.leftMargin: Tokens.padding.medium
                         anchors.rightMargin: Tokens.padding.medium
@@ -205,6 +210,7 @@ PageBase {
 
             ListView {
                 id: targetList
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 orientation: ListView.Vertical
@@ -217,6 +223,7 @@ PageBase {
 
                 delegate: StyledRect {
                     id: delegateRect
+
                     required property string modelData
                     required property int index
 
@@ -285,6 +292,7 @@ PageBase {
                             Layout.fillWidth: true
                             Layout.leftMargin: Math.round(Tokens.font.icon.large.pointSize * 1.5) + Tokens.spacing.medium
                             Layout.preferredHeight: 24
+
                             placeholderText: qsTr("Custom label (optional) — use {class}, {title}")
                             font: Tokens.font.label.small
                             verticalAlignment: TextInput.AlignVCenter
@@ -353,6 +361,7 @@ PageBase {
 
             ListView {
                 id: blacklistList
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 orientation: ListView.Vertical
@@ -365,6 +374,7 @@ PageBase {
 
                 delegate: StyledRect {
                     id: blacklistDelegateRect
+
                     required property string modelData
                     required property int index
 
@@ -375,6 +385,7 @@ PageBase {
 
                     RowLayout {
                         id: blacklistItemLayout
+
                         anchors.fill: parent
                         anchors.leftMargin: Tokens.padding.medium
                         anchors.rightMargin: Tokens.padding.medium
@@ -443,6 +454,7 @@ PageBase {
 
             ColumnLayout {
                 id: manualContent
+
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.medium
                 spacing: Tokens.spacing.medium
@@ -450,10 +462,12 @@ PageBase {
                 ColumnLayout {
                     spacing: Tokens.spacing.extraSmall
                     Layout.fillWidth: true
+
                     StyledText { text: "App/game name"; color: Colours.palette.m3onSurface }
                     StyledInputField {
                         id: manualAppName
                         Layout.fillWidth: true
+
                         text: GlobalConfig.services.arpcAppName
                         horizontalAlignment: TextInput.AlignLeft
                     }
@@ -462,10 +476,12 @@ PageBase {
                 ColumnLayout {
                     spacing: Tokens.spacing.extraSmall
                     Layout.fillWidth: true
+
                     StyledText { text: "Details"; color: Colours.palette.m3onSurface }
                     StyledInputField {
                         id: manualDetails
                         Layout.fillWidth: true
+
                         text: GlobalConfig.services.arpcDetails
                         horizontalAlignment: TextInput.AlignLeft
                     }
@@ -474,10 +490,12 @@ PageBase {
                 ColumnLayout {
                     spacing: Tokens.spacing.extraSmall
                     Layout.fillWidth: true
+
                     StyledText { text: "State"; color: Colours.palette.m3onSurface }
                     StyledInputField {
                         id: manualState
                         Layout.fillWidth: true
+
                         text: GlobalConfig.services.arpcState
                         horizontalAlignment: TextInput.AlignLeft
                     }
@@ -486,10 +504,12 @@ PageBase {
                 ColumnLayout {
                     spacing: Tokens.spacing.extraSmall
                     Layout.fillWidth: true
+
                     StyledText { text: "Large image key/URL"; color: Colours.palette.m3onSurface }
                     StyledInputField {
                         id: manualLargeImage
                         Layout.fillWidth: true
+
                         text: GlobalConfig.services.arpcLargeImage
                         horizontalAlignment: TextInput.AlignLeft
                     }
@@ -498,10 +518,12 @@ PageBase {
                 ColumnLayout {
                     spacing: Tokens.spacing.extraSmall
                     Layout.fillWidth: true
+
                     StyledText { text: "Small image key/URL"; color: Colours.palette.m3onSurface }
                     StyledInputField {
                         id: manualSmallImage
                         Layout.fillWidth: true
+
                         text: GlobalConfig.services.arpcSmallImage
                         horizontalAlignment: TextInput.AlignLeft
                     }
@@ -573,6 +595,7 @@ PageBase {
 
                         Connections {
                             target: KWinActiveWindowBridge
+
                             function onWindowListChanged() {
                                 list.updateModel();
                             }

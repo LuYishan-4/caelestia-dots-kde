@@ -236,6 +236,7 @@ Item {
 
     //  Recompute rectangles whenever anything changes
     property var windowRects: []
+
     function refresh() {
         windowRects = computeRects(
             root.layout, root.windowCount,
@@ -284,6 +285,7 @@ Item {
 
                 StyledText {
                     id: countLabel
+
                     anchors.centerIn: parent
                     text: root.windowCount.toString()
                     font: Tokens.font.label.medium
@@ -325,29 +327,35 @@ Item {
             }
 
             onWidthChanged: Qt.callLater(root.refresh)
+
             onHeightChanged: Qt.callLater(root.refresh)
+
             Component.onCompleted: Qt.callLater(root.refresh)
 
             // Gap visualizer tints
             Rectangle {
                 x: 0; y: 0; width: screen.width; height: root.gapTop
                 color: Qt.alpha(Colours.palette.m3primary, 0.10)
+
                 Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             }
             Rectangle {
                 x: 0; y: screen.height - root.gapBottom; width: screen.width; height: root.gapBottom
                 color: Qt.alpha(Colours.palette.m3primary, 0.10)
+
                 Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on y { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             }
             Rectangle {
                 x: 0; y: 0; width: root.gapLeft; height: screen.height
                 color: Qt.alpha(Colours.palette.m3primary, 0.10)
+
                 Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             }
             Rectangle {
                 x: screen.width - root.gapRight; y: 0; width: root.gapRight; height: screen.height
                 color: Qt.alpha(Colours.palette.m3primary, 0.10)
+
                 Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             }
@@ -355,6 +363,7 @@ Item {
             // Mock windows
             Repeater {
                 id: windowRepeater
+
                 model: root.windowCount
 
                 delegate: StyledRect {

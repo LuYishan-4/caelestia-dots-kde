@@ -29,7 +29,8 @@ Item {
         else
             Quickshell.execDetached(["sh", "-c", "cliphist decode " + root.modelData.id + " | wl-copy"]);
 
-        Toaster.toast(qsTr("Copied to clipboard"), preview, "content_paste");
+        if (GlobalConfig.utilities.toasts.clipboardChanged)
+            Toaster.toast(qsTr("Copied to clipboard"), preview, "content_paste");
     }
 
     Component.onCompleted: {
@@ -55,6 +56,7 @@ Item {
     /// This fires as soon as the decoded file is fully written — no timers needed.
     Connections {
         target: Clipboard
+
         function onImageReady(id: int, path: string): void {
             if (root.modelData?.isImage && id === root.modelData.id)
                 imagePreview.imagePath = path;
@@ -64,6 +66,7 @@ Item {
     implicitHeight: (root.modelData?.isImage ?? false) ? Tokens.sizes.launcher.itemHeight * 2 : Tokens.sizes.launcher.itemHeight
 
     anchors.left: parent?.left
+
     anchors.right: parent?.right
 
     StateLayer {

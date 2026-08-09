@@ -56,7 +56,9 @@ Item {
             readonly property Workspace start: root.workspaces.count > 0 ? root.workspaces.itemAt(getWsIdx(modelData.start)) ?? null : null // qmllint disable incompatible-type
             readonly property Workspace end: root.workspaces.count > 0 ? root.workspaces.itemAt(getWsIdx(modelData.end)) ?? null : null // qmllint disable incompatible-type
             readonly property bool isHorizontal: Config.bar.position === "top" || Config.bar.position === "bottom"
-            readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * Math.max(0.6, !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0))
+            readonly property real rawScale: !isNaN(Config.bar.scale) ? Config.bar.scale : 1.0
+            readonly property real scaleFactor: rawScale < 1.0 ? Math.sqrt(Math.max(0.1, rawScale)) : rawScale
+            readonly property int barThickness: Math.round(Tokens.sizes.bar.innerWidth * scaleFactor)
 
             function getWsIdx(ws: int): int {
                 let i = ws - 1;

@@ -1,12 +1,13 @@
+import "../../../components"
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.services
-import "../../../components"
 
 Item {
     id: root
+
     property alias currentIndex: tabBar.currentIndex
     required property var tabButtonList
 
@@ -26,7 +27,9 @@ Item {
 
     TabBar {
         id: tabBar
+
         visible: false
+
         Repeater {
             model: root.tabButtonList.length
             delegate: TabButton {
@@ -37,6 +40,7 @@ Item {
 
     Row {
         id: contentItem
+
         z: 1
         anchors.centerIn: parent
         spacing: 4
@@ -45,7 +49,9 @@ Item {
             model: root.tabButtonList
             delegate: Button {
                 id: tabBtn
+
                 property bool current: index === tabBar.currentIndex
+
                 implicitHeight: 36
                 implicitWidth: contentLayout.implicitWidth + 24
                 
@@ -54,11 +60,13 @@ Item {
                     // which would animate RGB through black.
                     color: tabBtn.current ? Colours.palette.m3secondaryContainer : Qt.alpha(Colours.palette.m3secondaryContainer, 0)
                     radius: height / 2
+
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
                 contentItem: Row {
                     id: contentLayout
+
                     spacing: 8
                     anchors.centerIn: parent
                     

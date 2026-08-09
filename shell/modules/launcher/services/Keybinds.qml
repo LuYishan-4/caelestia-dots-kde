@@ -31,6 +31,7 @@ QtObject {
 
     property Connections _conn: Connections {
         target: KeybindsModel
+
         function onLoaded(): void { root.loaded(); }
     }
 

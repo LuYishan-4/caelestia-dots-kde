@@ -33,6 +33,7 @@ Searcher {
 
     Variants {
         id: schemes
+
         model: SchemeLoader.schemes
         
         Scheme {}

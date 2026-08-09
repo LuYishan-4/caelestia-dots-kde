@@ -53,11 +53,13 @@ StyledRect {
 
         Component {
             id: hourlyForecastComp
+
             Forecast {}
         }
 
         Component {
             id: dailyForecastComp
+
             DailyForecast {}
         }
     }

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.services
 
@@ -10,138 +11,115 @@ ColumnLayout {
     id: root
 
     required property var client
-    property bool moveToWsExpanded
 
-    anchors.fill: parent
+    signal closeRequested()
+
     spacing: Tokens.spacing.small
 
     RowLayout {
-        Layout.topMargin: Tokens.padding.large
-        Layout.leftMargin: Tokens.padding.large
-        Layout.rightMargin: Tokens.padding.large
-
         spacing: Tokens.spacing.medium
 
         StyledText {
-            Layout.fillWidth: true
             text: qsTr("Move to workspace")
             elide: Text.ElideRight
+            Layout.fillWidth: true
         }
-
-        StyledRect {
-            color: Colours.palette.m3primary
-            radius: Tokens.rounding.medium
-
-            implicitWidth: moveToWsIcon.implicitWidth + Tokens.padding.small
-            implicitHeight: moveToWsIcon.implicitHeight + Tokens.padding.extraSmall
-
-            StateLayer {
-                color: Colours.palette.m3onPrimary
-                onClicked: root.moveToWsExpanded = !root.moveToWsExpanded
-            }
-
-            MaterialIcon {
-                id: moveToWsIcon
-
-                anchors.centerIn: parent
-
-                animate: true
-                text: root.moveToWsExpanded ? "expand_more" : "keyboard_arrow_right"
-                color: Colours.palette.m3onPrimary
-                fontStyle: Tokens.font.icon.large
-            }
-        }
-    }
-
-    GridLayout {
-        id: wsGrid
-
-        Layout.fillWidth: true
+        Layout.topMargin: Tokens.padding.large
         Layout.leftMargin: Tokens.padding.large
         Layout.rightMargin: Tokens.padding.large
-        Layout.bottomMargin: root.moveToWsExpanded ? Tokens.spacing.medium : 0
-        Layout.preferredHeight: root.moveToWsExpanded ? implicitHeight : 0
-        opacity: root.moveToWsExpanded ? 1 : 0
+    }
+    Flow {
+        id: wsGrid
+
         clip: true
-
-        rowSpacing: Tokens.spacing.small
-        columnSpacing: Tokens.spacing.small
-        columns: 5
-
-        Behavior on Layout.bottomMargin {
-            Anim {
-                type: Anim.DefaultEffects
-            }
-        }
-
-        Behavior on Layout.preferredHeight {
-            Anim {
-                type: Anim.DefaultEffects
-            }
-        }
-
-        Behavior on opacity {
-            Anim {
-                type: Anim.DefaultEffects
-            }
-        }
+        spacing: Tokens.spacing.small
 
         Repeater {
-            model: 10
+            model: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.workspaces.length : 10
 
             Button {
                 required property int index
-                readonly property int wsId: Math.floor((Hypr.activeWsId - 1) / 10) * 10 + index + 1
-                readonly property bool isCurrent: root.client?.workspace.id === wsId
+                readonly property int wsId: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.workspaces[index].index : index + 1
+                readonly property string wsName: wsId.toString()
+                readonly property bool isCurrent: root.client?.workspace?.id === wsId
 
                 onClicked: {
-                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.move({ window = "address:0x${root.client?.address}", workspace = "${wsId}", follow = true })` : `movetoworkspace ${wsId},address:0x${root.client?.address}`);
+                    if (typeof KWinActiveWindowBridge !== "undefined") {
+                        KWinActiveWindowBridge.setWindowDesktop(root.client?.address, wsId);
+                        if (typeof KWinWorkspaceState !== "undefined") {
+                            KWinWorkspaceState.switchTo(wsId);
+                        }
+                    }
+                    Visibilities.getForActive().overview = false;
                 }
-
                 color: isCurrent ? Colours.tPalette.m3surfaceContainerHighest : Colours.palette.m3tertiaryContainer
                 onColor: isCurrent ? Colours.palette.m3onSurface : Colours.palette.m3onTertiaryContainer
-                text: wsId
+                text: wsName
                 disabled: isCurrent
             }
         }
-    }
-
-    RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: Tokens.padding.large
         Layout.rightMargin: Tokens.padding.large
-        Layout.bottomMargin: Tokens.padding.large
-
-        spacing: root.client?.lastIpcObject.floating ? Tokens.spacing.medium : Tokens.spacing.small
+        Layout.bottomMargin: Tokens.spacing.medium
+    }
+    RowLayout {
+        spacing: Tokens.spacing.small
 
         Button {
             color: Colours.palette.m3secondaryContainer
             onColor: Colours.palette.m3onSecondaryContainer
-            text: root.client?.lastIpcObject.floating ? qsTr("Tile") : qsTr("Float")
-            onClicked: Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.float({ window = "address:0x${root.client?.address}" })` : `togglefloating address:0x${root.client?.address}`)
+            text: root.client?.maximized ? qsTr("Restore") : qsTr("Maximize")
+            onClicked: {
+                console.log("Maximize clicked. Address:", root.client?.address, "Maximized:", root.client?.maximized);
+                if (typeof KWinActiveWindowBridge !== "undefined") {
+                    console.log("Calling KWinActiveWindowBridge.maximizeWindow");
+                    KWinActiveWindowBridge.maximizeWindow(root.client?.address, !root.client?.maximized, !root.client?.maximized);
+                } else {
+                    console.log("KWinActiveWindowBridge is undefined");
+                }
+                Visibilities.getForActive().overview = false;
+            }
         }
-
         Loader {
             asynchronous: true
-            active: root.client?.lastIpcObject.floating ?? false
-            Layout.fillWidth: active
-            Layout.leftMargin: active ? 0 : -parent.spacing
-            Layout.rightMargin: active ? 0 : -parent.spacing
-
+            active: true
             sourceComponent: Button {
                 color: Colours.palette.m3secondaryContainer
                 onColor: Colours.palette.m3onSecondaryContainer
-                text: root.client?.lastIpcObject.pinned ? qsTr("Unpin") : qsTr("Pin")
-                onClicked: Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.pin({ window = "address:0x${root.client?.address}" })` : `pin address:0x${root.client?.address}`)
+                text: root.client?.minimized ? qsTr("Unminimize") : qsTr("Minimize")
+                onClicked: {
+                    if (typeof KWinActiveWindowBridge !== "undefined") {
+                        if (root.client?.minimized) {
+                            KWinActiveWindowBridge.focusWindow(root.client?.address);
+                        } else {
+                            KWinActiveWindowBridge.minimizeWindow(root.client?.address);
+                        }
+                    }
+                    Visibilities.getForActive().overview = false;
+                }
             }
+            Layout.fillWidth: active
+            Layout.leftMargin: active ? 0 : -parent.spacing
+            Layout.rightMargin: active ? 0 : -parent.spacing
         }
-
         Button {
             color: Colours.palette.m3errorContainer
             onColor: Colours.palette.m3onErrorContainer
             text: qsTr("Kill")
-            onClicked: Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.kill({ window = "address:0x${root.client?.address}" })` : `killwindow address:0x${root.client?.address}`)
+            onClicked: {
+                console.log("Kill clicked. Address:", root.client?.address);
+                if (typeof KWinActiveWindowBridge !== "undefined") {
+                    console.log("Calling KWinActiveWindowBridge.closeWindow");
+                    KWinActiveWindowBridge.closeWindow(root.client?.address);
+                }
+                Visibilities.getForActive().overview = false;
+            }
         }
+        Layout.fillWidth: true
+        Layout.leftMargin: Tokens.padding.large
+        Layout.rightMargin: Tokens.padding.large
+        Layout.bottomMargin: Tokens.padding.large
     }
 
     component Button: StyledRect {
@@ -152,25 +130,28 @@ ColumnLayout {
         signal clicked
 
         radius: Tokens.rounding.medium
-
-        Layout.fillWidth: true
+        implicitWidth: label.implicitWidth + Tokens.padding.medium * 2
         implicitHeight: label.implicitHeight + Tokens.padding.small
 
         StateLayer {
             id: stateLayer
 
             color: parent.onColor
-            onClicked: parent.clicked()
+            onClicked: {
+                parent.clicked()
+                root.closeRequested()
+                const v = typeof Visibilities !== "undefined" ? Visibilities.getForActive() : null;
+                if (v) v.overview = false;
+            }
         }
-
         StyledText {
             id: label
 
             anchors.centerIn: parent
-
             animate: true
             color: parent.onColor
             font: Tokens.font.body.medium
         }
+        Layout.fillWidth: true
     }
 }

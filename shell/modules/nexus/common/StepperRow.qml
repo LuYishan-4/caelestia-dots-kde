@@ -54,12 +54,38 @@ ConnectedRect {
             }
         }
 
-        CustomSpinBox {
-            min: root.from
-            max: root.to
-            step: root.stepSize
-            value: root.value
-            onValueModified: v => root.moved(v)
+        CustomMouseArea {
+            function onWheel(event: WheelEvent) {
+                const step = root.stepSize;
+                const decimals = step < 1 ? Math.max(1, Math.ceil(-Math.log10(step))) : 0;
+
+                if (event.angleDelta.y > 0) {
+                    let v = Math.min(root.to, root.value + step);
+                    v = Math.round(v * Math.pow(10, decimals)) / Math.pow(10, decimals);
+                    if (v !== root.value) root.moved(v);
+                } else if (event.angleDelta.y < 0) {
+                    let v = Math.max(root.from, root.value - step);
+                    v = Math.round(v * Math.pow(10, decimals)) / Math.pow(10, decimals);
+                    if (v !== root.value) root.moved(v);
+                }
+            }
+
+            acceptedButtons: Qt.NoButton
+
+            implicitWidth: spinBox.implicitWidth
+            implicitHeight: spinBox.implicitHeight
+
+            CustomSpinBox {
+                id: spinBox
+
+                anchors.fill: parent
+
+                min: root.from
+                max: root.to
+                step: root.stepSize
+                value: root.value
+                onValueModified: v => root.moved(v)
+            }
         }
     }
 }

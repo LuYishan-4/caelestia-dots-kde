@@ -278,6 +278,10 @@ Item {
             if (Math.abs(currentPos - startPos) > drag.threshold)
                 return;
 
+            // KDE has no special/scratchpad workspace concept.
+            if (typeof KWinActiveWindowBridge !== "undefined")
+                return;
+
             const ws = view.itemAt(event.x, event.y) as SpecialWsDelegate;
             if (ws?.modelData)
                 Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${ws.modelData.name.slice(8)}")` : `togglespecialworkspace ${ws.modelData.name.slice(8)}`);

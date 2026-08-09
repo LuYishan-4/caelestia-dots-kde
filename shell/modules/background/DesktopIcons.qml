@@ -2,15 +2,15 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Qt.labs.folderlistmodel
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
 import qs.components.containers
-import qs.services
-import Qt.labs.folderlistmodel
-import Quickshell.Io
 import qs.components.effects
+import qs.services
 import qs.utils
 
 Item {
@@ -31,6 +31,7 @@ Item {
     visible: GlobalConfig.forScreen(screenData.name).background.enabled && GlobalConfig.forScreen(screenData.name).background.wallpaperEnabled && GlobalConfig.forScreen(screenData.name).background.desktopIconsEnabled
 
     property var savedOrder: []
+
     property bool layoutLoaded: false
 
     Component.onCompleted: { 
@@ -39,6 +40,7 @@ Item {
 
     Process {
         id: loadLayoutProc
+
         command: ["sh", "-c", "cat ~/.local/share/caelestia/desktop_layout.json 2>/dev/null || echo '[]'"]
         stdout: StdioCollector {
             onStreamFinished: {
@@ -59,7 +61,9 @@ Item {
 
     Process {
         id: saveProc
+
         property string jsonContent: ""
+
         command: ["python3", "-c", "import sys, os; d = os.path.dirname(sys.argv[1]); os.makedirs(d, exist_ok=True) if d else None; open(sys.argv[1], 'w').write(sys.argv[2])", Quickshell.env("HOME") + "/.local/share/caelestia/desktop_layout.json", jsonContent]
     }
 
@@ -101,9 +105,11 @@ Item {
 
     Item {
         id: gridItem
+
         anchors.fill: parent
         
-        readonly property int barZone: Visibilities.bars.get(root.screenData.name)?.exclusiveZone ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
+        readonly property int barZone: Visibilities.bars.get(root.screenData.name)?.visualThickness ?? (Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.small, Config.border.thickness))
+
         readonly property int baseMargin: Tokens.padding.large * 2
         
         anchors.margins: baseMargin
@@ -114,8 +120,10 @@ Item {
 
         Instantiator {
             id: instantiator
+
             model: FolderListModel {
                 id: folderModel
+
                 folder: "file://" + Quickshell.env("HOME") + "/Desktop"
                 showDirsFirst: true
                 nameFilters: ["*"]
@@ -129,19 +137,26 @@ Item {
 
             delegate: Item {
                 id: delegateItem
+
                 width: root.cellWidth
                 height: root.cellHeight
 
                 required property string fileName
+
                 required property string filePath
+
                 required property bool fileIsDir
+
                 required property string fileSuffix
 
                 property string path: filePath.replace("file://", "")
+
                 property string desktopName: fileName
+
                 property string desktopIcon: ""
 
                 property int col: -1
+
                 property int row: -1
 
                 x: col * root.cellWidth + (dragHandler.active ? dragHandler.translation.x : 0)
@@ -186,6 +201,7 @@ Item {
 
                 Process {
                     id: desktopInfoProc
+
                     command: ["cat", path]
                     stdout: StdioCollector {
                         onStreamFinished: {
@@ -239,6 +255,7 @@ Item {
 
                 // Returns the search directories within the icon set, ordered by priority
                 readonly property string iconSetBase: Qt.resolvedUrl(Quickshell.shellDir + "/assets/icons/yet-another-monochrome-icon-set")
+
                 readonly property var iconSetDirs: ["apps/scalable", "mimetypes/scalable", "places/scalable", "actions/scalable", "devices/scalable", "status/scalable"]
 
                 function getMaterialYouIconUrl(iconName) {
@@ -262,6 +279,7 @@ Item {
                 }
 
                 property bool useMaterialYouIcons: GlobalConfig.forScreen(screenData.name).background.materialYouIconsEnabled
+
                 property bool useVibrantIcons: GlobalConfig.forScreen(screenData.name).background.materialYouIconsVibrant
 
                 function getIconSource(isDir, filename, suffix) {
@@ -294,6 +312,7 @@ Item {
                     color: Colours.palette.m3onSurface
                     opacity: mouseArea.containsMouse || dragHandler.active ? 0.12 : 0
                     radius: Tokens.rounding.medium
+
                     Behavior on opacity { NumberAnimation { duration: 100 } }
                 }
 
@@ -301,11 +320,13 @@ Item {
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.small
                     spacing: Tokens.spacing.small
+
                     Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Image {
                             id: iconImage
+
                             anchors.centerIn: parent
                             width: 64; height: 64
                             source: getIconSource(fileIsDir, fileName, fileSuffix)
@@ -347,9 +368,11 @@ Item {
 
                 DragHandler {
                     id: dragHandler
+
                     target: null
                     
                     property real lastTranslationX: 0
+
                     property real lastTranslationY: 0
                     
                     onTranslationChanged: {
@@ -395,6 +418,7 @@ Item {
 
                 MouseArea {
                     id: mouseArea
+
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor

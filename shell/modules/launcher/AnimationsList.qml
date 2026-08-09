@@ -1,5 +1,7 @@
 pragma ComponentBehavior: Bound
 
+import "items"
+import "services"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -8,8 +10,6 @@ import qs.components
 import qs.components.containers
 import qs.components.controls
 import qs.services
-import "items"
-import "services"
 
 StyledListView {
     id: root
@@ -94,6 +94,7 @@ StyledListView {
 
     delegate: Item {
         id: delegateRoot
+
         required property var modelData
 
         implicitHeight: Tokens.sizes.launcher.itemHeight
@@ -118,6 +119,7 @@ StyledListView {
 
             MaterialIcon {
                 id: icon
+
                 text: "animation"
                 fontStyle: Tokens.font.icon.builders.large.scale(1.3).build()
                 anchors.verticalCenter: parent.verticalCenter

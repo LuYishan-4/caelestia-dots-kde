@@ -1,14 +1,14 @@
 import ".."
-import qs.services
-import qs.utils
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
+import qs.services
+import qs.utils
 
 // Options toolbar
 Toolbar {
@@ -18,10 +18,12 @@ Toolbar {
     property var action
     property var selectionMode
     // Signals
+
     signal dismiss()
 
     ToolbarTabBar {
         id: tabBar
+
         tabButtonList: [
             {"icon": "content_cut", "name": qsTr("Screenshot")},
             {"icon": "image_search", "name": qsTr("Google Lens")}
