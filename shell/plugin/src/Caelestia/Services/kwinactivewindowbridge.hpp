@@ -69,6 +69,7 @@ signals:
 
 private:
     void injectKWinScript();
+    void ensureKWinScript();
     void executeKWinScriptAction(const QString &scriptBody);
 
     QVariantMap m_activeWindow;
@@ -78,6 +79,7 @@ private:
     int m_currentDesktop = 1;
 
     class QTimer* m_windowListDebounce;
+    class QTimer* m_scriptWatchdog;
     QString m_pendingWindowListJson;
 };
 
