@@ -12,6 +12,7 @@ ColumnLayout {
     spacing: Tokens.spacing.large
 
     SearchBar {
+        z: 1
         Layout.fillWidth: true
         nState: root.nState
         onSearchCommitted: {
