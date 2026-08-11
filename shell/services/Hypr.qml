@@ -380,8 +380,6 @@ Singleton {
         let cached = root._monitorCache[screen.name];
         if (!cached) {
             cached = root.createMonitorMock(screen.name, Object.keys(cache).filter(key => key !== "values").length);
-            cached.activeWorkspace = { id: root.mockActiveWs };
-            cached.specialWorkspace = { name: "" };
             root._monitorCache[screen.name] = cached;
         }
         return cached;
