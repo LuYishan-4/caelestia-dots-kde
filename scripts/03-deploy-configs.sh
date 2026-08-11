@@ -134,9 +134,29 @@ deploy_config() {
 }
 
 echo "  Deploying Caelestia configs..."
-for config in btop fastfetch foot kitty micro thunar; do
+for config in btop fastfetch foot kitty micro; do
     deploy_config "$config" "$DOTS_DIR/$config"
 done
+
+if [[ "${INSTALL_THUNAR:-false}" == "true" ]]; then
+    thunar_source="$DOTS_DIR/thunar"
+    thunar_target="$HOME/.config/thunar"
+    if [[ -d "$thunar_source" ]]; then
+        mkdir -p "$thunar_target"
+        for file in thunar-volman.xml uca.xml; do
+            if [[ -f "$thunar_source/$file" ]]; then
+                cp "$thunar_source/$file" "$thunar_target/$file"
+                echo "    Deployed: thunar/$file"
+            else
+                echo "    [WARN] Missing optional Thunar file: thunar/$file"
+            fi
+        done
+    else
+        echo "    [WARN] Thunar integration files unavailable in src/dots/thunar"
+    fi
+else
+    echo "    [SKIP] Thunar integration files disabled by user choice"
+fi
 
 echo "  Deploying extra configs..."
 for config in fish fastfetch; do
