@@ -636,7 +636,7 @@ void KWinActiveWindowBridge::ensureKWinScript() {
 
     QDBusMessage listMsg =
         QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadedScripts");
-    QDBusReply<QStringList> listReply = QDBusConnection::sessionBus().call(listMsg);
+    QDBusReply<QStringList> listReply = QDBusConnection::sessionBus().call(listMsg, QDBus::Block, 1000);
     if (!listReply.isValid()) {
         qWarning() << "Failed to check KWin bridge script:" << listReply.error().message();
         return;
