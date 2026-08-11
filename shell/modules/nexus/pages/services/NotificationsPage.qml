@@ -1,75 +1,9 @@
-import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
-import qs.components.controls
-import qs.services
 import qs.modules.nexus.common
 
 PageBase {
     id: root
-
-    // Notification fullscreen visibility, mapped to GlobalConfig.notifs.fullscreen
-    readonly property list<MenuItem> notifFullscreenItems: [
-        MenuItem {
-            text: qsTr("Off")
-            icon: "notifications_off"
-        },
-        MenuItem {
-            text: qsTr("On")
-            icon: "notifications"
-        }
-    ]
-    readonly property list<string> notifFullscreenValues: ["off", "on"]
-
-    // Notification position, mapped to GlobalConfig.notifs.position
-    readonly property list<MenuItem> notifPositionItems: [
-        MenuItem {
-            text: qsTr("Auto")
-            icon: "auto_awesome"
-        },
-        MenuItem {
-            text: qsTr("Top Left")
-            icon: "north_west"
-        },
-        MenuItem {
-            text: qsTr("Top Center")
-            icon: "north"
-        },
-        MenuItem {
-            text: qsTr("Top Right")
-            icon: "north_east"
-        },
-        MenuItem {
-            text: qsTr("Bottom Left")
-            icon: "south_west"
-        },
-        MenuItem {
-            text: qsTr("Bottom Center")
-            icon: "south"
-        },
-        MenuItem {
-            text: qsTr("Bottom Right")
-            icon: "south_east"
-        }
-    ]
-    readonly property list<string> notifPositionValues: ["auto", "top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"]
-
-    // Toast fullscreen visibility, mapped to GlobalConfig.utilities.toasts.fullscreen
-    readonly property list<MenuItem> toastFullscreenItems: [
-        MenuItem {
-            text: qsTr("Off")
-            icon: "notifications_off"
-        },
-        MenuItem {
-            text: qsTr("Important")
-            icon: "priority_high"
-        },
-        MenuItem {
-            text: qsTr("On")
-            icon: "notifications"
-        }
-    ]
-    readonly property list<string> toastFullscreenValues: ["off", "important", "all"]
 
     title: qsTr("Notifications")
 
@@ -79,228 +13,38 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.extraSmall / 2
 
-        // Notifications
         SectionHeader {
             first: true
-            text: qsTr("Notifications")
+            text: qsTr("Delivery")
         }
 
-        SelectRow {
+        NavRow {
             first: true
-            label: qsTr("Show in fullscreen")
-            subtext: qsTr("Whether notifications appear over fullscreen apps")
-            menuItems: root.notifFullscreenItems
-            active: root.notifFullscreenItems[Math.max(0, root.notifFullscreenValues.indexOf(GlobalConfig.notifs.fullscreen))]
-            onSelected: item => GlobalConfig.notifs.fullscreen = root.notifFullscreenValues[root.notifFullscreenItems.indexOf(item)]
-        }
-
-        SelectRow {
-            label: qsTr("Position")
-            subtext: qsTr("Where notification popups appear on screen")
-            menuItems: root.notifPositionItems
-            active: root.notifPositionItems[Math.max(0, root.notifPositionValues.indexOf(GlobalConfig.notifs.position))]
-            onSelected: item => GlobalConfig.notifs.position = root.notifPositionValues[root.notifPositionItems.indexOf(item)]
-        }
-
-        ToggleRow {
-            text: qsTr("Expire automatically")
-            subtext: qsTr("Dismiss notifications after their timeout")
-            checked: GlobalConfig.notifs.expire
-            onToggled: GlobalConfig.notifs.expire = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Open expanded")
-            subtext: qsTr("Show notifications expanded by default")
-            checked: GlobalConfig.notifs.openExpanded
-            onToggled: GlobalConfig.notifs.openExpanded = checked
-        }
-
-        StepperRow {
-            label: qsTr("Default timeout")
-            subtext: qsTr("Time before a notification dismisses (seconds)")
-            value: GlobalConfig.notifs.defaultExpireTimeout / 1000
-            from: 1
-            to: 60
-            stepSize: 1
-            onMoved: v => GlobalConfig.notifs.defaultExpireTimeout = Math.round(v * 1000)
-        }
-
-        StepperRow {
-            last: true
-            label: qsTr("Group preview count")
-            subtext: qsTr("Notifications shown per group before collapsing")
-            value: GlobalConfig.notifs.groupPreviewNum
-            from: 1
-            to: 10
-            stepSize: 1
-            onMoved: v => GlobalConfig.notifs.groupPreviewNum = Math.round(v)
-        }
-
-        // Toasts
-        SectionHeader {
-            text: qsTr("Toasts")
-        }
-
-        SelectRow {
-            first: true
-            label: qsTr("Show in fullscreen")
-            subtext: qsTr("Whether toasts appear over fullscreen apps")
-            menuItems: root.toastFullscreenItems
-            active: root.toastFullscreenItems[Math.max(0, root.toastFullscreenValues.indexOf(GlobalConfig.utilities.toasts.fullscreen))]
-            onSelected: item => GlobalConfig.utilities.toasts.fullscreen = root.toastFullscreenValues[root.toastFullscreenItems.indexOf(item)]
-        }
-
-        StepperRow {
-            label: qsTr("Visible toasts")
-            subtext: qsTr("Maximum number of toasts shown at once")
-            value: GlobalConfig.utilities.maxToasts
-            from: 1
-            to: 10
-            stepSize: 1
-            onMoved: v => GlobalConfig.utilities.maxToasts = Math.round(v)
-        }
-
-        ToggleRow {
-            text: qsTr("Toast transparency")
-            subtext: qsTr("Apply transparency and blur to toast notifications")
-            checked: GlobalConfig.utilities.toasts.transparency
-            onToggled: GlobalConfig.utilities.toasts.transparency = checked
-        }
-
-        SliderRow {
-            last: true
-            label: qsTr("Base transparency")
-            valueLabel: Math.round(value * 100) + "%"
-            value: GlobalConfig.utilities.toasts.transparencyBase
-            enabled: GlobalConfig.utilities.toasts.transparency
-            onMoved: v => GlobalConfig.utilities.toasts.transparencyBase = v
-        }
-
-        SectionHeader {
-            text: qsTr("Sound")
-        }
-
-        SliderRow {
-            first: true
-            last: true
             icon: "notifications"
-            label: qsTr("Notification volume")
-            valueLabel: Math.round(value * 100) + "%"
-            value: GlobalConfig.audio.sounds.notificationVolume
-            enabled: GlobalConfig.audio.sounds.enabled
-            onMoved: v => GlobalConfig.audio.sounds.notificationVolume = v
-            onReleased: v => Audio.playNotification()
+            label: qsTr("Notifications")
+            status: qsTr("Position, timeout, and display behavior")
+            onClicked: root.nState.openSubPage(1)
+        }
+
+        NavRow {
+            last: true
+            icon: "campaign"
+            label: qsTr("Toasts")
+            status: qsTr("Fullscreen behavior, appearance, and sound")
+            onClicked: root.nState.openSubPage(2)
         }
 
         SectionHeader {
-            text: qsTr("Taskbar indicator")
+            text: qsTr("Automation")
         }
 
-        ToggleRow {
+        NavRow {
             first: true
             last: true
-            text: qsTr("Show notifications icon")
-            subtext: qsTr("Show notifications in taskbar status icons")
-            checked: Config.bar.status.showNotifications
-            onToggled: GlobalConfig.bar.status.showNotifications = checked
-        }
-
-        // Toast events
-        SectionHeader {
-            text: qsTr("Toast events")
-        }
-
-        ToggleRow {
-            first: true
-            text: qsTr("Charging changes")
-            checked: GlobalConfig.utilities.toasts.chargingChanged
-            onToggled: GlobalConfig.utilities.toasts.chargingChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Game mode changes")
-            checked: GlobalConfig.utilities.toasts.gameModeChanged
-            onToggled: GlobalConfig.utilities.toasts.gameModeChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Do not disturb changes")
-            checked: GlobalConfig.utilities.toasts.dndChanged
-            onToggled: GlobalConfig.utilities.toasts.dndChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Audio output changes")
-            checked: GlobalConfig.utilities.toasts.audioOutputChanged
-            onToggled: GlobalConfig.utilities.toasts.audioOutputChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Audio input changes")
-            checked: GlobalConfig.utilities.toasts.audioInputChanged
-            onToggled: GlobalConfig.utilities.toasts.audioInputChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Caps lock changes")
-            checked: GlobalConfig.utilities.toasts.capsLockChanged
-            onToggled: GlobalConfig.utilities.toasts.capsLockChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Num lock changes")
-            checked: GlobalConfig.utilities.toasts.numLockChanged
-            onToggled: GlobalConfig.utilities.toasts.numLockChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Keyboard layout changes")
-            checked: GlobalConfig.utilities.toasts.kbLayoutChanged
-            onToggled: GlobalConfig.utilities.toasts.kbLayoutChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("VPN changes")
-            checked: GlobalConfig.utilities.toasts.vpnChanged
-            onToggled: GlobalConfig.utilities.toasts.vpnChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Now playing")
-            checked: GlobalConfig.utilities.toasts.nowPlaying
-            onToggled: GlobalConfig.utilities.toasts.nowPlaying = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Config loaded")
-            checked: GlobalConfig.utilities.toasts.configLoaded
-            onToggled: GlobalConfig.utilities.toasts.configLoaded = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Keyboard layout limit")
-            checked: GlobalConfig.utilities.toasts.kbLimit
-            onToggled: GlobalConfig.utilities.toasts.kbLimit = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Night light changes")
-            checked: GlobalConfig.utilities.toasts.nightLightChanged
-            onToggled: GlobalConfig.utilities.toasts.nightLightChanged = checked
-        }
-
-        ToggleRow {
-            text: qsTr("Clipboard changes")
-            checked: GlobalConfig.utilities.toasts.clipboardChanged
-            onToggled: GlobalConfig.utilities.toasts.clipboardChanged = checked
-        }
-
-        ToggleRow {
-            last: true
-            text: qsTr("System updates")
-            checked: GlobalConfig.utilities.toasts.updateAvailable
-            onToggled: GlobalConfig.utilities.toasts.updateAvailable = checked
+            icon: "tune"
+            label: qsTr("Toast events")
+            status: qsTr("Choose which system changes show a toast")
+            onClicked: root.nState.openSubPage(3)
         }
     }
 }

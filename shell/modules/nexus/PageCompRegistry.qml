@@ -13,6 +13,7 @@ import qs.modules.nexus.pages.bluetooth
 import qs.modules.nexus.pages.desktop
 import qs.modules.nexus.pages.panels
 import qs.modules.nexus.pages.services
+import qs.modules.nexus.pages.utilities
 import qs.modules.nexus.pages.wallandstyle
 import qs.modules.nexus.pages.panels.taskbar
 
@@ -165,6 +166,12 @@ QtObject {
                 Component {
                     AppVolumes {}
                 }
+                Component {
+                    SoundEffectsPage {}
+                }
+                Component {
+                    NotificationSilencingPage {}
+                }
             }
         },
         // Controls
@@ -173,6 +180,15 @@ QtObject {
             StackPage {
                 Component {
                     NotificationsPage {}
+                }
+                Component {
+                    NotificationPreferencesPage {}
+                }
+                Component {
+                    ToastPreferencesPage {}
+                }
+                Component {
+                    ToastEventsPage {}
                 }
             }
         },
@@ -187,6 +203,18 @@ QtObject {
                 }
                 Component {
                     GameModeTargetsPage {}
+                }
+                Component {
+                    OsdPage {}
+                }
+                Component {
+                    ClipboardPage {}
+                }
+                Component {
+                    UtilitiesPanelPage {}
+                }
+                Component {
+                    QuickTogglesPage {}
                 }
             }
         },
