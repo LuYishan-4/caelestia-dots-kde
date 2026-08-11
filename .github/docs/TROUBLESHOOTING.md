@@ -349,10 +349,11 @@ bash scripts/09-system-tweaks.sh
 
 ### 6.1 Pacman Mirror Ranking Fails
 
-The installer uses `reflector` to rank mirrors. Failure modes:
-- **Offline:** `curl -fsSL https://ipapi.co/country_name/` fails → falls back to global pool
-- **reflector not installed:** Auto-installed via `pacman -Sy reflector`. If that fails, ranking is skipped
-- **cachyos-rate-mirrors:** CachyOS-specific; if it fails, existing mirrors are kept
+On CachyOS, the installer uses the native `cachyos-rate-mirrors` command, which ranks both Arch and CachyOS repositories. Other Arch-based systems use `reflector` as a fallback. Fedora refreshes its configured DNF metadata and Debian-based systems refresh their configured APT indexes; neither needs mirror-list rewriting during installation. Failure modes:
+- **Offline:** Mirror ranking fails and the existing mirror lists are kept
+- **cachyos-rate-mirrors unavailable:** CachyOS mirror ranking is skipped and the existing mirror lists are kept
+- **reflector not installed:** On non-Cachy Arch systems, it is auto-installed via `pacman -Sy reflector`; if that fails, ranking is skipped
+- **DNF or APT refresh fails:** Fedora/Debian package installation continues and reports the package-manager error later if the configured sources remain unavailable
 
 ### 6.2 Git / Submodule Failures
 
