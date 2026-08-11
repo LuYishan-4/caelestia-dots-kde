@@ -26,11 +26,11 @@ SHELL_PACKAGES=(
 )
 
 THEME_PACKAGES=(
-    adw-gtk3-theme google-rubik-fonts
+    adw-gtk3-theme google-rubik-fonts google-noto-sans-fonts google-noto-sans-cjk-fonts google-noto-emoji-fonts
 )
 
 UTILITY_PACKAGES=(
-    fuzzel swappy brightnessctl ddcutil NetworkManager ImageMagick tesseract tesseract-langpack-eng spectacle gpu-screen-recorder slurp grim xdg-utils sassc
+    fuzzel swappy brightnessctl ddcutil NetworkManager ImageMagick tesseract tesseract-langpack-eng spectacle gpu-screen-recorder slurp grim xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
 )
 
 # Packages known to need copr or manual fallback
@@ -284,6 +284,10 @@ else
 fi
 
 fi  # end of PACKAGE_GROUP themes/all block
+
+if command -v xdg-user-dirs-update >/dev/null 2>&1; then
+    xdg-user-dirs-update || true
+fi
 
 if [[ "$PACKAGE_GROUP" == "all" || "$PACKAGE_GROUP" == "shell" ]]; then
 

@@ -9,6 +9,7 @@ import Caelestia.Config
 import Caelestia.Internal
 import Caelestia.Services
 import qs.components.misc
+import qs.services
 
 Singleton {
     id: root
@@ -41,35 +42,29 @@ Singleton {
     // undefined - causing "Cannot call method 'toString' of undefined" and
     // "Unable to assign [undefined] to ..." warnings wherever it was used.
     readonly property int mockActiveWs: 1
-    
-    readonly property var monitors: {
-        let _ = root.monitorState;
-        if (Object.keys(root._monitorCache).length === 0) {
-            for (let i = 0; i < Quickshell.screens.length; i++) {
-                let s = Quickshell.screens[i];
-                let fallback = Qt.createQmlObject(`
-                    import QtQuick
-                    QtObject {
-                        property int id: 0
-                        property string name: ""
-                        property bool focused: false
-                        property real scale: 1.0
-                        property real x: 0
-                        property real y: 0
-                        // activeWorkspace must include toplevels.values for
-                        // optional-chaining code paths (e.g. hasFullscreen checks)
-                        property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
-                        property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
-                        property var lastIpcObject: null
 
-                        Component.onCompleted: lastIpcObject = this
-                    }
-                `, root, "monitorMock");
-                fallback.name = s.name;
-                fallback.id = i;
-                if (i === 0) fallback.focused = true;
-                root._monitorCache[s.name] = fallback;
+    readonly property var monitors: {
+        const screens = [...Quickshell.screens];
+        const screenNames = screens.map(s => s.name);
+        const cachedNames = Object.keys(root._monitorCache).filter(key => key !== "values");
+        const topologyChanged = cachedNames.length !== screenNames.length || cachedNames.some(name => !screenNames.includes(name));
+
+        if (topologyChanged) {
+            for (const name of cachedNames) {
+                if (!screenNames.includes(name))
+                    delete root._monitorCache[name];
             }
+            for (let i = 0; i < screens.length; i++) {
+                const screen = screens[i];
+                if (!root._monitorCache[screen.name])
+                    root._monitorCache[screen.name] = root.createMonitorMock(screen.name, i);
+            }
+        }
+
+        for (let i = 0; i < screens.length; i++) {
+            const monitor = root._monitorCache[screens[i].name];
+            monitor.id = i;
+            monitor.focused = i === 0;
         }
         // Inject .values so for-of loops and .some()/.find() on Hypr.monitors work.
         // The codebase expects monitors to behave like a Map/iterable.
@@ -88,7 +83,7 @@ Singleton {
     readonly property var activeToplevel: ToplevelManager.activeToplevel
     readonly property var focusedWorkspace: ({ id: root.mockActiveWs, name: root.mockActiveWs.toString() })
     readonly property var focusedMonitor: {
-        let _ = root.monitorState;
+        let _ = root.monitors;
         
         let targetName = "";
         if (typeof KWinActiveWindowBridge !== "undefined" && KWinActiveWindowBridge.activeOutputName) {
@@ -123,9 +118,9 @@ Singleton {
 
     readonly property bool capsLock: CUtils.capsLock
     readonly property bool numLock: CUtils.numLock
-    readonly property string defaultKbLayout: "??"
-    readonly property string kbLayoutFull: "Unknown"
-    readonly property string kbLayout: "??"
+    readonly property string defaultKbLayout: ""
+    readonly property string kbLayoutFull: KbLayout.activeLabel
+    readonly property string kbLayout: KbLayout.activeShortLabel
     readonly property var kbMap: new Map()
 
     readonly property alias extras: extras
@@ -136,6 +131,31 @@ Singleton {
     property string lastSpecialWorkspace: ""
 
     signal configReloaded
+
+    function createMonitorMock(name: string, index: int): var {
+        const fallback = Qt.createQmlObject(`
+            import QtQuick
+            QtObject {
+                property int id: 0
+                property string name: ""
+                property bool focused: false
+                property real scale: 1.0
+                property real x: 0
+                property real y: 0
+                // activeWorkspace must include toplevels.values for
+                // optional-chaining code paths (e.g. hasFullscreen checks)
+                property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
+                property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
+                property var lastIpcObject: null
+
+                Component.onCompleted: lastIpcObject = this
+            }
+        `, root, "monitorMock");
+        fallback.name = name;
+        fallback.id = index;
+        fallback.focused = index === 0;
+        return fallback;
+    }
 
     function hasFullscreen(): bool {
         if (typeof KWinActiveWindowBridge !== "undefined") {
@@ -355,27 +375,11 @@ Singleton {
     }
 
     function monitorFor(screen: ShellScreen): var {
+        const monitors = root.monitors;
+        const cache = monitors;
         let cached = root._monitorCache[screen.name];
         if (!cached) {
-            cached = Qt.createQmlObject(`
-                import QtQuick
-                QtObject {
-                    property int id: 0
-                    property string name: ""
-                    property bool focused: false
-                    property real scale: 1.0
-                    property real x: 0
-                    property real y: 0
-                    property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
-                    property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
-                    property var lastIpcObject: null
-                    Component.onCompleted: lastIpcObject = this
-                }
-            `, root, "monitorMock");
-            cached.name = screen.name;
-            cached.id = Object.keys(root._monitorCache).length;
-            cached.activeWorkspace = { id: root.mockActiveWs };
-            cached.specialWorkspace = { name: "" };
+            cached = root.createMonitorMock(screen.name, Object.keys(cache).filter(key => key !== "values").length);
             root._monitorCache[screen.name] = cached;
         }
         return cached;
@@ -409,7 +413,7 @@ Singleton {
         if (hadKeyboard && GlobalConfig.utilities.toasts.kbLayoutChanged)
             Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
 
-        hadKeyboard = !!keyboard;
+        hadKeyboard = kbLayoutFull.length > 0;
     }
 
 

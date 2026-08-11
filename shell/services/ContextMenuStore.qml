@@ -15,6 +15,7 @@ Singleton {
     property bool loaded: false
     property bool loading: false
     property bool cacheValid: false
+    property bool writeQueued: false
     property real loadStartedAt: 0
     property real saveStartedAt: 0
 
@@ -54,6 +55,17 @@ Singleton {
         saveDebounce.restart();
     }
 
+    function startWrite(): void {
+        if (writeProc.running) {
+            writeQueued = true;
+            return;
+        }
+
+        writeQueued = false;
+        writeProc.jsonContent = JSON.stringify(pendingEntries);
+        writeProc.running = true;
+    }
+
     Process {
         id: readProc
 
@@ -89,7 +101,7 @@ Singleton {
 
         interval: 180
         repeat: false
-        onTriggered: writeProc.running = true
+        onTriggered: root.startWrite()
     }
 
     Process {
@@ -107,12 +119,15 @@ Singleton {
 
         onRunningChanged: {
             if (running) {
-                writeProc.jsonContent = JSON.stringify(root.pendingEntries);
+                return;
             } else if (root.saveStartedAt > 0) {
                 const saveMs = Date.now() - root.saveStartedAt;
                 console.log("[perf][ContextMenuStore] save disk ms=" + saveMs + " entries=" + root.pendingEntries.length);
                 root.saveStartedAt = 0;
             }
+
+            if (root.writeQueued)
+                saveDebounce.restart();
         }
 
         stdout: StdioCollector {}

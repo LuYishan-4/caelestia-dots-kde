@@ -273,6 +273,11 @@ KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
         }
     });
 
+    m_scriptWatchdog = new QTimer(this);
+    m_scriptWatchdog->setInterval(5000);
+    m_scriptWatchdog->setSingleShot(false);
+    connect(m_scriptWatchdog, &QTimer::timeout, this, &KWinActiveWindowBridge::ensureKWinScript);
+
     QDBusConnection bus = QDBusConnection::sessionBus();
     bus.registerObject("/dev/caelestia/KWinActiveWindow", this,
         QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals | QDBusConnection::ExportAllProperties |
@@ -296,6 +301,7 @@ KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
     }
 
     injectKWinScript();
+    m_scriptWatchdog->start();
 }
 
 KWinActiveWindowBridge::~KWinActiveWindowBridge() {
@@ -619,6 +625,26 @@ void KWinActiveWindowBridge::updateWindowList(const QString& windowsJson) {
     m_pendingWindowListJson = windowsJson;
     if (!m_windowListDebounce->isActive()) {
         m_windowListDebounce->start();
+    }
+}
+
+void KWinActiveWindowBridge::ensureKWinScript() {
+    if (m_scriptName.isEmpty()) {
+        injectKWinScript();
+        return;
+    }
+
+    QDBusMessage listMsg =
+        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadedScripts");
+    QDBusReply<QStringList> listReply = QDBusConnection::sessionBus().call(listMsg, QDBus::Block, 1000);
+    if (!listReply.isValid()) {
+        qWarning() << "Failed to check KWin bridge script:" << listReply.error().message();
+        return;
+    }
+
+    if (!listReply.value().contains(m_scriptName)) {
+        qWarning() << "KWin bridge script is no longer loaded; reinjecting";
+        injectKWinScript();
     }
 }
 

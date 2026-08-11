@@ -42,10 +42,11 @@ SHELL_PACKAGES=(
 
 THEME_PACKAGES=(
     adw-gtk-theme ttf-jetbrains-mono-nerd ttf-material-symbols-variable ttf-rubik-vf ttf-cascadia-code-nerd
+    noto-fonts noto-fonts-cjk noto-fonts-emoji
 )
 
 UTILITY_PACKAGES=(
-    swappy brightnessctl ddcutil networkmanager imagemagick tesseract tesseract-data-eng satty spectacle xdg-utils sassc
+    swappy brightnessctl ddcutil networkmanager imagemagick tesseract tesseract-data-eng satty spectacle xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
 )
 
 # Build final package list based on selected group
@@ -117,6 +118,10 @@ if [ ${#FAILED_PKGS[@]} -ne 0 ]; then
         err "  - $pkg"
         echo "$pkg" >> "${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/failed_packages.txt"
     done
+fi
+
+if command -v xdg-user-dirs-update >/dev/null 2>&1; then
+    xdg-user-dirs-update || true
 fi
 
 if command -v sassc >/dev/null 2>&1 && ! command -v sass >/dev/null 2>&1; then
