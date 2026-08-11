@@ -42,10 +42,26 @@ PageBase {
             icon: "info"
             label: qsTr("Instructions & Setup")
 
-            StyledText {
-                width: parent.width
-                wrapMode: Text.Wrap
-                text: qsTr("The AI Assistant supports several providers:\n\n• Claude Code (recommended) — uses your Claude subscription through the 'claude' CLI. No API key needed.\n• Ollama — fully local models for maximum privacy (install Ollama, then e.g. 'ollama run llama3').\n• Claude API, ChatGPT, Gemini, OpenRouter — pay-per-token; each needs its own API key (or the matching ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY env var, which takes precedence).\n\nInstall Claude Code, log in, add accounts, toggle providers and enter keys in Settings → AI Assistant. Pick the active provider and model from the selectors at the top of the chat.\n\nThe assistant tab appears in the sidebar whenever at least one provider is enabled.")
+            Item {
+                id: instructionsContent
+
+                readonly property real contentWidth: Math.max(320, Math.min(560, root.width - Tokens.padding.largeIncreased * 2))
+
+                implicitWidth: contentWidth
+                implicitHeight: instructionsText.implicitHeight
+
+                StyledText {
+                    id: instructionsText
+
+                    width: instructionsContent.contentWidth
+                    wrapMode: Text.Wrap
+                    text: qsTr("The AI Assistant supports several providers:\n\n• Claude Code (recommended) — uses your Claude subscription through the 'claude' CLI. No API key needed.\n• Ollama — fully local models for maximum privacy (install Ollama, then e.g. 'ollama run llama3').\n• Claude API, ChatGPT, Gemini, OpenRouter — pay-per-token; each needs its own API key (or the matching ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY env var, which takes precedence).\n\nInstall Claude Code, log in, add accounts, toggle providers and enter keys in Settings → AI Assistant. Pick the active provider and model from the selectors at the top of the chat.\n\nThe assistant tab appears in the sidebar whenever at least one provider is enabled.")
+                    color: Colours.on(Colours.palette.m3secondaryContainer)
+                    font: Tokens.font.body.small
+                    lineHeight: 1.15
+                    lineHeightMode: Text.ProportionalHeight
+                    horizontalAlignment: Text.AlignLeft
+                }
             }
         }
 
