@@ -38,7 +38,6 @@ PageBase {
                 MaterialIcon {
                     Layout.alignment: Qt.AlignTop
                     text: "extension_off"
-                    color: Colours.palette.m3onSurfaceVariant
                     fontStyle: Tokens.font.icon.large
                 }
 
@@ -52,13 +51,6 @@ PageBase {
                         font: Tokens.font.title.medium
                     }
 
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: qsTr("Caelestia does not currently load or manage plugins.")
-                        color: Colours.palette.m3onSurfaceVariant
-                        font: Tokens.font.body.small
-                        wrapMode: Text.Wrap
-                    }
                 }
             }
         }
