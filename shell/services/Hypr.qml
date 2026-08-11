@@ -9,6 +9,7 @@ import Caelestia.Config
 import Caelestia.Internal
 import Caelestia.Services
 import qs.components.misc
+import qs.services
 
 Singleton {
     id: root
@@ -142,9 +143,9 @@ Singleton {
 
     readonly property bool capsLock: CUtils.capsLock
     readonly property bool numLock: CUtils.numLock
-    readonly property string defaultKbLayout: "??"
-    readonly property string kbLayoutFull: "Unknown"
-    readonly property string kbLayout: "??"
+    readonly property string defaultKbLayout: ""
+    readonly property string kbLayoutFull: KbLayout.activeLabel
+    readonly property string kbLayout: KbLayout.activeShortLabel
     readonly property var kbMap: new Map()
 
     readonly property alias extras: extras
@@ -414,7 +415,7 @@ Singleton {
         if (hadKeyboard && GlobalConfig.utilities.toasts.kbLayoutChanged)
             Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayoutFull), "keyboard");
 
-        hadKeyboard = !!keyboard;
+        hadKeyboard = kbLayoutFull.length > 0;
     }
 
 
