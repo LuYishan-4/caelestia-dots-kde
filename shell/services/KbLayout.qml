@@ -64,6 +64,8 @@ Singleton {
         activeIndex = index >= 0 && index < layouts.length ? index : -1;
     }
 
+    Component.onCompleted: start()
+
     Process {
         id: layoutsProc
 
@@ -88,6 +90,4 @@ Singleton {
         onRunningChanged: if (!running)
             activeProc.running = true
     }
-
-    Component.onCompleted: start()
 }

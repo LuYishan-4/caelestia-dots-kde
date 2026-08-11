@@ -43,31 +43,6 @@ Singleton {
     // "Unable to assign [undefined] to ..." warnings wherever it was used.
     readonly property int mockActiveWs: 1
 
-    function createMonitorMock(name: string, index: int): var {
-        const fallback = Qt.createQmlObject(`
-            import QtQuick
-            QtObject {
-                property int id: 0
-                property string name: ""
-                property bool focused: false
-                property real scale: 1.0
-                property real x: 0
-                property real y: 0
-                // activeWorkspace must include toplevels.values for
-                // optional-chaining code paths (e.g. hasFullscreen checks)
-                property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
-                property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
-                property var lastIpcObject: null
-
-                Component.onCompleted: lastIpcObject = this
-            }
-        `, root, "monitorMock");
-        fallback.name = name;
-        fallback.id = index;
-        fallback.focused = index === 0;
-        return fallback;
-    }
-
     readonly property var monitors: {
         const screens = [...Quickshell.screens];
         const screenNames = screens.map(s => s.name);
@@ -156,6 +131,31 @@ Singleton {
     property string lastSpecialWorkspace: ""
 
     signal configReloaded
+
+    function createMonitorMock(name: string, index: int): var {
+        const fallback = Qt.createQmlObject(`
+            import QtQuick
+            QtObject {
+                property int id: 0
+                property string name: ""
+                property bool focused: false
+                property real scale: 1.0
+                property real x: 0
+                property real y: 0
+                // activeWorkspace must include toplevels.values for
+                // optional-chaining code paths (e.g. hasFullscreen checks)
+                property var activeWorkspace: ({ id: 1, toplevels: { values: [] } })
+                property var specialWorkspace: ({ name: "", toplevels: { values: [] } })
+                property var lastIpcObject: null
+
+                Component.onCompleted: lastIpcObject = this
+            }
+        `, root, "monitorMock");
+        fallback.name = name;
+        fallback.id = index;
+        fallback.focused = index === 0;
+        return fallback;
+    }
 
     function hasFullscreen(): bool {
         if (typeof KWinActiveWindowBridge !== "undefined") {
