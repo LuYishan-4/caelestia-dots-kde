@@ -49,6 +49,7 @@ private slots:
 private:
     void fetchInitialState();
     void updateState(const QVariantMap &config);
+    void writeConfig(const QStringList &args);
 
     bool m_active = false;
     int m_currentTemperature = 0;

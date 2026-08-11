@@ -6,6 +6,9 @@
 
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTimer>
+
+#include <memory>
 
 namespace caelestia::services {
 
@@ -45,10 +48,9 @@ bool NightColorBridge::available() const {
 }
 
 void NightColorBridge::toggleAutoMode() {
-    m_autoMode = !m_autoMode;
     // In KWin 6: Constant = 0, DarkLight = 1
-    QString modeStr = m_autoMode ? QStringLiteral("DarkLight") : QStringLiteral("Constant");
-    
+    QString modeStr = m_autoMode ? QStringLiteral("Constant") : QStringLiteral("DarkLight");
+
     QStringList args = {
         QStringLiteral("--notify"),
         QStringLiteral("--file"), QStringLiteral("kwinrc"),
@@ -56,15 +58,12 @@ void NightColorBridge::toggleAutoMode() {
         QStringLiteral("--key"), QStringLiteral("Mode"),
         modeStr
     };
-    QProcess::startDetached(QStringLiteral("kwriteconfig6"), args);
-
-    emit autoModeChanged();
+    writeConfig(args);
 }
 
 void NightColorBridge::toggleNightLight() {
-    m_active = !m_active;
-    QString activeStr = m_active ? QStringLiteral("true") : QStringLiteral("false");
-    
+    QString activeStr = m_active ? QStringLiteral("false") : QStringLiteral("true");
+
     QStringList args = {
         QStringLiteral("--notify"),
         QStringLiteral("--file"), QStringLiteral("kwinrc"),
@@ -72,16 +71,13 @@ void NightColorBridge::toggleNightLight() {
         QStringLiteral("--key"), QStringLiteral("Active"),
         activeStr
     };
-    QProcess::startDetached(QStringLiteral("kwriteconfig6"), args);
-
-    emit activeChanged();
+    writeConfig(args);
 }
 
 void NightColorBridge::setDayTemperature(int temp) {
     if (temp <= 0)
         return;
 
-    m_dayTemperature = temp;
     QStringList args = {
         QStringLiteral("--notify"),
         QStringLiteral("--file"), QStringLiteral("kwinrc"),
@@ -89,15 +85,13 @@ void NightColorBridge::setDayTemperature(int temp) {
         QStringLiteral("--key"), QStringLiteral("DayTemperature"),
         QString::number(temp)
     };
-    QProcess::startDetached(QStringLiteral("kwriteconfig6"), args);
-    emit dayTemperatureChanged();
+    writeConfig(args);
 }
 
 void NightColorBridge::setNightTemperature(int temp) {
     if (temp <= 0)
         return;
 
-    m_nightTemperature = temp;
     QStringList args = {
         QStringLiteral("--notify"),
         QStringLiteral("--file"), QStringLiteral("kwinrc"),
@@ -105,8 +99,31 @@ void NightColorBridge::setNightTemperature(int temp) {
         QStringLiteral("--key"), QStringLiteral("NightTemperature"),
         QString::number(temp)
     };
-    QProcess::startDetached(QStringLiteral("kwriteconfig6"), args);
-    emit nightTemperatureChanged();
+    writeConfig(args);
+}
+
+void NightColorBridge::writeConfig(const QStringList &args) {
+    auto* process = new QProcess(this);
+    auto settled = std::make_shared<bool>(false);
+    auto reconcile = [this, process, settled](bool success) {
+        if (*settled)
+            return;
+        *settled = true;
+
+        if (!success)
+            qWarning() << "Failed to update KWin Night Color configuration";
+
+        process->deleteLater();
+        QTimer::singleShot(250, this, &NightColorBridge::fetchInitialState);
+    };
+
+    connect(process, &QProcess::finished, this, [reconcile](int exitCode, QProcess::ExitStatus status) {
+        reconcile(status == QProcess::NormalExit && exitCode == 0);
+    });
+    connect(process, &QProcess::errorOccurred, this, [reconcile](QProcess::ProcessError) {
+        reconcile(false);
+    });
+    process->start(QStringLiteral("kwriteconfig6"), args);
 }
 
 void NightColorBridge::previewTemperature(int temp) {
@@ -128,9 +145,18 @@ void NightColorBridge::stopPreview() {
 void NightColorBridge::fetchInitialState() {
     QSettings settings(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation) + QStringLiteral("/kwinrc"), QSettings::IniFormat);
     settings.beginGroup(QStringLiteral("NightColor"));
-    m_dayTemperature = settings.value(QStringLiteral("DayTemperature"), 6500).toInt();
-    m_nightTemperature = settings.value(QStringLiteral("NightTemperature"), 4500).toInt();
+    const int dayTemperature = settings.value(QStringLiteral("DayTemperature"), 6500).toInt();
+    const int nightTemperature = settings.value(QStringLiteral("NightTemperature"), 4500).toInt();
     settings.endGroup();
+
+    if (dayTemperature != m_dayTemperature) {
+        m_dayTemperature = dayTemperature;
+        emit dayTemperatureChanged();
+    }
+    if (nightTemperature != m_nightTemperature) {
+        m_nightTemperature = nightTemperature;
+        emit nightTemperatureChanged();
+    }
 
     QDBusMessage msg = QDBusMessage::createMethodCall(
         QStringLiteral("org.kde.KWin"), QStringLiteral("/org/kde/KWin/NightLight"), QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("GetAll"));
