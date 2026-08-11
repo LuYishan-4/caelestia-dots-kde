@@ -42,6 +42,7 @@ SHELL_PACKAGES=(
 
 THEME_PACKAGES=(
     adw-gtk-theme ttf-jetbrains-mono-nerd ttf-material-symbols-variable ttf-rubik-vf ttf-cascadia-code-nerd
+    noto-fonts noto-fonts-cjk noto-fonts-emoji
 )
 
 UTILITY_PACKAGES=(
