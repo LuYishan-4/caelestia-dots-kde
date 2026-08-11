@@ -11,6 +11,8 @@
 #include <fcntl.h>
 #include <iostream>
 #include <pty.h>
+#include <QProcess>
+#include <QStringList>
 #include <sys/wait.h>
 #include <termios.h>
 #include <thread>
@@ -37,7 +39,7 @@ bool ensure_tmux_worker_pane() {
          "\\\":\\\" SIGINT SIGQUIT SIGTSTP; clear; echo \\\"Waiting for "
          "installer...\\\"; exec 3<> /tmp/caelestia_cmd; while read -u 3 -r "
          "cmd; do if [[ \\\"\\$cmd\\\" == \\\"EXIT\\\" ]]; then break; fi; "
-         "eval \\\"\\$cmd\\\"; echo \\$? > /tmp/caelestia_status; done'\"");
+         "bash -c \\\"\\$cmd\\\"; echo \\$? > /tmp/caelestia_status; done'\"");
   system("tmux select-pane -t caelestia_install:0.0");
   this_thread::sleep_for(
       chrono::milliseconds(50)); // tiny wait for terminal resize propagation
@@ -60,7 +62,7 @@ bool is_valid_env_name(const string &name) {
 }
 
 string shell_single_quote(string s) {
-  // Prevent multiline values from breaking command boundaries in eval.
+  // Prevent multiline values from breaking shell command boundaries.
   std::replace(s.begin(), s.end(), '\n', ' ');
   std::replace(s.begin(), s.end(), '\r', ' ');
 
@@ -74,6 +76,26 @@ string shell_single_quote(string s) {
   }
   out += "'";
   return out;
+}
+
+int run_script(const string &script_path) {
+  QProcess process;
+  process.setProgram(QStringLiteral("bash"));
+  process.setArguments({QString::fromStdString(script_path)});
+  process.setProcessChannelMode(QProcess::ForwardedChannels);
+  process.start();
+
+  if (!process.waitForStarted())
+    return -1;
+  if (!process.waitForFinished(-1)) {
+    process.kill();
+    process.waitForFinished();
+    return -1;
+  }
+
+  if (process.exitStatus() != QProcess::NormalExit)
+    return -1;
+  return process.exitCode();
 }
 } // namespace
 
@@ -385,8 +407,8 @@ void execute() {
                      shell_single_quote(safe_env(pair.first.c_str()));
         }
 
-        // Send as a single compound command so the listener evaluates it all at
-        // once and replies once
+        // Send as a single compound command so the listener runs it all at once
+        // and replies once.
         fprintf(cmd_fifo,
                 "%s; echo -e '\\033[1;36m==> Running: %s\\033[0m'; %s\n",
                 exports.c_str(), steps[i].name.c_str(), cmd.c_str());
@@ -481,8 +503,8 @@ void execute() {
       }
     } else {
       // Fallback if not in tmux
-      int status = system(cmd.c_str());
-      if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      const int exit_code = run_script(g_bundle_dir + "/" + steps[i].script_path);
+      if (exit_code == 0) {
         steps[i].status = "OK";
       } else {
         steps[i].status = "FAILED";
