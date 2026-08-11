@@ -21,7 +21,6 @@ PageBase {
             Layout.alignment: Qt.AlignHCenter
             text: qsTr("Plugins are coming soon")
             font: Tokens.font.headline.small
-            color: root.foreground
             animate: true
         }
 
@@ -29,7 +28,6 @@ PageBase {
             Layout.alignment: Qt.AlignHCenter
             text: qsTr("Stay tuned for the ability to extend your shell with community plugins.")
             font: Tokens.font.body.medium
-            color: Qt.alpha(root.foreground, 0.75)
             horizontalAlignment: Text.AlignHCenter
             animate: true
         }
