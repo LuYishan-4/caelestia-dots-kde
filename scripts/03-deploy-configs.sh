@@ -8,6 +8,7 @@ SRC_DIR="$BUNDLE_DIR/src"
 DOTS_DIR="$SRC_DIR/dots"
 FISH_DIR="$SRC_DIR/dots-extra"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde"
+DEPLOYED_DIR="$CACHE_DIR/deployed"
 BACKUP_DIR_FILE="$CACHE_DIR/backup-dir.txt"
 if [[ -z "${BACKUP_DIR:-}" ]]; then
     BACKUP_DIR=""
@@ -38,6 +39,7 @@ echo "  Step 3/11  Config Deployment"
 echo ""
 
 mkdir -p "$BACKUP_DIR"
+mkdir -p "$DEPLOYED_DIR"
 
 if [[ ! -d "$DOTS_DIR" ]] || [[ -z "$(ls -A "$DOTS_DIR" 2>/dev/null)" ]]; then
     echo "  [ERR] Missing src/dots content. Run: git submodule update --init --recursive src/dots"
@@ -80,15 +82,60 @@ backup_shell_rc "$HOME/.bashrc" "bashrc"
 backup_shell_rc "$HOME/.zshrc" "zshrc"
 backup_shell_rc "$HOME/.config/fish/config.fish" "fish_config"
 
+config_checksum() {
+    local path="$1"
+
+    if [[ ! -e "$path" ]]; then
+        printf 'missing\n'
+        return
+    fi
+
+    if [[ -d "$path" ]]; then
+        (
+            cd "$path"
+            find . -type f -print0 | sort -z | while IFS= read -r -d '' file; do
+                sha256sum "$file"
+            done
+        ) | sha256sum | awk '{print $1}'
+    else
+        sha256sum "$path" | awk '{print $1}'
+    fi
+}
+
+deploy_config() {
+    local config="$1"
+    local source="$2"
+    local target="$HOME/.config/$config"
+    local stamp="$DEPLOYED_DIR/$config.sha256"
+
+    if [[ ! -d "$source" ]]; then
+        return
+    fi
+
+    if [[ -e "$target" ]]; then
+        local current expected
+        current="$(config_checksum "$target")"
+        expected=""
+        if [[ -f "$stamp" ]]; then
+            expected="$(<"$stamp")"
+        fi
+
+        if [[ -z "$expected" || "$current" != "$expected" ]]; then
+            echo "    [SKIP] Preserving locally modified config: $config"
+            echo "           Backup: $BACKUP_DIR/.config/$config"
+            return
+        fi
+    fi
+
+    rm -rf "$target"
+    cp -a "$source" "$target"
+    config_checksum "$target" > "$stamp"
+    echo "    Deployed: $config"
+}
+
 echo "  Deploying Caelestia configs..."
 for config in btop fastfetch foot kitty micro thunar; do
-    if [[ -d "$DOTS_DIR/$config" ]]; then
-        # Remove
-        rm -rf "$HOME/.config/$config"
-        # Deploy
-        cp -r "$DOTS_DIR/$config" "$HOME/.config/$config"
-        echo "    Deployed: $config"
-    fi
+    deploy_config "$config" "$DOTS_DIR/$config"
 done
 
 echo "  Deploying extra configs..."
@@ -98,13 +145,7 @@ for config in fish fastfetch; do
         continue
     fi
 
-    if [[ -d "$FISH_DIR/$config" ]]; then
-        # Remove
-        rm -rf "$HOME/.config/$config"
-        # Deploy
-        cp -r "$FISH_DIR/$config" "$HOME/.config/$config"
-        echo "    Deployed: $config"
-    fi
+    deploy_config "$config" "$FISH_DIR/$config"
 done
 
 # Backup existing starship config
@@ -113,11 +154,30 @@ if [[ -f "$HOME/.config/starship.toml" ]]; then
     cp "$HOME/.config/starship.toml" "$BACKUP_DIR/.config/starship.toml"
 fi
 
-# Deploy starship.toml
+# Deploy starship.toml unless the previous Caelestia copy was locally edited.
 if [[ -f "$DOTS_DIR/starship.toml" ]]; then
     mkdir -p "$HOME/.config"
-    cp "$DOTS_DIR/starship.toml" "$HOME/.config/starship.toml"
-    echo "    Deployed: starship.toml"
+    starship_target="$HOME/.config/starship.toml"
+    starship_stamp="$DEPLOYED_DIR/starship.toml.sha256"
+    if [[ -e "$starship_target" ]]; then
+        starship_current="$(config_checksum "$starship_target")"
+        starship_expected=""
+        if [[ -f "$starship_stamp" ]]; then
+            starship_expected="$(<"$starship_stamp")"
+        fi
+        if [[ -z "$starship_expected" || "$starship_current" != "$starship_expected" ]]; then
+            echo "    [SKIP] Preserving locally modified config: starship.toml"
+            echo "           Backup: $BACKUP_DIR/.config/starship.toml"
+        else
+            cp "$DOTS_DIR/starship.toml" "$starship_target"
+            config_checksum "$starship_target" > "$starship_stamp"
+            echo "    Deployed: starship.toml"
+        fi
+    else
+        cp "$DOTS_DIR/starship.toml" "$starship_target"
+        config_checksum "$starship_target" > "$starship_stamp"
+        echo "    Deployed: starship.toml"
+    fi
 fi
 
 #  Deploy Bridge Files 
