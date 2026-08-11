@@ -11,8 +11,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <pty.h>
-#include <QProcess>
-#include <QStringList>
+#include <cerrno>
 #include <sys/wait.h>
 #include <termios.h>
 #include <thread>
@@ -79,23 +78,24 @@ string shell_single_quote(string s) {
 }
 
 int run_script(const string &script_path) {
-  QProcess process;
-  process.setProgram(QStringLiteral("bash"));
-  process.setArguments({QString::fromStdString(script_path)});
-  process.setProcessChannelMode(QProcess::ForwardedChannels);
-  process.start();
+  pid_t child = fork();
+  if (child < 0)
+    return -1;
 
-  if (!process.waitForStarted())
-    return -1;
-  if (!process.waitForFinished(-1)) {
-    process.kill();
-    process.waitForFinished();
-    return -1;
+  if (child == 0) {
+    execlp("bash", "bash", script_path.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
   }
 
-  if (process.exitStatus() != QProcess::NormalExit)
-    return -1;
-  return process.exitCode();
+  int status = 0;
+  while (waitpid(child, &status, 0) < 0) {
+    if (errno != EINTR)
+      return -1;
+  }
+
+  if (WIFEXITED(status))
+    return WEXITSTATUS(status);
+  return -1;
 }
 } // namespace
 
