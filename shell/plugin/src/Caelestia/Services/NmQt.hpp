@@ -177,6 +177,9 @@ private slots:
     void onAccessPointAppeared(const QString& apPath);
     void onAccessPointDisappeared(const QString& apPath);
 
+    /// Re-sync all state once NetworkManagerQt/NM itself is fully settled.
+    void onNetworkManagerReady();
+
 private:
     // -- Helpers --
     void refreshNetworks();

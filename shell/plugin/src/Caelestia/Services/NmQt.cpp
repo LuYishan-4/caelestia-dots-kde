@@ -57,6 +57,12 @@ NmQt::NmQt(QObject* parent)
     connect(notifier, &NetworkManager::Notifier::activeConnectionsChanged,
             this, &NmQt::onActiveConnectionsChanged);
 
+    // -- NM (re)appearing / finishing its own startup sequence --
+    connect(notifier, &NetworkManager::Notifier::serviceAppeared,
+            this, &NmQt::onNetworkManagerReady);
+    connect(notifier, &NetworkManager::Notifier::isStartingUpChanged,
+            this, &NmQt::onNetworkManagerReady);
+
     // -- Connection list (saved profiles) --
     if (auto* settingsNotifier = NetworkManager::settingsNotifier()) {
         connect(settingsNotifier, &NetworkManager::SettingsNotifier::connectionAdded,
@@ -726,6 +732,15 @@ void NmQt::onAccessPointAppeared(const QString& /*apPath*/) {
 
 void NmQt::onAccessPointDisappeared(const QString& /*apPath*/) {
     refreshNetworks();
+}
+
+void NmQt::onNetworkManagerReady() {
+    refreshDevices();
+    refreshSavedConnections();
+    refreshVpnConnections();
+    refreshWirelessDeviceDetails();
+    refreshEthernetDeviceDetails();
+    emit isConnectedChanged();
 }
 
 // ---
