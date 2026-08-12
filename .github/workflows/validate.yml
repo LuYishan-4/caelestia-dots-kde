@@ -302,6 +302,29 @@ jobs:
         run: python3 .github/scripts/check_wayland_static_lifetime.py
 
   # ═══════════════════════════════════════════════════════════
+  # Job 14: QML import completeness - missing/extra imports
+  # ═══════════════════════════════════════════════════════════
+  # No real Qt/QML toolchain is available here (qmllint6 can't resolve this
+  # repo's qs.* directory-import convention at all), and no other job ever
+  # loads the QML engine - see check_qml_imports.py's module docstring for
+  # the exact/correlation registry design. This is what would have caught
+  # Nmcli.qml shipping without `import Quickshell` ("Singleton is not a
+  # type", cascading into "Type X unavailable" for every transitive importer).
+  qml-imports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check QML import completeness
+        run: python3 .github/scripts/check_qml_imports.py --shell-root shell
+
+  # ═══════════════════════════════════════════════════════════
   # Final gate: require all non-skippable jobs to pass
   # ═══════════════════════════════════════════════════════════
   validate-gate:
@@ -319,6 +342,7 @@ jobs:
       - config-cross-ref
       - actionlint
       - wayland-static-lifetime
+      - qml-imports
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -341,6 +365,7 @@ jobs:
           job_results[config-cross-ref]="${{ needs.config-cross-ref.result }}"
           job_results[actionlint]="${{ needs.actionlint.result }}"
           job_results[wayland-static-lifetime]="${{ needs.wayland-static-lifetime.result }}"
+          job_results[qml-imports]="${{ needs.qml-imports.result }}"
 
           all_passed=true
           # Jobs with pre-existing violations that don't block the gate

@@ -119,6 +119,13 @@ if [ ! -d "$SHELL_DIR" ]; then
     exit 1
 fi
 
+if command -v python3 >/dev/null 2>&1 && [[ -f "$BUNDLE_DIR/.github/scripts/check_qml_deployment.py" ]]; then
+    python3 "$BUNDLE_DIR/.github/scripts/check_qml_deployment.py" --source-root "$SHELL_DIR" || {
+        err "QML source compatibility validation failed."
+        exit 1
+    }
+fi
+
 cd "$SHELL_DIR" || exit 1
 
 info "Configuring CMake..."
@@ -140,20 +147,40 @@ cmake --install build || {
     exit 1
 }
 
-# Validate critical QML module presence before declaring success.
-CONFIG_MODULE_DIR="$HOME/.local/lib/qt6/qml/Caelestia/Config"
-if [[ ! -f "$CONFIG_MODULE_DIR/qmldir" ]]; then
-    err "Missing QML module metadata: $CONFIG_MODULE_DIR/qmldir"
-    exit 1
-fi
+# Validate every generated QML module before declaring success. Checking only
+# Caelestia.Config lets a partial install reach Quickshell and fail as a large
+# cascade of "Type unavailable" errors.
+QML_BASE="$HOME/.local/lib/qt6/qml"
+QML_MODULES=(
+    Caelestia
+    Caelestia/Components
+    Caelestia/Config
+    Caelestia/Internal
+    Caelestia/Models
+    Caelestia/Services
+    Caelestia/Blobs
+    Caelestia/Images
+    Caelestia/Layouts
+    M3Shapes
+)
 
-shopt -s nullglob
-CONFIG_PLUGIN_FILES=("$CONFIG_MODULE_DIR"/*.so)
-shopt -u nullglob
-if [[ ${#CONFIG_PLUGIN_FILES[@]} -eq 0 ]]; then
-    err "Missing Caelestia.Config plugin library in $CONFIG_MODULE_DIR"
-    exit 1
-fi
+for module in "${QML_MODULES[@]}"; do
+    module_dir="$QML_BASE/$module"
+    if [[ ! -f "$module_dir/qmldir" ]]; then
+        err "Missing QML module metadata: $module_dir/qmldir"
+        exit 1
+    fi
+
+    shopt -s nullglob
+    plugin_files=("$module_dir"/*.so)
+    shopt -u nullglob
+    if [[ ${#plugin_files[@]} -eq 0 ]]; then
+        err "Missing QML plugin library in $module_dir"
+        exit 1
+    fi
+done
+
+export QML2_IMPORT_PATH="$QML_BASE${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
 
 # Add wrapper config to bashrc/fish
 if ! grep -q "QML2_IMPORT_PATH=.*caelestia" ~/.bashrc; then
@@ -173,6 +200,7 @@ info "Installing Caelestia bin wrappers..."
 install -m 755 "$BUNDLE_DIR/src/bin/caelestia-record" ~/.local/bin/caelestia-record
 install -m 755 "$BUNDLE_DIR/src/bin/caelestia-screenshot" ~/.local/bin/caelestia-screenshot
 install -m 755 "$BUNDLE_DIR/src/bin/caelestia-shell-ipc" ~/.local/bin/caelestia-shell-ipc
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia" ~/.local/bin/caelestia
 install -m 755 "$BUNDLE_DIR/src/bin/caelestia-update" ~/.local/bin/caelestia-update
 install -m 755 "$BUNDLE_DIR/src/bin/caelestia-check-updates" ~/.local/bin/caelestia-check-updates
 ok "Caelestia bin wrappers installed to ~/.local/bin"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Export Caelestia's installed QML paths before delegating to caelestia-cli.
+
+set -euo pipefail
+
+export QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
+export CAELESTIA_LIB_DIR="${CAELESTIA_LIB_DIR:-$HOME/.local/lib/caelestia}"
+
+self="$(realpath "$0")"
+old_ifs="$IFS"
+IFS=:
+for directory in $PATH; do
+    IFS="$old_ifs"
+    [[ -z "$directory" ]] && directory="."
+    candidate="$directory/caelestia"
+    if [[ -x "$candidate" ]] && [[ "$(realpath "$candidate")" != "$self" ]]; then
+        exec "$candidate" "$@"
+    fi
+    IFS=:
+done
+IFS="$old_ifs"
+
+echo "[ERR] caelestia-cli was not found outside $self" >&2
+exit 127

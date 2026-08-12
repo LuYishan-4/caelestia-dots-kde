@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Caelestia.Services
 
 /// Thin adapter wrapping the C++ NmQt (NetworkManagerQt/D-Bus) singleton.

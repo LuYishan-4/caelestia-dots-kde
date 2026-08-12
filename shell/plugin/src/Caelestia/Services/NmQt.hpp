@@ -6,6 +6,7 @@
 #include <QVariantMap>
 #include <QStringList>
 #include <QJSValue>
+#include <QDateTime>
 #include <qqmlintegration.h>
 #include <NetworkManagerQt/Device>
 
@@ -171,8 +172,8 @@ private slots:
     void onConnectionsChanged();
     void onDeviceStateChanged(NetworkManager::Device::State newState,
                               NetworkManager::Device::State oldState,
-                              NetworkManager::DeviceStateReason reason);
-    void onScanFinished();
+                              NetworkManager::Device::StateChangeReason reason);
+    void onScanFinished(const QDateTime& dateTime);
     void onAccessPointAppeared(const QString& apPath);
     void onAccessPointDisappeared(const QString& apPath);
 
