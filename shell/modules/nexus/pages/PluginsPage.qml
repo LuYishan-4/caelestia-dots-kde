@@ -50,7 +50,6 @@ PageBase {
                         text: qsTr("Plugins are not available yet")
                         font: Tokens.font.title.medium
                     }
-
                 }
             }
         }

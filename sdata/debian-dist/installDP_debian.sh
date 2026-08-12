@@ -21,7 +21,7 @@ CORE_PACKAGES=(
     libaubio-dev aubio-tools lm-sensors libsensors-dev
     libpipewire-0.3-dev pipewire libc6
     qt6-base-dev qt6-base-private-dev qt6-declarative-dev qml6-module-qtquick qt6-wayland qt6-wayland-dev qt6-svg-dev qt6-shadertools-dev
-    libkf6globalaccel-dev libkf6windowsystem-dev libkpipewire-dev libsecret-1-dev
+    libkf6globalaccel-dev libkf6windowsystem-dev libkf6networkmanagerqt-dev libkpipewire-dev libsecret-1-dev
     ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libqalculate-dev qalc
 )
 

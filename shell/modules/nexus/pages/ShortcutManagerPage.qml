@@ -141,7 +141,6 @@ PageBase {
 
                     Layout.fillWidth: true
                     placeholderText: qsTr("Search shortcuts")
-                    placeholderTextColor: Colours.palette.m3onSurfaceVariant
                     color: Colours.palette.m3onSurface
                     font: Tokens.font.body.medium
                     onTextChanged: root.shortcutQuery = text

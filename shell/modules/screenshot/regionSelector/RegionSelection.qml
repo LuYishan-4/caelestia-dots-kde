@@ -257,7 +257,7 @@ PanelWindow {
         id: checkRecordingProc
 
         running: isRecording
-        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && test -f $HOME/.local/state/caelestia/record/recording.mp4"]
+        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && f=\"$(cat $HOME/.local/state/caelestia/record/current_recording_path 2>/dev/null)\" && [ -n \"$f\" ] && test -f \"$f\""]
         onExited: (exitCode, exitStatus) => {
             root.preparationDone = !screenshotProc.running
             root.recordingShouldStop = (exitCode === 0);
@@ -271,7 +271,7 @@ PanelWindow {
     onPreparationDoneChanged: {
         if (!preparationDone) return;
         if (root.isRecording && root.recordingShouldStop) {
-            Quickshell.execDetached(["caelestia-record"]);
+            Quickshell.execDetached([Paths.absolutePath("~/.local/bin/caelestia-record")]);
             root.dismiss();
             return;
         }

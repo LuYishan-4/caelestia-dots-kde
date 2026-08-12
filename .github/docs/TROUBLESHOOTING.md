@@ -229,17 +229,17 @@ journalctl --user -u kde-material-you-colors.service -n 50
 | Symptom | Cause |
 |---|---|
 | Recording appears stuck | `gpu-screen-recorder` not installed or not in PATH |
-| Portal dialog doesn't appear | The build script patches `record.py` to restart `plasma-xdg-desktop-portal-kde`. If it doesn't restart in time, the target selector won't show. |
-| OpenCV linking errors | Symlinks like `libopencv_core.so.413 → libopencv_core.so.5.0.0` break when OpenCV updates. |
+| Portal dialog doesn't appear | The `caelestia-record` wrapper restarts `plasma-xdg-desktop-portal-kde` and `xdg-desktop-portal` before launching `gpu-screen-recorder`. If the portal still doesn't appear, restart them manually: `systemctl --user restart plasma-xdg-desktop-portal-kde xdg-desktop-portal`. |
+| Recording doesn't start | `caelestia-record` wraps `gpu-screen-recorder` directly with KDE-specific monitor detection (via `kscreen-doctor`) and portal management. No Python/OpenCV dependency. |
 
 The recorder now verifies both `pidof gpu-screen-recorder` AND that `recording.mp4` exists, preventing false positives from stale PID matches.
 
 ### 3.6 Screenshot Issues
 
-The screenshot tool was patched to use `spectacle` (KDE) instead of `grim` (wlroots).
+The screenshot tool uses `spectacle` (KDE's native screenshot utility) via the `caelestia-screenshot` wrapper.
 
 - If `spectacle` isn't installed, screenshots silently fail
-- Screenshots are written to `/tmp/qs-screenshot.png` — if `/tmp` is cleaned during the session, this may fail
+- Full-screen screenshots save to `~/Pictures/Screenshots/` by default
 
 ---
 

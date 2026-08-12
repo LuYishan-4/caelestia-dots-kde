@@ -84,7 +84,7 @@ Item {
                     anchors.rightMargin: Config.bar.position === "right" ? (root.barExclusiveZone + root.fallbackMargin) : root.fallbackMargin
                     anchors.topMargin: Config.bar.position === "top" ? root.barExclusiveZone : Config.border.thickness
                     anchors.bottomMargin: Config.bar.position === "bottom" ? root.barExclusiveZone : Config.border.thickness
-                    values: Audio.cava.values
+                    values: Audio.cava?.values ?? []
                     primaryColor: Qt.alpha(Colours.palette.m3primary, 0.7)
                     secondaryColor: Qt.alpha(Colours.palette.m3inversePrimary, 0.7)
                     rounding: Tokens.rounding.medium * Config.background.visualiser.rounding

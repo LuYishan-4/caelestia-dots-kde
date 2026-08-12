@@ -28,7 +28,10 @@ Singleton {
     readonly property bool sourceMuted: !!source?.audio?.muted
     readonly property real sourceVolume: source?.audio?.volume ?? 0
 
-    readonly property alias cava: cava
+    // CavaProvider is only registered when the plugin was built with libcava
+    // available (see shell/plugin/CMakeLists.txt). Create it dynamically so a
+    // build without Cava doesn't fail this whole singleton's component load.
+    property var cava: null
     readonly property alias beatTracker: beatTracker
 
     function setVolume(newVolume: real): void {
@@ -215,6 +218,17 @@ Singleton {
         refreshNodes();
         previousSinkName = sink?.description || sink?.name || qsTr("Unknown Device");
         previousSourceName = source?.description || source?.name || qsTr("Unknown Device");
+
+        // CavaProvider is only registered when the plugin was built with
+        // libcava available (see shell/plugin/CMakeLists.txt); create it
+        // dynamically so a build without Cava doesn't fail this singleton's load.
+        try {
+            root.cava = Qt.createQmlObject(
+                'import Caelestia.Config\nimport Caelestia.Services\nCavaProvider { bars: GlobalConfig.services.visualiserBars }',
+                root, "CavaProviderDynamic");
+        } catch (e) {
+            console.warn("Caelestia: CavaProvider unavailable, visualiser disabled:", e);
+        }
     }
 
     Connections {
@@ -231,15 +245,10 @@ Singleton {
         objects: [root.sink, root.source, ...root.sinks, ...root.sources, ...root.streams].filter(n => n)
     }
 
-    CavaProvider {
-        id: cava
-
-        bars: GlobalConfig.services.visualiserBars
-    }
-
     BeatTracker {
         id: beatTracker
     }
+
 
     IpcHandler {
         function cycleOutput(): void {

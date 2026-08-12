@@ -3,9 +3,12 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.utils
 
 Singleton {
     id: root
+
+    readonly property string recordBin: Paths.absolutePath("~/.local/bin/caelestia-record")
 
     readonly property alias running: props.running
     readonly property alias paused: props.paused
@@ -50,7 +53,7 @@ Singleton {
     Process {
         id: checkProc
 
-        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && test -f $HOME/.local/state/caelestia/record/recording.mp4"]
+        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && f=\"$(cat $HOME/.local/state/caelestia/record/current_recording_path 2>/dev/null)\" && [ -n \"$f\" ] && test -f \"$f\""]
         onExited: code => { // qmllint disable signal-handler-parameters
             let isRunning = (code === 0);
 
@@ -64,13 +67,13 @@ Singleton {
 
             if (isRunning) {
                 if (root.needsStop) {
-                    Quickshell.execDetached(["caelestia", "record"]);
+                    Quickshell.execDetached([root.recordBin, "--stop"]);
                 } else if (root.needsPause) {
-                    Quickshell.execDetached(["caelestia", "record", "-p"]);
+                    Quickshell.execDetached([root.recordBin, "--pause"]);
                     props.paused = !props.paused;
                 }
             } else if (root.needsStart) {
-                Quickshell.execDetached(["caelestia", "record", ...root.startArgs]);
+                Quickshell.execDetached([root.recordBin, ...root.startArgs]);
             }
 
             root.needsStart = false;

@@ -22,38 +22,8 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
-
-    onActualCurrentChanged: root.syncPlasmaWallpaper()
-
-    // videoThumbs landing (a fresh extraction, or discovering a frame already
-    // cached from a previous session) can complete after onActualCurrentChanged
-    // already ran with nothing to show yet — re-sync so it still lands.
-    onVideoThumbsChanged: root.syncPlasmaWallpaper()
-
-    // Plasma's own desktop wallpaper layer can only render still images
-    // (org.kde.image); a video wallpaper's raw path there just shows up
-    // blank/broken. That's invisible under normal operation since Caelestia's own
-    // background layer draws over the real desktop, but it's exactly what's
-    // exposed the moment that's not true — a crash, a manual `qs -c caelestia`
-    // exit, or someone temporarily switching back to stock Plasma to
-    // troubleshoot. Sync the same first-frame still the pickers already use
-    // instead of a path org.kde.image can't decode at all.
-    function syncPlasmaWallpaper(): void {
-        const path = root.actualCurrent;
-        if (path === "")
-            return;
-
-        // thumbFor() is the same "video path in, still frame out" resolution the
-        // pickers use: returns the cached frame, or "" while kicking off the
-        // extraction — in which case Plasma's previous (still valid) wallpaper is
-        // left alone rather than pointed at a video, and onVideoThumbsChanged
-        // retries once the frame lands.
-        const target = root.thumbFor(path);
-        if (target === "")
-            return;
-
-        Quickshell.execDetached(["sh", "-c", 'qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "var allDesktops = desktops();for (i=0;i<allDesktops.length;i++) {d = allDesktops[i];d.wallpaperPlugin = \\"org.kde.image\\";d.currentConfigGroup = Array(\\"Wallpaper\\", \\"org.kde.image\\", \\"General\\");d.writeConfig(\\"Image\\", \\"file://$1\\")}"', "--", target]);
-    }
+    property var videoThumbs: ({})
+    property var videoThumbsPending: ({})
 
     readonly property var categories: {
         let dummy = root.list;
@@ -97,7 +67,14 @@ Searcher {
     }
 
     function setRandom(): void {
-        Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        // caelestia-cli's wallpaper command has no random ("-r") support for
+        // live/video wallpapers, so pick randomly ourselves and set it via the
+        // same path (setWallpaper) used for a specific wallpaper, which does.
+        if (!root.list || root.list.length === 0) return;
+        let idx = Math.floor(Math.random() * root.list.length);
+        if (root.list.length > 1 && root.list[idx].path === actualCurrent)
+            idx = (idx + 1) % root.list.length;
+        setWallpaper(root.list[idx].path);
     }
 
     function setNextSequential(): void {
@@ -128,12 +105,31 @@ Searcher {
             if (thumb !== "") {
                 const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$2" > "$3"';
                 Quickshell.execDetached(["sh", "-c", script, "--", thumb, path, root.currentNamePath]);
+                syncPlasmaWallpaper(thumb);
             } else {
                 Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" > "$2"', "--", path, root.currentNamePath]);
+                // Still frame not ready yet — onVideoThumb() syncs Plasma once it is.
             }
         } else {
             Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+            syncPlasmaWallpaper(path);
         }
+    }
+
+    // Mirrors the wallpaper onto Plasma's own desktop background so it doesn't
+    // stay stale (e.g. showing the deploy-time default) whenever the shell
+    // isn't running to keep it in sync itself, such as after a crash/exit.
+    function syncPlasmaWallpaper(imagePath: string): void {
+        if (!imagePath)
+            return;
+        const script = 'var allDesktops = desktops();' +
+            'for (var i = 0; i < allDesktops.length; i++) {' +
+            '    var d = allDesktops[i];' +
+            '    d.wallpaperPlugin = "org.kde.image";' +
+            '    d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];' +
+            '    d.writeConfig("Image", "file://" + ' + JSON.stringify(imagePath) + ');' +
+            '}';
+        Quickshell.execDetached(["qdbus6", "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", script]);
     }
 
     function preview(path: string): void {
@@ -163,10 +159,6 @@ Searcher {
     // and sat on a loading spinner forever. Extract a frame once and cache it
     // beside the wallpaper caches, keyed the same way getThumbnailPath already
     // described — that path was being computed but never produced by anything.
-    property var videoThumbs: ({})   // source path -> cached frame, once it exists
-
-    property var videoThumbsPending: ({})
-
     // What a picker should actually display for a wallpaper: the image itself, or
     // a video's extracted frame once there is one. Returns "" for a video whose
     // frame is still being made, so callers can show a placeholder meanwhile.
@@ -214,6 +206,7 @@ Searcher {
             if (path === root.actualCurrent) {
                 const script = 'caelestia wallpaper -f "$1" ' + root.smartArg.join(" ") + '; printf "%s" "$2" > "$3"';
                 Quickshell.execDetached(["sh", "-c", script, "--", out, path, root.currentNamePath]);
+                syncPlasmaWallpaper(out);
             }
         }
         const pending = root.videoThumbsPending;

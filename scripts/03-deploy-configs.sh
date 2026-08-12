@@ -224,17 +224,27 @@ echo "  [OK]  Bridge files deployed."
 
 if [[ "${APPLY_LOCKSCREEN:-true}" != "false" ]]; then
     echo "  Configuring KDE Lock Screen to use Caelestia..."
-    if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kpackagetool6 >/dev/null 2>&1; then
-        if kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
-            kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin net.dosowisko.PlasmaApplicationWallpaper
-            kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key command "quickshell -p $HOME/.config/quickshell/caelestia/lockscreen.qml"
-            kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key fps 1
-            kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key alwaysShowClock false
-            kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key showMediaControls false
-            echo "  [OK]  KDE Lock Screen configured."
-        else
-            echo "  [WARN] plasma-wallpaper-application plugin not installed. Skipping KDE Lock Screen configuration."
-        fi
+    WALLPAPER_STAMP="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/wallpaper-plugin-installed"
+    PLUGIN_OK=false
+    if [[ "${CAELESTIA_WALLPAPER_PLUGIN_INSTALLED:-false}" == "true" ]]; then
+        PLUGIN_OK=true
+    elif command -v kpackagetool6 >/dev/null 2>&1 \
+        && kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null \
+        | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
+        PLUGIN_OK=true
+    elif ! command -v kpackagetool6 >/dev/null 2>&1 && [[ -f "$WALLPAPER_STAMP" ]]; then
+        PLUGIN_OK=true
+    fi
+
+    if $PLUGIN_OK && command -v kwriteconfig6 >/dev/null 2>&1; then
+        kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin net.dosowisko.PlasmaApplicationWallpaper
+        kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key command "quickshell -p $HOME/.config/quickshell/caelestia/lockscreen.qml"
+        kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key fps 1
+        kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key alwaysShowClock false
+        kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key showMediaControls false
+        echo "  [OK]  KDE Lock Screen configured."
+    elif ! $PLUGIN_OK; then
+        echo "  [WARN] plasma-wallpaper-application plugin not installed. Skipping KDE Lock Screen configuration."
     else
         echo "  [WARN] KDE config tools not found. Skipping KDE Lock Screen configuration."
     fi
