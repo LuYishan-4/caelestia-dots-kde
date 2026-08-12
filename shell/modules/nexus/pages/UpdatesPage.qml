@@ -436,7 +436,7 @@ PageBase {
             first: true
             last: true
             Layout.fillWidth: true
-            // Dev branch can list up to ~150 commits — cap the card height and
+            // Dev branch can list up to 10 commits — cap the card height and
             // let it scroll internally instead of pushing the log/actions
             // below it far down the page. Commit rows are taller than plain
             // release rows, so scale the cap with the timeline's own row
@@ -479,6 +479,22 @@ PageBase {
                     }
                 }
             }
+        }
+
+        // "Load more" pagination for the dev commit timeline — keeps the
+        // initial fetch light (10 commits) and pulls the next page on demand.
+        TextButton {
+            Layout.alignment: Qt.AlignHCenter
+            visible: !root.branchDataLoading
+                && !UpdateChecker.versionSummaryMode
+                && UpdateChecker.hasMoreCommits
+            text: UpdateChecker.loadingMoreCommits ? qsTr("Loading…") : qsTr("Load 10 More")
+            type: TextButton.Tonal
+            font: Tokens.font.body.medium
+            horizontalPadding: Tokens.padding.large
+            verticalPadding: Tokens.padding.medium
+            disabled: UpdateChecker.loadingMoreCommits
+            onClicked: UpdateChecker.loadMoreCommits()
         }
 
         // 4 ── INSTALLATION SETTINGS ───────────────────────────────────────

@@ -29,6 +29,14 @@ Singleton {
     property bool loaded: false
     property bool checkingUpdates: false
 
+    // Dev-branch commit pagination: the update checker only fetches the
+    // first page (devCommitLimit commits) and exposes a "load more" affordance
+    // for the rest, so we never pull the whole dev history up front.
+    property int devCommitLimit: 10
+    property int devCommitOffset: 0
+    property bool hasMoreCommits: false
+    property bool loadingMoreCommits: false
+
     // ── Update process state ────────────────────────────────────────────
     // Lives on the singleton (rather than UpdatesPage) so it survives the
     // page being destroyed/recreated when the user navigates to a different
@@ -53,6 +61,8 @@ Singleton {
         if (branch !== "") currentBranch = clampBranch(branch);
         else currentBranch = clampBranch(currentBranch);
         checkingUpdates = true;
+        devCommitOffset = 0;
+        hasMoreCommits = false;
         checkClaudeCodeUpdate();
         
         let bashCmd = `
@@ -244,11 +254,16 @@ for t in tags:
     print("RELEASE_JSON|" + json.dumps(out, separators=(",", ":"), ensure_ascii=False))
 PY
 else
-    # Dev branch: emit the full recent commit history (not just commits ahead of
-    # the installed one) so the UI can render a git-log-style timeline with
-    # past/current/available state, same as the version list does for main.
-    DEV_LOG_LIMIT=150
-    git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" -n "$DEV_LOG_LIMIT" "$CURRENT_BRANCH" 2>/dev/null
+    # Dev branch: paginated commit history — emit only the first page (10
+    # commits by default) plus a MORE flag so the UI can offer to load the
+    # next page instead of pulling the whole dev history up front.
+    DEV_LOG_LIMIT=10
+    DEV_SKIP=0
+    git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --skip="$DEV_SKIP" -n "$((DEV_LOG_LIMIT + 1))" "$CURRENT_BRANCH" 2>/dev/null | awk -v lim="$DEV_LOG_LIMIT" '
+        NR <= lim { print }
+        NR > lim { more = 1 }
+        END { if (more) print "MORE|1"; else print "MORE|0" }
+    '
     if [ -n "$LOCAL_COMMIT" ]; then
         AHEAD_COUNT="$(git -C "$REPO" rev-list --count "$LOCAL_COMMIT..$CURRENT_BRANCH" 2>/dev/null || echo 0)"
     else
@@ -266,6 +281,26 @@ fi
     function reload() {
         loaded = false;
         localCommitProcess.running = true;
+    }
+
+    function loadMoreCommits(): void {
+        if (root.loadingMoreCommits || !root.hasMoreCommits || root.currentBranch !== "dev")
+            return;
+        root.loadingMoreCommits = true;
+        const moreCmd = `
+REPO="$HOME/.cache/caelestia-update-repo"
+BRANCH="$1"
+SKIP="$2"
+LIMIT="$3"
+[ -d "$REPO" ] || exit 0
+git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --skip="$SKIP" -n "$((LIMIT + 1))" "$BRANCH" 2>/dev/null | awk -v lim="$LIMIT" '
+    NR <= lim { print }
+    NR > lim { more = 1 }
+    END { if (more) print "MORE|1"; else print "MORE|0" }
+'
+`;
+        moreCommitsProcess.command = ["bash", "-c", moreCmd, "load-more", root.currentBranch, String(root.devCommitOffset), String(root.devCommitLimit)];
+        moreCommitsProcess.running = true;
     }
 
     function handleProgressLine(rawLine: string): void {
@@ -383,6 +418,8 @@ fi
                     let parsedHasUpdate = false;
                     let parsedVersionSummaryMode = root.currentBranch === "main";
                     let parsedLocalCommitFull = "";
+                    let parsedCommitCount = 0;
+                    let parsedHasMore = false;
                     root.availableBranches = ["main", "dev"];
                     
                     for (let i = 0; i < lines.length; i++) {
@@ -470,6 +507,7 @@ fi
                                 date: new Date(parts[5]).toLocaleString(Qt.locale(), Locale.ShortFormat),
                                 isMerge: parentCount > 1
                             });
+                            parsedCommitCount++;
                             continue;
                         }
                         if (line.startsWith("LOCAL|")) {
@@ -481,6 +519,10 @@ fi
                             parsedVersionSummaryMode = false;
                             parsedPendingCount = isNaN(count) ? 0 : count;
                             parsedHasUpdate = parsedPendingCount > 0;
+                            continue;
+                        }
+                        if (line.startsWith("MORE|")) {
+                            parsedHasMore = line.substring(5).trim() === "1";
                             continue;
                         }
                         const parts = line.split("|");
@@ -513,6 +555,13 @@ fi
                     }
 
                     root.commits = dedupedCommits;
+                    if (parsedVersionSummaryMode) {
+                        root.devCommitOffset = 0;
+                        root.hasMoreCommits = false;
+                    } else {
+                        root.devCommitOffset = parsedCommitCount;
+                        root.hasMoreCommits = parsedHasMore;
+                    }
                     const uniqueVersions = [];
                     const seenVersions = new Set();
                     for (let i = 0; i < parsedVersions.length; i++) {
@@ -550,6 +599,66 @@ fi
                     console.log("UpdateChecker git parse error:", e);
                 }
             }
+        }
+    }
+
+    // Fetch the next page of dev-branch commits. Unlike checkUpdates() this
+    // does not re-clone/re-fetch or re-resolve branches — the bare repo
+    // already exists, so it's just a git log with a --skip offset.
+    Process {
+        id: moreCommitsProcess
+
+        command: []
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.loadingMoreCommits = false;
+                try {
+                    const lines = text.trim().split("\n");
+                    const newCommits = [];
+                    let hasMore = false;
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line === "") continue;
+                        if (line.startsWith("COMMIT\u001f")) {
+                            const parts = line.split("\u001f");
+                            const parentsField = (parts[6] || "").trim();
+                            const parentCount = parentsField === "" ? 0 : parentsField.split(/\s+/).length;
+                            newCommits.push({
+                                hash: parts[2] || "",
+                                fullHash: parts[1] || "",
+                                subject: parts[3] || "",
+                                author: parts[4] || "",
+                                date: new Date(parts[5]).toLocaleString(Qt.locale(), Locale.ShortFormat),
+                                isMerge: parentCount > 1
+                            });
+                        } else if (line.startsWith("MORE|")) {
+                            hasMore = line.substring(5).trim() === "1";
+                        }
+                    }
+
+                    const seen = new Set();
+                    for (let i = 0; i < root.commits.length; i++) {
+                        const c = root.commits[i];
+                        seen.add(c.fullHash || (c.hash + "|" + c.subject));
+                    }
+                    const unique = [];
+                    for (let i = 0; i < newCommits.length; i++) {
+                        const c = newCommits[i];
+                        const key = c.fullHash || (c.hash + "|" + c.subject);
+                        if (seen.has(key)) continue;
+                        seen.add(key);
+                        unique.push(c);
+                    }
+                    root.devCommitOffset += newCommits.length;
+                    root.hasMoreCommits = hasMore;
+                    root.commits = root.commits.concat(unique);
+                } catch (e) {
+                    console.log("UpdateChecker load-more parse error:", e);
+                }
+            }
+        }
+        onExited: _code => { // qmllint disable signal-handler-parameters
+            root.loadingMoreCommits = false;
         }
     }
 
