@@ -64,13 +64,13 @@ Singleton {
 
             if (isRunning) {
                 if (root.needsStop) {
-                    Quickshell.execDetached(["caelestia", "record"]);
+                    Quickshell.execDetached(["caelestia-record", "--stop"]);
                 } else if (root.needsPause) {
-                    Quickshell.execDetached(["caelestia", "record", "-p"]);
+                    Quickshell.execDetached(["caelestia-record", "--pause"]);
                     props.paused = !props.paused;
                 }
             } else if (root.needsStart) {
-                Quickshell.execDetached(["caelestia", "record", ...root.startArgs]);
+                Quickshell.execDetached(["caelestia-record", ...root.startArgs]);
             }
 
             root.needsStart = false;
