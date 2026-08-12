@@ -53,7 +53,7 @@ Singleton {
     Process {
         id: checkProc
 
-        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && test -f $HOME/.local/state/caelestia/record/recording.mp4"]
+        command: ["sh", "-c", "pidof gpu-screen-recorder >/dev/null && f=\"$(cat $HOME/.local/state/caelestia/record/current_recording_path 2>/dev/null)\" && [ -n \"$f\" ] && test -f \"$f\""]
         onExited: code => { // qmllint disable signal-handler-parameters
             let isRunning = (code === 0);
 
