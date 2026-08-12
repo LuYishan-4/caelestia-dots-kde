@@ -34,11 +34,13 @@ MouseArea {
     property var dynamicModel: items
     property MenuItem active: dynamicModel[0] ?? null
     property bool expanded
+    property bool rightClickReposition: false
     property real maxHeight: 320
     readonly property alias backgroundItem: menu
     property bool transparentBackground: false
 
     signal itemSelected(item: MenuItem)
+    signal rightClickedAt(real x, real y)
 
     parent: {
         let node = root.attachTo;
@@ -60,7 +62,14 @@ MouseArea {
     anchors.fill: parent
 
     enabled: expanded
-    onClicked: expanded = false
+    acceptedButtons: rightClickReposition ? Qt.LeftButton | Qt.RightButton : Qt.LeftButton
+    onClicked: mouse => {
+        if (rightClickReposition && mouse.button === Qt.RightButton) {
+            rightClickedAt(mouse.x, mouse.y);
+            return;
+        }
+        expanded = false;
+    }
 
     opacity: expanded ? 1 : 0
     visible: opacity > 0
