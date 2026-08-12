@@ -1,6 +1,8 @@
 #include "requests.hpp"
 
+#include <qdir.h>
 #include <qfile.h>
+#include <qfileinfo.h>
 #include <qjsondocument.h>
 #include <qjsvalueiterator.h>
 #include <qloggingcategory.h>
@@ -109,14 +111,18 @@ int Requests::registerReply(QNetworkReply* reply, QJSValue callback, QJSValue on
         }
 
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        const bool isError = (reply->error() != QNetworkReply::NoError);
+        const bool httpError = status > 0 && (status < 200 || status >= 300);
+        const bool isError = reply->error() != QNetworkReply::NoError || httpError;
+        const QString error = httpError
+            ? QStringLiteral("HTTP status %1").arg(status)
+            : reply->errorString();
 
         if (isError && !it->isDownload) {
             // Standard GET/POST error path
             if (it->onError.isCallable()) {
-                it->onError.call({ reply->errorString(), status });
+                it->onError.call({ error, status });
             } else {
-                qCWarning(lcRequests) << "request" << reqId << "failed:" << reply->errorString();
+                qCWarning(lcRequests) << "request" << reqId << "failed:" << error;
             }
             cleanupRequest(reqId);
             return;
@@ -135,9 +141,9 @@ int Requests::registerReply(QNetworkReply* reply, QJSValue callback, QJSValue on
 
             if (isError) {
                 if (it->onError.isCallable()) {
-                    it->onError.call({ reply->errorString(), status });
+                    it->onError.call({ error, status });
                 } else {
-                    qCWarning(lcRequests) << "download" << reqId << "failed:" << reply->errorString();
+                    qCWarning(lcRequests) << "download" << reqId << "failed:" << error;
                 }
             } else if (it->onComplete.isCallable()) {
                 it->onComplete.call({ it->destPath, status });
@@ -223,15 +229,28 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
         return -1;
     }
 
+    const QFileInfo destination(destPath);
+    if (!QDir().mkpath(destination.absolutePath())) {
+        const QString error = QStringLiteral("Cannot create destination directory: ")
+            + destination.absolutePath();
+        reply->abort();
+        reply->deleteLater();
+        if (onError.isCallable()) {
+            onError.call({error, 0});
+        }
+        return -1;
+    }
+
     // Open destination file
     auto* file = new QFile(destPath);
     if (!file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qCWarning(lcRequests) << "download: cannot open" << destPath << file->errorString();
+        const QString fileError = file->errorString();
+        qCWarning(lcRequests) << "download: cannot open" << destPath << fileError;
         delete file;
         reply->abort();
         reply->deleteLater();
         if (onError.isCallable()) {
-            onError.call({ QStringLiteral("Cannot open destination file: ") + file->errorString(), 0 });
+            onError.call({ QStringLiteral("Cannot open destination file: ") + fileError, 0 });
         }
         return -1;
     }
@@ -257,6 +276,12 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
             }
             if (it->reply) {
                 it->reply->abort();
+            }
+            if (it->destFile) {
+                if (it->destFile->isOpen()) {
+                    it->destFile->close();
+                }
+                it->destFile->remove();
             }
             if (it->onError.isCallable()) {
                 it->onError.call({ QStringLiteral("Download timed out"), 0 });
@@ -294,7 +319,11 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
         }
 
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        const bool isError = (reply->error() != QNetworkReply::NoError);
+        const bool httpError = status > 0 && (status < 200 || status >= 300);
+        const bool isError = reply->error() != QNetworkReply::NoError || httpError;
+        const QString error = httpError
+            ? QStringLiteral("HTTP status %1").arg(status)
+            : reply->errorString();
 
         // Flush any remaining bytes not yet delivered via readyRead.
         if (it->destFile && it->destFile->isOpen()) {
@@ -307,9 +336,9 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
 
         if (isError) {
             if (it->onError.isCallable()) {
-                it->onError.call({ reply->errorString(), status });
+                it->onError.call({ error, status });
             } else {
-                qCWarning(lcRequests) << "download" << reqId << "failed:" << reply->errorString();
+                qCWarning(lcRequests) << "download" << reqId << "failed:" << error;
             }
         } else if (it->onComplete.isCallable()) {
             it->onComplete.call({ it->destPath, status });

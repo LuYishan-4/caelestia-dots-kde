@@ -306,7 +306,12 @@ Singleton {
     }
 
     function connectToNetworkWithPasswordCheck(ssid: string, isSecure: bool, callback: var, bssid: string): void {
+        let immediateResult = null;
         const wrappedCallback = result => {
+            if (result && result.success)
+                return;
+
+            immediateResult = result;
             root.pendingConnection = null;
             connectionCheckTimer.stop();
             immediateCheckTimer.stop();
@@ -314,8 +319,8 @@ Singleton {
             if (callback && typeof callback === "function") callback(result);
         };
         NmQt.connectToNetworkWithPasswordCheck(ssid, isSecure, wrappedCallback, bssid);
-        if (callback) {
-            root.pendingConnection = { ssid: ssid, bssid: bssid || "", callback: wrappedCallback };
+        if (callback && !immediateResult) {
+            root.pendingConnection = { ssid: ssid, bssid: bssid || "", callback: callback };
             connectionCheckTimer.start();
             immediateCheckTimer.checkCount = 0;
             immediateCheckTimer.start();
@@ -323,7 +328,12 @@ Singleton {
     }
 
     function connectToNetwork(ssid: string, password: string, bssid: string, callback: var): void {
+        let immediateResult = null;
         const wrappedCallback = result => {
+            if (result && result.success)
+                return;
+
+            immediateResult = result;
             root.pendingConnection = null;
             connectionCheckTimer.stop();
             immediateCheckTimer.stop();
@@ -331,8 +341,8 @@ Singleton {
             if (callback && typeof callback === "function") callback(result);
         };
         NmQt.connectToNetwork(ssid, password, bssid, wrappedCallback);
-        if (callback) {
-            root.pendingConnection = { ssid: ssid, bssid: bssid || "", callback: wrappedCallback };
+        if (callback && !immediateResult) {
+            root.pendingConnection = { ssid: ssid, bssid: bssid || "", callback: callback };
             connectionCheckTimer.start();
             immediateCheckTimer.checkCount = 0;
             immediateCheckTimer.start();

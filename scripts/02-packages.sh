@@ -42,12 +42,25 @@ echo
 
 echo "--- Ensuring Python tooling for konsave backups ---"
 if ! command -v python3 >/dev/null 2>&1 || ! python3 -m pip --version >/dev/null 2>&1; then
-    if [[ "$BASE_DISTRO" == "arch" ]]; then
+    package_distro="${BASE_DISTRO:-}"
+    if [[ -z "$package_distro" ]]; then
+        if command -v pacman >/dev/null 2>&1; then
+            package_distro="arch"
+        elif command -v dnf >/dev/null 2>&1; then
+            package_distro="fedora"
+        elif command -v apt-get >/dev/null 2>&1; then
+            package_distro="debian"
+        fi
+    fi
+
+    if [[ "$package_distro" == "arch" ]]; then
         sudo pacman -S --needed --noconfirm python python-pip
-    elif [[ "$BASE_DISTRO" == "fedora" ]]; then
+    elif [[ "$package_distro" == "fedora" ]]; then
         sudo dnf install -y python3 python3-pip
-    elif [[ "$BASE_DISTRO" == "debian" ]]; then
+    elif [[ "$package_distro" == "debian" ]]; then
         sudo apt-get update && sudo apt-get install -y python3 python3-pip python3-venv
+    else
+        echo "[WARN]  Could not determine the distro for Python tooling installation."
     fi
 fi
 

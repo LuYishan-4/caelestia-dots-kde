@@ -29,7 +29,7 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
         # Pin plasma-wallpaper-application to the tagged release.
         WALLPAPER_DIR="$BUNDLE_DIR/src/plasma-wallpaper-application"
         WALLPAPER_TAG="v1.2"
-        if [[ -d "$WALLPAPER_DIR/.git" ]]; then
+        if [[ -e "$WALLPAPER_DIR/.git" ]]; then
             info "Pinning plasma-wallpaper-application to tag $WALLPAPER_TAG..."
             git -C "$WALLPAPER_DIR" fetch --tags --quiet 2>/dev/null || true
             git -C "$WALLPAPER_DIR" checkout "tags/$WALLPAPER_TAG" --quiet 2>/dev/null || \
@@ -67,7 +67,11 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
         PLUGIN_OK=false
         if [[ "${CAELESTIA_WALLPAPER_PLUGIN_INSTALLED:-false}" == "true" ]]; then
             PLUGIN_OK=true
-        elif [[ -f "$WALLPAPER_STAMP" ]]; then
+        elif command -v kpackagetool6 >/dev/null 2>&1 \
+            && kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null \
+            | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
+            PLUGIN_OK=true
+        elif ! command -v kpackagetool6 >/dev/null 2>&1 && [[ -f "$WALLPAPER_STAMP" ]]; then
             PLUGIN_OK=true
         fi
 

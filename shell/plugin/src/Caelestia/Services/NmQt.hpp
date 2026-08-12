@@ -183,8 +183,8 @@ private:
     void refreshEthernetDevices();
     void refreshSavedConnections();
     void refreshVpnConnections();
-    void refreshWirelessDeviceDetails();
-    void refreshEthernetDeviceDetails();
+    void refreshWirelessDeviceDetails(const QString& interfaceName = {});
+    void refreshEthernetDeviceDetails(const QString& interfaceName = {});
 
     /// Build a QVariantMap for a single access point.
     static QVariantMap buildApMap(const QString& ssid, const QString& bssid,

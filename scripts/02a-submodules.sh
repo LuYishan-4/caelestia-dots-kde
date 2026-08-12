@@ -12,7 +12,7 @@ if [[ -f "$BUNDLE_DIR/.gitmodules" ]]; then
     # Pin plasma-wallpaper-application to the tagged release.
     WALLPAPER_DIR="$BUNDLE_DIR/src/plasma-wallpaper-application"
     WALLPAPER_TAG="v1.2"
-    if [[ -d "$WALLPAPER_DIR/.git" ]]; then
+    if [[ -e "$WALLPAPER_DIR/.git" ]]; then
         echo "[INFO]  Pinning plasma-wallpaper-application to tag $WALLPAPER_TAG..."
         git -C "$WALLPAPER_DIR" fetch --tags --quiet 2>/dev/null || true
         git -C "$WALLPAPER_DIR" checkout "tags/$WALLPAPER_TAG" --quiet 2>/dev/null || \

@@ -21,7 +21,10 @@ _is_recording() {
     if [[ -f "$PID_FILE" ]]; then
         local pid
         pid=$(cat "$PID_FILE" 2>/dev/null || true)
-        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        local recorder_name
+        recorder_name=$(basename -- "$RECORDER")
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null \
+            && [[ "$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')" == "$recorder_name" ]]; then
             return 0
         fi
     fi
@@ -89,7 +92,12 @@ _stop_recording() {
         rm -f "$PID_FILE"
     fi
     # Also kill any stray gpu-screen-recorder processes owned by us
-    pkill -INT -f "$RECORDER" 2>/dev/null || true
+    local recorder_name
+    recorder_name=$(basename -- "$RECORDER")
+    while read -r pid; do
+        [[ -z "$pid" ]] && continue
+        kill -INT "$pid" 2>/dev/null || true
+    done < <(pgrep -u "$(id -u)" -x "$recorder_name" 2>/dev/null || true)
     rm -f "$LOCK_FILE"
 }
 
@@ -111,22 +119,24 @@ case "$ACTION" in
             exit 0
         fi
 
-        # Prevent duplicate starts
+        # Prevent duplicate starts, but recover from a stale lock after a crash.
         if [[ -f "$LOCK_FILE" ]]; then
-            exit 0
+            if _is_recording; then
+                exit 0
+            fi
+            rm -f "$LOCK_FILE"
         fi
         touch "$LOCK_FILE"
 
         _ensure_portals
 
-        local rr
         rr=$(_get_focused_refresh_rate)
         [[ "$rr" -le 0 ]] && rr=60
 
         # Clean up any stale recording file
         rm -f "$REC_PATH"
 
-        local args=("$RECORDER")
+        args=("$RECORDER")
         args+=("-w" "portal")
         args+=("-f" "$rr")
         args+=("-a" "default_output")
@@ -146,7 +156,7 @@ case "$ACTION" in
         disown
 
         # Wait briefly for the recording file to appear (portal negotiation)
-        local waited=0
+        waited=0
         while [[ ! -f "$REC_PATH" ]] && [[ $waited -lt 50 ]]; do
             sleep 0.1
             waited=$((waited + 1))
@@ -163,7 +173,6 @@ case "$ACTION" in
 
     --pause|pause|-p)
         if [[ -f "$PID_FILE" ]]; then
-            local pid
             pid=$(cat "$PID_FILE" 2>/dev/null || true)
             if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
                 # Check current state: if stopped, continue; if running, stop

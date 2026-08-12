@@ -228,7 +228,11 @@ if [[ "${APPLY_LOCKSCREEN:-true}" != "false" ]]; then
     PLUGIN_OK=false
     if [[ "${CAELESTIA_WALLPAPER_PLUGIN_INSTALLED:-false}" == "true" ]]; then
         PLUGIN_OK=true
-    elif [[ -f "$WALLPAPER_STAMP" ]]; then
+    elif command -v kpackagetool6 >/dev/null 2>&1 \
+        && kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null \
+        | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
+        PLUGIN_OK=true
+    elif ! command -v kpackagetool6 >/dev/null 2>&1 && [[ -f "$WALLPAPER_STAMP" ]]; then
         PLUGIN_OK=true
     fi
 
