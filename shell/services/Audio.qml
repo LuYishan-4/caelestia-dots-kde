@@ -224,7 +224,7 @@ Singleton {
         // dynamically so a build without Cava doesn't fail this singleton's load.
         try {
             root.cava = Qt.createQmlObject(
-                'import Caelestia.Services\nCavaProvider { bars: GlobalConfig.services.visualiserBars }',
+                'import Caelestia.Config\nimport Caelestia.Services\nCavaProvider { bars: GlobalConfig.services.visualiserBars }',
                 root, "CavaProviderDynamic");
         } catch (e) {
             console.warn("Caelestia: CavaProvider unavailable, visualiser disabled:", e);
