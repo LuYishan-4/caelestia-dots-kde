@@ -67,7 +67,14 @@ Searcher {
     }
 
     function setRandom(): void {
-        Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        // caelestia-cli's wallpaper command has no random ("-r") support for
+        // live/video wallpapers, so pick randomly ourselves and set it via the
+        // same path (setWallpaper) used for a specific wallpaper, which does.
+        if (!root.list || root.list.length === 0) return;
+        let idx = Math.floor(Math.random() * root.list.length);
+        if (root.list.length > 1 && root.list[idx].path === actualCurrent)
+            idx = (idx + 1) % root.list.length;
+        setWallpaper(root.list[idx].path);
     }
 
     function setNextSequential(): void {
