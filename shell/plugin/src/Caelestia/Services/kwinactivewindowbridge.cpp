@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -27,6 +28,25 @@ QString escapeJsString(const QString& value) {
     escaped.replace('\n', QStringLiteral("\\n"));
     escaped.replace('\r', QStringLiteral("\\r"));
     return escaped;
+}
+
+QString persistedScriptNamePath() {
+    return qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp") + "/caelestia-kwin-bridge-script-name";
+}
+
+QString readPersistedScriptName() {
+    QFile f(persistedScriptNamePath());
+    if (!f.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return QString::fromUtf8(f.readAll()).trimmed();
+}
+
+void writePersistedScriptName(const QString& name) {
+    QFile f(persistedScriptNamePath());
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write(name.toUtf8());
+    }
 }
 
 } // namespace
@@ -300,19 +320,22 @@ KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
             QDBusConnection::ExportAdaptors);
     bus.registerService("dev.caelestia.KWinActiveWindow");
 
-    // Clean up orphan KWin scripts from previous crashed sessions before
+    // Clean up an orphan KWin script from a previous crashed session before
     // injecting a fresh one, so duplicate D-Bus notifications don't pile up.
-    QDBusMessage listMsg =
-        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadedScripts");
-    QDBusReply<QStringList> listReply = bus.call(listMsg);
-    if (listReply.isValid()) {
-        for (const auto& name : listReply.value()) {
-            if (name.startsWith("caelestia-active-window-")) {
-                QDBusMessage unloadMsg = QDBusMessage::createMethodCall(
-                    "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript");
-                unloadMsg << name;
-                bus.call(unloadMsg, QDBus::NoBlock);
-            }
+    // KWin's Scripting D-Bus interface has no "list loaded scripts" method,
+    // only isScriptLoaded(name)/unloadScript(name) for an exact known name, so
+    // the previous session's script name is persisted to disk to look it up.
+    const QString previousScriptName = readPersistedScriptName();
+    if (!previousScriptName.isEmpty()) {
+        QDBusMessage checkMsg = QDBusMessage::createMethodCall(
+            "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "isScriptLoaded");
+        checkMsg << previousScriptName;
+        QDBusReply<bool> checkReply = bus.call(checkMsg);
+        if (checkReply.isValid() && checkReply.value()) {
+            QDBusMessage unloadMsg = QDBusMessage::createMethodCall(
+                "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript");
+            unloadMsg << previousScriptName;
+            bus.call(unloadMsg, QDBus::NoBlock);
         }
     }
 
@@ -650,15 +673,16 @@ void KWinActiveWindowBridge::ensureKWinScript() {
         return;
     }
 
-    QDBusMessage listMsg =
-        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadedScripts");
-    QDBusReply<QStringList> listReply = QDBusConnection::sessionBus().call(listMsg, QDBus::Block, 1000);
-    if (!listReply.isValid()) {
-        qWarning() << "Failed to check KWin bridge script:" << listReply.error().message();
+    QDBusMessage checkMsg = QDBusMessage::createMethodCall(
+        "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "isScriptLoaded");
+    checkMsg << m_scriptName;
+    QDBusReply<bool> checkReply = QDBusConnection::sessionBus().call(checkMsg, QDBus::Block, 1000);
+    if (!checkReply.isValid()) {
+        qWarning() << "Failed to check KWin bridge script:" << checkReply.error().message();
         return;
     }
 
-    if (!listReply.value().contains(m_scriptName)) {
+    if (!checkReply.value()) {
         qWarning() << "KWin bridge script is no longer loaded; reinjecting";
         injectKWinScript();
     }
@@ -667,6 +691,7 @@ void KWinActiveWindowBridge::ensureKWinScript() {
 void KWinActiveWindowBridge::injectKWinScript() {
     m_scriptName = "caelestia-active-window-" + QString::number(QCoreApplication::applicationPid()) + "-" +
                    QString::number(QDateTime::currentMSecsSinceEpoch());
+    writePersistedScriptName(m_scriptName);
 
     QTemporaryFile f(QDir::tempPath() + "/caelestia-kwin-bridge-XXXXXX.js");
     f.setAutoRemove(false);

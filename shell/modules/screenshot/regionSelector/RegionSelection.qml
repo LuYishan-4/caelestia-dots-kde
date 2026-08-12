@@ -271,7 +271,7 @@ PanelWindow {
     onPreparationDoneChanged: {
         if (!preparationDone) return;
         if (root.isRecording && root.recordingShouldStop) {
-            Quickshell.execDetached(["caelestia-record"]);
+            Quickshell.execDetached([Paths.absolutePath("~/.local/bin/caelestia-record")]);
             root.dismiss();
             return;
         }

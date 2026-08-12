@@ -3,9 +3,12 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.utils
 
 Singleton {
     id: root
+
+    readonly property string recordBin: Paths.absolutePath("~/.local/bin/caelestia-record")
 
     readonly property alias running: props.running
     readonly property alias paused: props.paused
@@ -64,13 +67,13 @@ Singleton {
 
             if (isRunning) {
                 if (root.needsStop) {
-                    Quickshell.execDetached(["caelestia-record", "--stop"]);
+                    Quickshell.execDetached([root.recordBin, "--stop"]);
                 } else if (root.needsPause) {
-                    Quickshell.execDetached(["caelestia-record", "--pause"]);
+                    Quickshell.execDetached([root.recordBin, "--pause"]);
                     props.paused = !props.paused;
                 }
             } else if (root.needsStart) {
-                Quickshell.execDetached(["caelestia-record", ...root.startArgs]);
+                Quickshell.execDetached([root.recordBin, ...root.startArgs]);
             }
 
             root.needsStart = false;
