@@ -13,6 +13,21 @@ pkg_check_modules(Cava IMPORTED_TARGET libcava QUIET)
 if(NOT Cava_FOUND)
     pkg_check_modules(Cava IMPORTED_TARGET cava QUIET)
 endif()
+if(NOT Cava_FOUND)
+    # Arch's cava package doesn't ship a .pc file -- find the library
+    # and header directly as a fallback.
+    find_library(Cava_LIBRARY NAMES cava libcava)
+    find_path(Cava_INCLUDE_DIR NAMES cava/cavacore.h)
+    if(Cava_LIBRARY AND Cava_INCLUDE_DIR)
+        add_library(PkgConfig::Cava UNKNOWN IMPORTED)
+        set_target_properties(PkgConfig::Cava PROPERTIES
+            IMPORTED_LOCATION "${Cava_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${Cava_INCLUDE_DIR}"
+        )
+        set(Cava_FOUND TRUE)
+        message(STATUS "Found cava (via find_library): ${Cava_LIBRARY}")
+    endif()
+endif()
 include(cmake/sensorslib.cmake)
 
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")

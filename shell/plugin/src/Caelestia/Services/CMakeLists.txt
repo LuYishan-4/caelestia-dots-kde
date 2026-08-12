@@ -6,6 +6,14 @@ find_package(X11 REQUIRED)
 # Qt exposes no public native interface for it. Ships with qt6-base on Arch and
 # with qt6-qtbase-private-devel on Fedora, both already installed by setup.
 find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
+# Cava audio visualizer — optional on systems where it's not packaged.
+set(CAVA_SOURCES "")
+set(CAVA_LIBRARIES "")
+if(Cava_FOUND)
+    list(APPEND CAVA_SOURCES cavaprovider.cpp)
+    list(APPEND CAVA_LIBRARIES PkgConfig::Cava)
+endif()
+
 qml_module(caelestia-services
     URI Caelestia.Services
     SOURCES
@@ -14,7 +22,7 @@ qml_module(caelestia-services
         beattracker.cpp
         audiocollector.cpp
         audioprovider.cpp
-        cavaprovider.cpp
+        ${CAVA_SOURCES}
         tickingservice.cpp
         sensorslib.cpp
         usagefmt.cpp
@@ -80,7 +88,7 @@ qml_module(caelestia-services
         X11::X11
         PkgConfig::Pipewire
         PkgConfig::Aubio
-        PkgConfig::Cava
+        ${CAVA_LIBRARIES}
         Sensors::Sensors
         KF6::NetworkManagerQt
         caelestia-core
