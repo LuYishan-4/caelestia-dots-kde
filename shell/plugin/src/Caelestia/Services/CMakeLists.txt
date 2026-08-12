@@ -1,5 +1,6 @@
 find_package(KF6GlobalAccel REQUIRED)
 find_package(KF6Config REQUIRED)
+find_package(KF6NetworkManagerQt REQUIRED)
 find_package(X11 REQUIRED)
 # For QPlatformNativeInterface, the only way to reach a QWindow's wl_surface:
 # Qt exposes no public native interface for it. Ships with qt6-base on Arch and
@@ -66,6 +67,8 @@ qml_module(caelestia-services
         plasmawindowicon.hpp
         screenedges.cpp
         screenedges.hpp
+        NmQt.cpp
+        NmQt.hpp
     LIBRARIES
         Qt::DBus
         Qt::Gui
@@ -79,6 +82,7 @@ qml_module(caelestia-services
         PkgConfig::Aubio
         PkgConfig::Cava
         Sensors::Sensors
+        KF6::NetworkManagerQt
         caelestia-core
         caelestia-config
         caelestia-internal
