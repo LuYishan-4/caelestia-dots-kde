@@ -11,15 +11,31 @@ echo ""
 echo "  Installing wallpaper plugin & Python tooling"
 echo ""
 
-echo "--- Installing plasma-wallpaper-application ---"
+echo "--- Installing plasma-wallpaper-application (v1.2) ---"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde"
+WALLPAPER_STAMP="$CACHE_DIR/wallpaper-plugin-installed"
+export CAELESTIA_WALLPAPER_PLUGIN_INSTALLED=false
+
 if [[ "${APPLY_LOCKSCREEN:-true}" != "false" ]]; then
     if [[ -d "$BUNDLE_DIR/src/plasma-wallpaper-application/package" ]]; then
-        kpackagetool6 -t Plasma/Wallpaper -i "$BUNDLE_DIR/src/plasma-wallpaper-application/package" >/dev/null 2>&1 || kpackagetool6 -t Plasma/Wallpaper -u "$BUNDLE_DIR/src/plasma-wallpaper-application/package" || echo "[WARN] plasma-wallpaper-application installation failed"
+        if kpackagetool6 -t Plasma/Wallpaper -i "$BUNDLE_DIR/src/plasma-wallpaper-application/package" >/dev/null 2>&1; then
+            mkdir -p "$CACHE_DIR"
+            echo "v1.2" > "$WALLPAPER_STAMP"
+            CAELESTIA_WALLPAPER_PLUGIN_INSTALLED=true
+            echo "[OK]  plasma-wallpaper-application v1.2 installed."
+        elif kpackagetool6 -t Plasma/Wallpaper -u "$BUNDLE_DIR/src/plasma-wallpaper-application/package" >/dev/null 2>&1; then
+            mkdir -p "$CACHE_DIR"
+            echo "v1.2" > "$WALLPAPER_STAMP"
+            CAELESTIA_WALLPAPER_PLUGIN_INSTALLED=true
+            echo "[OK]  plasma-wallpaper-application v1.2 updated."
+        else
+            echo "[WARN] plasma-wallpaper-application installation failed"
+        fi
     else
-        echo "[WARN] plasma-wallpaper-application not found, Skipping installation"
+        echo "[WARN] plasma-wallpaper-application not found. Skipping installation."
     fi
 else
-    echo "[WARN] Lockscreen wallpaper not enabled, Skipping installation"
+    echo "[SKIP] Lockscreen wallpaper not enabled by user choice."
 fi
 
 echo
