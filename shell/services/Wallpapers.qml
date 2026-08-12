@@ -22,6 +22,8 @@ Searcher {
     property string actualCurrent
     property bool previewColourLock
     property bool pendingPreviewClear
+    property var videoThumbs: ({})
+    property var videoThumbsPending: ({})
 
     readonly property var categories: {
         let dummy = root.list;
@@ -131,10 +133,6 @@ Searcher {
     // and sat on a loading spinner forever. Extract a frame once and cache it
     // beside the wallpaper caches, keyed the same way getThumbnailPath already
     // described — that path was being computed but never produced by anything.
-    property var videoThumbs: ({})   // source path -> cached frame, once it exists
-
-    property var videoThumbsPending: ({})
-
     // What a picker should actually display for a wallpaper: the image itself, or
     // a video's extracted frame once there is one. Returns "" for a video whose
     // frame is still being made, so callers can show a placeholder meanwhile.

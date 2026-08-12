@@ -43,54 +43,6 @@ Singleton {
 
     readonly property AccessPoint active: __networks.find(n => n.active) ?? null
 
-    Connections {
-        target: NmQt
-
-        function onNetworksChanged(): void {
-            rebuildNetworkList();
-        }
-        function onWifiEnabledChanged(): void {
-            root.wifiEnabled = NmQt.wifiEnabled;
-        }
-        function onVpnPendingConnectionChanged(): void {
-            root.vpnPendingConnection = NmQt.vpnPendingConnection;
-        }
-        function onSavedConnectionsChanged(): void {
-            root.savedConnections = NmQt.savedConnections;
-        }
-        function onSavedConnectionSsidsChanged(): void {
-            root.savedConnectionSsids = NmQt.savedConnectionSsids;
-        }
-        function onConnectionFailed(ssid: string): void {
-            root.connectionFailed(ssid);
-        }
-    }
-
-    function rebuildNetworkList(): void {
-        const rawList = NmQt.networks;
-        const newList = [];
-
-        for (let i = 0; i < rawList.length; i++) {
-            const existing = __networks[i];
-            if (existing) {
-                existing.lastIpcObject = rawList[i];
-                newList.push(existing);
-            } else {
-                newList.push(apComp.createObject(root, { lastIpcObject: rawList[i] }));
-            }
-        }
-
-        for (let j = newList.length; j < __networks.length; j++) {
-            __networks[j].destroy();
-        }
-
-        root.__networks = newList;
-    }
-
-    // =========================================================================
-    //  Legacy bridge properties
-    // =========================================================================
-
     property var deviceStatus: null
     property var wirelessInterfaces: []
     property var ethernetInterfaces: []
@@ -100,76 +52,6 @@ Singleton {
     property var wifiConnectionQueue: []
     property int currentSsidQueryIndex: 0
     property var pendingConnection: null
-
-    // =========================================================================
-    //  Timers
-    // =========================================================================
-
-    readonly property alias connectionCheckTimer: connectionCheckTimer
-    readonly property alias immediateCheckTimer: immediateCheckTimer
-
-    Timer {
-        id: connectionCheckTimer
-        interval: 4000
-        onTriggered: {
-            if (root.pendingConnection) {
-                const connected = root.active && root.active.ssid === root.pendingConnection.ssid;
-                if (!connected) {
-                    const pending = root.pendingConnection;
-                    const failedSsid = pending.ssid;
-                    root.pendingConnection = null;
-                    immediateCheckTimer.stop();
-                    immediateCheckTimer.checkCount = 0;
-                    root.connectionFailed(failedSsid);
-                    if (pending.callback && typeof pending.callback === "function") {
-                        pending.callback({
-                            success: false, output: "", error: "Connection timeout",
-                            exitCode: -1, needsPassword: false
-                        });
-                    }
-                } else {
-                    root.pendingConnection = null;
-                    immediateCheckTimer.stop();
-                    immediateCheckTimer.checkCount = 0;
-                }
-            }
-        }
-    }
-
-    Timer {
-        id: immediateCheckTimer
-        property int checkCount: 0
-        interval: 500
-        repeat: true
-        triggeredOnStart: false
-        onTriggered: {
-            if (root.pendingConnection) {
-                checkCount++;
-                const connected = root.active && root.active.ssid === root.pendingConnection.ssid;
-                if (connected) {
-                    connectionCheckTimer.stop();
-                    immediateCheckTimer.stop();
-                    immediateCheckTimer.checkCount = 0;
-                    if (root.pendingConnection.callback && typeof root.pendingConnection.callback === "function") {
-                        root.pendingConnection.callback({
-                            success: true, output: "Connected", error: "", exitCode: 0
-                        });
-                    }
-                    root.pendingConnection = null;
-                } else if (checkCount >= 6) {
-                    immediateCheckTimer.stop();
-                    immediateCheckTimer.checkCount = 0;
-                }
-            } else {
-                immediateCheckTimer.stop();
-                immediateCheckTimer.checkCount = 0;
-            }
-        }
-    }
-
-    // =========================================================================
-    //  Constants
-    // =========================================================================
 
     readonly property string deviceTypeWifi: "wifi"
     readonly property string deviceTypeEthernet: "ethernet"
@@ -195,12 +77,32 @@ Singleton {
     readonly property string connectionParamPassword: "password"
     readonly property string connectionParamBssid: "802-11-wireless.bssid"
 
-    // =========================================================================
-    //  Signals
-    // =========================================================================
+    readonly property alias connectionCheckTimer: connectionCheckTimer
+    readonly property alias immediateCheckTimer: immediateCheckTimer
 
     signal connectionFailed(string ssid)
     signal monitorEvent()
+
+    function rebuildNetworkList(): void {
+        const rawList = NmQt.networks;
+        const newList = [];
+
+        for (let i = 0; i < rawList.length; i++) {
+            const existing = __networks[i];
+            if (existing) {
+                existing.lastIpcObject = rawList[i];
+                newList.push(existing);
+            } else {
+                newList.push(apComp.createObject(root, { lastIpcObject: rawList[i] }));
+            }
+        }
+
+        for (let j = newList.length; j < __networks.length; j++) {
+            __networks[j].destroy();
+        }
+
+        root.__networks = newList;
+    }
 
     // =========================================================================
     //  Delegated methods
@@ -464,22 +366,111 @@ Singleton {
         emit: monitorEvent();
     }
 
+    Connections {
+        function onNetworksChanged(): void {
+            rebuildNetworkList();
+        }
+        function onWifiEnabledChanged(): void {
+            root.wifiEnabled = NmQt.wifiEnabled;
+        }
+        function onVpnPendingConnectionChanged(): void {
+            root.vpnPendingConnection = NmQt.vpnPendingConnection;
+        }
+        function onSavedConnectionsChanged(): void {
+            root.savedConnections = NmQt.savedConnections;
+        }
+        function onSavedConnectionSsidsChanged(): void {
+            root.savedConnectionSsids = NmQt.savedConnectionSsids;
+        }
+        function onConnectionFailed(ssid: string): void {
+            root.connectionFailed(ssid);
+        }
+
+        target: NmQt
+    }
+
+    Timer {
+        id: connectionCheckTimer
+
+        interval: 4000
+
+        onTriggered: {
+            if (root.pendingConnection) {
+                const connected = root.active && root.active.ssid === root.pendingConnection.ssid;
+                if (!connected) {
+                    const pending = root.pendingConnection;
+                    const failedSsid = pending.ssid;
+                    root.pendingConnection = null;
+                    immediateCheckTimer.stop();
+                    immediateCheckTimer.checkCount = 0;
+                    root.connectionFailed(failedSsid);
+                    if (pending.callback && typeof pending.callback === "function") {
+                        pending.callback({
+                            success: false, output: "", error: "Connection timeout",
+                            exitCode: -1, needsPassword: false
+                        });
+                    }
+                } else {
+                    root.pendingConnection = null;
+                    immediateCheckTimer.stop();
+                    immediateCheckTimer.checkCount = 0;
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: immediateCheckTimer
+
+        property int checkCount: 0
+
+        interval: 500
+        repeat: true
+        triggeredOnStart: false
+        onTriggered: {
+            if (root.pendingConnection) {
+                checkCount++;
+                const connected = root.active && root.active.ssid === root.pendingConnection.ssid;
+                if (connected) {
+                    connectionCheckTimer.stop();
+                    immediateCheckTimer.stop();
+                    immediateCheckTimer.checkCount = 0;
+                    if (root.pendingConnection.callback && typeof root.pendingConnection.callback === "function") {
+                        root.pendingConnection.callback({
+                            success: true, output: "Connected", error: "", exitCode: 0
+                        });
+                    }
+                    root.pendingConnection = null;
+                } else if (checkCount >= 6) {
+                    immediateCheckTimer.stop();
+                    immediateCheckTimer.checkCount = 0;
+                }
+            } else {
+                immediateCheckTimer.stop();
+                immediateCheckTimer.checkCount = 0;
+            }
+        }
+    }
+
     // =========================================================================
     //  Components
     // =========================================================================
 
     Component {
         id: commandProc
+
         QtObject {}
     }
 
     Component {
         id: apComp
+
         AccessPoint {}
     }
 
     component AccessPoint: QtObject {
         required property var lastIpcObject
+
         readonly property string ssid: lastIpcObject.ssid ?? ""
         readonly property string bssid: lastIpcObject.bssid ?? ""
         readonly property int strength: lastIpcObject.strength ?? 0
