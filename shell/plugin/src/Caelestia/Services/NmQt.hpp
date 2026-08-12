@@ -171,7 +171,7 @@ private slots:
     void onConnectionsChanged();
     void onDeviceStateChanged(NetworkManager::Device::State newState,
                               NetworkManager::Device::State oldState,
-                              NetworkManager::Device::StateReason reason);
+                              NetworkManager::DeviceStateReason reason);
     void onScanFinished();
     void onAccessPointAppeared(const QString& apPath);
     void onAccessPointDisappeared(const QString& apPath);

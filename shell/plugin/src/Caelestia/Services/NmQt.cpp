@@ -650,7 +650,7 @@ void NmQt::onConnectionsChanged() {
 
 void NmQt::onDeviceStateChanged(NetworkManager::Device::State newState,
                                  NetworkManager::Device::State oldState,
-                                 NetworkManager::Device::StateReason /*reason*/) {
+                                 NetworkManager::DeviceStateReason /*reason*/) {
     Q_UNUSED(oldState)
     const bool wasConnecting = (oldState == NetworkManager::Device::State::NeedAuth
                              || oldState == NetworkManager::Device::State::Config
