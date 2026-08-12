@@ -123,6 +123,8 @@ let lastFullscreen = null;
 let lastMaximized = null;
 let lastOut = null;
 let lastTitle = null;
+let lastWindowListGeometryUpdate = 0;
+const WINDOW_LIST_GEOMETRY_INTERVAL_MS = 100;
 
 function notifyActiveWindowReal() {
     let window = workspace.activeWindow;
@@ -181,6 +183,13 @@ function notifyWindowList() {
     callDBus(BUS, PATH, IFACE, "notifyWindowList", JSON.stringify(caelestiaWindowList()));
 }
 
+function notifyWindowListForGeometry() {
+    let now = Date.now();
+    if (now - lastWindowListGeometryUpdate < WINDOW_LIST_GEOMETRY_INTERVAL_MS) return;
+    lastWindowListGeometryUpdate = now;
+    notifyWindowList();
+}
+
 workspace.windowActivated.connect(onActiveWindowChanged);
 
 function onWindowAdded(window) {
@@ -189,7 +198,7 @@ function onWindowAdded(window) {
         if (window && window.normalWindow) {
             try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
-            try { window.frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+            try { window.frameGeometryChanged.connect(notifyWindowListForGeometry); } catch(e){}
             // fullScreen/maximize changes update the fullscreen and floating
             // fields in the window list entry, so the shell must be told
             // whenever either property flips — without this the bar stays
@@ -233,7 +242,7 @@ for (let i = 0; i < initialWins.length; ++i) {
         if (initialWins[i].normalWindow) {
             try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
-            try { initialWins[i].frameGeometryChanged.connect(notifyWindowList); } catch(e){}
+            try { initialWins[i].frameGeometryChanged.connect(notifyWindowListForGeometry); } catch(e){}
             try { initialWins[i].fullScreenChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].maximizedChanged.connect(notifyWindowList); } catch(e){}
         }
