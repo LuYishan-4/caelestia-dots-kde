@@ -23,7 +23,10 @@ Singleton {
     readonly property var wirelessDeviceDetails: NmQt.wirelessDeviceDetails
     readonly property var ethernetDeviceDetails: NmQt.ethernetDeviceDetails
 
-    readonly property var activeEthernet: NmQt.activeEthernet
+    // NmQt always returns a QVariantMap, which QML sees as a truthy object even
+    // when empty. Collapse the "no active Ethernet connection" case back to
+    // null so truthiness checks (e.g. StatusIcons.qml) behave as before.
+    readonly property var activeEthernet: (NmQt.activeEthernet && Object.keys(NmQt.activeEthernet).length > 0) ? NmQt.activeEthernet : null
     readonly property var ethernetDevices: NmQt.ethernetDevices
 
     readonly property var vpnConnections: NmQt.vpnConnections
@@ -366,6 +369,11 @@ Singleton {
     function refreshOnConnectionChange(): void {
         emit: monitorEvent();
     }
+
+    // NmQt populates its own network cache in its C++ constructor, before this
+    // Connections block exists to observe networksChanged — without this, the
+    // adapter's list stays empty until NetworkManager emits another change.
+    Component.onCompleted: rebuildNetworkList()
 
     Connections {
         function onNetworksChanged(): void {

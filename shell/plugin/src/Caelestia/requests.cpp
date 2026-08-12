@@ -3,6 +3,7 @@
 #include <qdir.h>
 #include <qfile.h>
 #include <qfileinfo.h>
+#include <qjsengine.h>
 #include <qjsondocument.h>
 #include <qjsvalueiterator.h>
 #include <qloggingcategory.h>
@@ -84,20 +85,7 @@ int Requests::registerReply(QNetworkReply* reply, QJSValue callback, QJSValue on
         timer->setSingleShot(true);
         ar.timeoutTimer = timer;
         QObject::connect(timer, &QTimer::timeout, this, [this, reqId]() {
-            auto it = m_activeRequests.find(reqId);
-            if (it == m_activeRequests.end()) {
-                return;
-            }
-            auto& ar2 = it.value();
-            if (ar2.reply) {
-                ar2.reply->abort();
-            }
-            if (ar2.onError.isCallable()) {
-                ar2.onError.call({ QStringLiteral("Request timed out"), 0 });
-            } else {
-                qCWarning(lcRequests) << "request" << reqId << "timed out";
-            }
-            cleanupRequest(reqId);
+            abortAndFail(reqId, QStringLiteral("Request timed out"), /*removeDestFile=*/false);
         });
         timer->start(timeoutMs);
     }
@@ -189,6 +177,41 @@ void Requests::cleanupRequest(int requestId) {
     m_activeRequests.erase(it);
 }
 
+void Requests::abortAndFail(int requestId, const QString& errorMessage, bool removeDestFile) {
+    auto it = m_activeRequests.find(requestId);
+    if (it == m_activeRequests.end()) {
+        return;
+    }
+
+    ActiveRequest ar = m_activeRequests.take(requestId);
+
+    if (ar.timeoutTimer) {
+        ar.timeoutTimer->stop();
+        ar.timeoutTimer->deleteLater();
+    }
+
+    if (ar.reply) {
+        ar.reply->abort();
+        ar.reply->deleteLater();
+    }
+
+    if (ar.destFile) {
+        if (ar.destFile->isOpen()) {
+            ar.destFile->close();
+        }
+        if (removeDestFile) {
+            ar.destFile->remove();
+        }
+        delete ar.destFile;
+    }
+
+    if (ar.onError.isCallable()) {
+        ar.onError.call({ errorMessage, 0 });
+    } else {
+        qCWarning(lcRequests) << "request" << requestId << "failed:" << errorMessage;
+    }
+}
+
 // ── public API ────────────────────────────────────────────────────
 
 int Requests::get(const QUrl& url, QJSValue callback, QJSValue onError, QJSValue headers, int timeoutMs) {
@@ -270,23 +293,7 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
         timer->setSingleShot(true);
         ar.timeoutTimer = timer;
         QObject::connect(timer, &QTimer::timeout, this, [this, reqId]() {
-            auto it = m_activeRequests.find(reqId);
-            if (it == m_activeRequests.end()) {
-                return;
-            }
-            if (it->reply) {
-                it->reply->abort();
-            }
-            if (it->destFile) {
-                if (it->destFile->isOpen()) {
-                    it->destFile->close();
-                }
-                it->destFile->remove();
-            }
-            if (it->onError.isCallable()) {
-                it->onError.call({ QStringLiteral("Download timed out"), 0 });
-            }
-            cleanupRequest(reqId);
+            abortAndFail(reqId, QStringLiteral("Download timed out"), /*removeDestFile=*/true);
         });
         timer->start(timeoutMs);
     }
@@ -297,8 +304,14 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
         if (it == m_activeRequests.end() || !it->destFile) {
             return;
         }
-        it->destFile->write(reply->readAll());
+        const QByteArray data = reply->readAll();
+        if (it->destFile->write(data) != data.size()) {
+            const QString writeError = it->destFile->errorString();
+            qCWarning(lcRequests) << "download" << reqId << "write failed:" << writeError;
+            abortAndFail(reqId, QStringLiteral("Write failed: ") + writeError, /*removeDestFile=*/true);
+        }
     });
+
 
     // ── progress ──────────────────────────────────────────────
     QObject::connect(reply, &QNetworkReply::downloadProgress, this, [this, reqId](qint64 received, qint64 total) {
@@ -320,14 +333,18 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
 
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const bool httpError = status > 0 && (status < 200 || status >= 300);
-        const bool isError = reply->error() != QNetworkReply::NoError || httpError;
-        const QString error = httpError
+        bool isError = reply->error() != QNetworkReply::NoError || httpError;
+        QString error = httpError
             ? QStringLiteral("HTTP status %1").arg(status)
             : reply->errorString();
 
         // Flush any remaining bytes not yet delivered via readyRead.
         if (it->destFile && it->destFile->isOpen()) {
-            it->destFile->write(reply->readAll());
+            const QByteArray data = reply->readAll();
+            if (!isError && it->destFile->write(data) != data.size()) {
+                isError = true;
+                error = QStringLiteral("Write failed: ") + it->destFile->errorString();
+            }
             it->destFile->close();
         }
         if (it->destFile && isError) {
@@ -351,14 +368,29 @@ int Requests::download(const QUrl& url, const QString& destPath, QJSValue onComp
 }
 
 void Requests::cancel(int requestId) {
-    auto it = m_activeRequests.find(requestId);
-    if (it == m_activeRequests.end()) {
+    // Discard the partial file on cancel too — otherwise a truncated download
+    // is left at the requested final path, which callers can mistake for a
+    // completed one. abortAndFail() also fixes the same synchronous-abort
+    // reentrancy hazard described above for the timeout paths.
+    if (!m_activeRequests.contains(requestId)) {
         return;
     }
-    if (it->reply) {
-        it->reply->abort();
+    ActiveRequest ar = m_activeRequests.take(requestId);
+    if (ar.timeoutTimer) {
+        ar.timeoutTimer->stop();
+        ar.timeoutTimer->deleteLater();
     }
-    cleanupRequest(requestId);
+    if (ar.reply) {
+        ar.reply->abort();
+        ar.reply->deleteLater();
+    }
+    if (ar.destFile) {
+        if (ar.destFile->isOpen()) {
+            ar.destFile->close();
+        }
+        ar.destFile->remove();
+        delete ar.destFile;
+    }
 }
 
 QJSValue Requests::parseJson(const QString& text) const {
@@ -383,8 +415,14 @@ QString Requests::toJson(const QJSValue& value) const {
     if (!engine) {
         return {};
     }
-    const QJsonDocument doc = QJsonDocument::fromVariant(value.toVariant());
-    return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
+    // QJsonDocument::fromVariant() only represents top-level objects/arrays,
+    // so primitives (strings, numbers, booleans) would serialise to an empty
+    // string. Go through the engine's own JSON.stringify instead, which
+    // handles any JS value the same way JavaScript itself would.
+    QJSValue json = engine->globalObject().property(QStringLiteral("JSON"));
+    QJSValue stringify = json.property(QStringLiteral("stringify"));
+    QJSValue result = stringify.callWithInstance(json, { value });
+    return result.isUndefined() ? QStringLiteral("null") : result.toString();
 }
 
 void Requests::resetCookies() {

@@ -140,6 +140,30 @@ void NmQt::connectToNetwork(const QString& ssid, const QString& password,
         return;
     }
 
+    // Locate the target access point (by BSSID if given, else the strongest AP
+    // advertising this SSID) so we can inspect its real security requirements
+    // instead of assuming every unsaved network needs a password.
+    NetworkManager::AccessPoint::Ptr targetAp;
+    for (const auto& apPath : wifiDev->accessPoints()) {
+        const auto ap = wifiDev->findAccessPoint(apPath);
+        if (!ap || ap->ssid() != ssid)
+            continue;
+        if (!bssid.isEmpty()) {
+            if (ap->hardwareAddress().compare(bssid, Qt::CaseInsensitive) == 0) {
+                targetAp = ap;
+                break;
+            }
+            continue;
+        }
+        if (!targetAp || ap->signalStrength() > targetAp->signalStrength())
+            targetAp = ap;
+    }
+
+    const bool apIsOpen = targetAp
+        && !targetAp->wpaFlags()
+        && !targetAp->rsnFlags()
+        && !targetAp->capabilities().testFlag(NetworkManager::AccessPoint::Privacy);
+
     // Look for a saved connection matching this SSID
     NetworkManager::Connection::Ptr existingConn;
     {
@@ -184,7 +208,7 @@ void NmQt::connectToNetwork(const QString& ssid, const QString& password,
         return;
     }
 
-    if (password.isEmpty()) {
+    if (password.isEmpty() && !apIsOpen) {
         // No saved connection and no password — needs one
         qCInfo(lcNmQt) << "connectToNetwork:" << ssid << "needs password";
         m_connectingSsid.clear();
@@ -211,16 +235,10 @@ void NmQt::connectToNetwork(const QString& ssid, const QString& password,
     wirelessSetting->setInitialized(true);
 
     QString specificObject;
-    if (!bssid.isEmpty()) {
+    if (!bssid.isEmpty())
         wirelessSetting->setBssid(bssid.toUtf8());
-        for (const auto& apPath : wifiDev->accessPoints()) {
-            const auto ap = wifiDev->findAccessPoint(apPath);
-            if (ap && ap->hardwareAddress().compare(bssid, Qt::CaseInsensitive) == 0) {
-                specificObject = ap->uni();
-                break;
-            }
-        }
-    }
+    if (targetAp)
+        specificObject = targetAp->uni();
 
     if (!password.isEmpty()) {
         auto securitySetting = settings.setting(NetworkManager::Setting::SettingType::WirelessSecurity)
@@ -230,11 +248,18 @@ void NmQt::connectToNetwork(const QString& ssid, const QString& password,
             return;
         }
 
-        securitySetting->setKeyMgmt(NetworkManager::WirelessSecuritySetting::WpaPsk);
+        // Prefer SAE (WPA3) key management when the AP advertises it; fall back
+        // to WPA-PSK for WPA/WPA2 networks. Hard-coding WpaPsk here previously
+        // made pure WPA3/SAE APs reject an otherwise-correct password.
+        const bool useSae = targetAp && targetAp->rsnFlags().testFlag(NetworkManager::AccessPoint::KeyMgmtSAE);
+        securitySetting->setKeyMgmt(useSae
+            ? NetworkManager::WirelessSecuritySetting::SAE
+            : NetworkManager::WirelessSecuritySetting::WpaPsk);
         securitySetting->setPsk(password);
         securitySetting->setInitialized(true);
         wirelessSetting->setSecurity(securitySetting->name());
     }
+    // else: open network (apIsOpen) — no wireless-security setting needed.
 
     QDBusPendingReply<QDBusObjectPath, QDBusObjectPath> reply =
         NetworkManager::addAndActivateConnection(settings.toMap(),
@@ -441,6 +466,8 @@ void NmQt::connectEthernet(const QString& connectionName, const QString& interfa
     if (!interfaceName.isEmpty()) {
         // Activate the first profile available on this interface.
         auto dev = NetworkManager::findNetworkInterface(interfaceName);
+        if (!dev)
+            dev = NetworkManager::findDeviceByIpFace(interfaceName);
         if (dev) {
             const auto availableConnections = dev->availableConnections();
             if (!availableConnections.isEmpty()) {
@@ -639,10 +666,14 @@ void NmQt::onActiveConnectionsChanged() {
     refreshNetworks();
     refreshDevices();
     refreshVpnConnections();
+    // Ethernet devices never go through onDeviceStateChanged, so the global
+    // connectivity property must be refreshed here too or it can go stale.
+    emit isConnectedChanged();
 }
 
 void NmQt::onConnectionsChanged() {
     refreshSavedConnections();
+    refreshVpnConnections();
 }
 
 void NmQt::onDeviceStateChanged(NetworkManager::Device::State newState,
@@ -764,6 +795,9 @@ void NmQt::refreshNetworks() {
                 security = QStringLiteral("WPA");
             else
                 security = QStringLiteral("encrypted");
+        } else if (ap->capabilities().testFlag(NetworkManager::AccessPoint::Privacy)) {
+            // Privacy capability with no WPA/RSN flags means legacy WEP.
+            security = QStringLiteral("WEP");
         }
 
         auto map = buildApMap(ap->ssid(), ap->hardwareAddress(),

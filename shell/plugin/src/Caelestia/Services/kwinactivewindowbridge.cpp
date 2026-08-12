@@ -199,6 +199,12 @@ function onWindowAdded(window) {
             try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
             try { window.frameGeometryChanged.connect(notifyWindowListForGeometry); } catch(e){}
+            // notifyWindowListForGeometry() throttles frameGeometryChanged, which
+            // can silently drop the final event of a move/resize if it lands
+            // inside the throttle window, leaving stale geometry published
+            // with no further update ever correcting it. interactiveMoveResizeFinished
+            // guarantees one last, unthrottled notification once the interaction ends.
+            try { window.interactiveMoveResizeFinished.connect(notifyWindowList); } catch(e){}
             // fullScreen/maximize changes update the fullscreen and floating
             // fields in the window list entry, so the shell must be told
             // whenever either property flips — without this the bar stays
@@ -243,6 +249,7 @@ for (let i = 0; i < initialWins.length; ++i) {
             try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].frameGeometryChanged.connect(notifyWindowListForGeometry); } catch(e){}
+            try { initialWins[i].interactiveMoveResizeFinished.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].fullScreenChanged.connect(notifyWindowList); } catch(e){}
             try { initialWins[i].maximizedChanged.connect(notifyWindowList); } catch(e){}
         }

@@ -78,6 +78,8 @@ private:
     void cleanupRequest(int requestId);
     int nextRequestId();
 
+    void abortAndFail(int requestId, const QString& errorMessage, bool removeDestFile);
+
     QNetworkAccessManager* m_manager;
     QHash<int, ActiveRequest> m_activeRequests;
     int m_nextRequestId = 1;
