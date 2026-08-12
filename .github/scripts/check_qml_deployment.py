@@ -20,7 +20,7 @@ EXPECTED_MODULES = (
     "Caelestia/Layouts",
     "M3Shapes",
 )
-PLUGIN_PATTERN = re.compile(r"^plugin\s+(\S+)", re.MULTILINE)
+PLUGIN_PATTERN = re.compile(r"^(?:optional\s+)?plugin\s+(\S+)", re.MULTILINE)
 PLUGIN_SUFFIXES = (".so", ".dylib", ".dll")
 
 # Types commonly used as non-visual children (Quickshell.Io/QtQml) that only
