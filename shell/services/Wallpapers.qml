@@ -23,38 +23,6 @@ Searcher {
     property bool previewColourLock
     property bool pendingPreviewClear
 
-    onActualCurrentChanged: root.syncPlasmaWallpaper()
-
-    // videoThumbs landing (a fresh extraction, or discovering a frame already
-    // cached from a previous session) can complete after onActualCurrentChanged
-    // already ran with nothing to show yet — re-sync so it still lands.
-    onVideoThumbsChanged: root.syncPlasmaWallpaper()
-
-    // Plasma's own desktop wallpaper layer can only render still images
-    // (org.kde.image); a video wallpaper's raw path there just shows up
-    // blank/broken. That's invisible under normal operation since Caelestia's own
-    // background layer draws over the real desktop, but it's exactly what's
-    // exposed the moment that's not true — a crash, a manual `qs -c caelestia`
-    // exit, or someone temporarily switching back to stock Plasma to
-    // troubleshoot. Sync the same first-frame still the pickers already use
-    // instead of a path org.kde.image can't decode at all.
-    function syncPlasmaWallpaper(): void {
-        const path = root.actualCurrent;
-        if (path === "")
-            return;
-
-        // thumbFor() is the same "video path in, still frame out" resolution the
-        // pickers use: returns the cached frame, or "" while kicking off the
-        // extraction — in which case Plasma's previous (still valid) wallpaper is
-        // left alone rather than pointed at a video, and onVideoThumbsChanged
-        // retries once the frame lands.
-        const target = root.thumbFor(path);
-        if (target === "")
-            return;
-
-        Quickshell.execDetached(["sh", "-c", 'qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "var allDesktops = desktops();for (i=0;i<allDesktops.length;i++) {d = allDesktops[i];d.wallpaperPlugin = \\"org.kde.image\\";d.currentConfigGroup = Array(\\"Wallpaper\\", \\"org.kde.image\\", \\"General\\");d.writeConfig(\\"Image\\", \\"file://$1\\")}"', "--", target]);
-    }
-
     readonly property var categories: {
         let dummy = root.list;
         const baseDir = Paths.wallsdir;
