@@ -26,6 +26,10 @@ class KWinWorkspaceState : public QObject
     QML_SINGLETON
 
 public:
+    static KWinWorkspaceState* instance();
+    int indexForId(const QString& id) const;
+    QString uuidForIndex(int index) const;
+
     explicit KWinWorkspaceState(QObject *parent = nullptr);
     ~KWinWorkspaceState() override;
 
@@ -35,6 +39,10 @@ public:
     Q_INVOKABLE void switchTo(const QString& id);
     Q_INVOKABLE void createWorkspace(const QString& name = QString());
     Q_INVOKABLE void removeWorkspace(const QString& id);
+
+    Q_INVOKABLE void setDesktop(int desktopId);
+    Q_INVOKABLE void nextDesktop();
+    Q_INVOKABLE void previousDesktop();
 
 signals:
     void activeIdChanged();

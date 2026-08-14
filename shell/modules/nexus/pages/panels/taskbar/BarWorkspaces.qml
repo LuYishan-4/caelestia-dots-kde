@@ -48,20 +48,17 @@ PageBase {
             stepSize: 1
             onMoved: v => {
                 GlobalConfig.bar.workspaces.shown = v;
-                if (typeof KWinActiveWindowBridge !== "undefined") {
-                    KWinActiveWindowBridge.runArbitraryScript(`
-                        let target = ${v};
-                        let d = workspace.desktops;
-                        let count = d.length;
-                        while (count < target) {
-                            workspace.createDesktop(count, "Desktop " + (count + 1));
-                            count++;
-                        }
-                        while (count > target) {
-                            workspace.removeDesktop(d[count - 1]);
-                            count--;
-                        }
-                    `);
+                if (typeof KWinWorkspaceState !== "undefined") {
+                    let d = KWinWorkspaceState.workspaces;
+                    let count = d.length;
+                    while (count < v) {
+                        KWinWorkspaceState.createWorkspace("Desktop " + (count + 1));
+                        count++;
+                    }
+                    while (count > v) {
+                        KWinWorkspaceState.removeWorkspace(d[count - 1].id);
+                        count--;
+                    }
                 }
             }
         }

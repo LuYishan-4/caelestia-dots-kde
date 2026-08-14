@@ -101,9 +101,13 @@ qml_module(caelestia-services
 qt6_generate_wayland_protocol_client_sources(caelestia-services FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/zkde-screencast-unstable-v1.xml
     ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/plasma-window-management.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/kde-output-device-v2.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/kde-output-management-v2.xml
 )
 set_source_files_properties(
     ${CMAKE_CURRENT_BINARY_DIR}/wayland-zkde-screencast-unstable-v1-protocol.c
     ${CMAKE_CURRENT_BINARY_DIR}/wayland-plasma-window-management-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-kde-output-device-v2-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-kde-output-management-v2-protocol.c
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON
 )
