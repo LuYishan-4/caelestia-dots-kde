@@ -106,7 +106,6 @@ PageBase {
         }
 
         StepperRow {
-            last: true
             label: qsTr("Group preview count")
             subtext: qsTr("Notifications shown before a group collapses")
             value: GlobalConfig.notifs.groupPreviewNum
@@ -114,6 +113,17 @@ PageBase {
             to: 10
             stepSize: 1
             onMoved: value => GlobalConfig.notifs.groupPreviewNum = Math.round(value)
+        }
+
+        StepperRow {
+            last: true
+            label: qsTr("Max stored notifications")
+            subtext: qsTr("Older notifications are dropped when the limit is reached")
+            value: GlobalConfig.notifs.maxNotifs
+            from: 20
+            to: 2000
+            stepSize: 50
+            onMoved: value => GlobalConfig.notifs.maxNotifs = Math.round(value)
         }
 
         SectionHeader {

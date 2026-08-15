@@ -83,7 +83,7 @@ ColumnLayout {
 
             model: ScriptModel {
                 values: {
-                    const list = Notifs.notClosed.map(n => [n.appName, null]);
+                    const list = Notifs.list.filter(n => !n.closed).map(n => [n.appName, null]);
                     return [...new Map(list).keys()];
                 }
             }

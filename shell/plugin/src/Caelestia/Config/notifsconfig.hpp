@@ -20,6 +20,7 @@ class NotifsConfig : public ConfigObject {
     CONFIG_PROPERTY(int, groupPreviewNum, 3)
     CONFIG_PROPERTY(bool, openExpanded, false)
     CONFIG_GLOBAL_PROPERTY(QString, position, QStringLiteral("auto"))
+    CONFIG_GLOBAL_PROPERTY(int, maxNotifs, 50)
 
 public:
     explicit NotifsConfig(QObject* parent = nullptr)

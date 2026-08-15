@@ -56,7 +56,7 @@ ColumnLayout {
             }
 
             StyledText {
-                text: Notifs.dnd ? qsTr("Notifications off") : qsTr("%1 unread").arg(Notifs.notClosed.length)
+                text: Notifs.dnd ? qsTr("Notifications off") : qsTr("%1 unread").arg(Notifs.openCount)
                 color: Colours.palette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
             }
