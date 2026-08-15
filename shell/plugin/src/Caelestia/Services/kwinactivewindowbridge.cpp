@@ -112,6 +112,7 @@ QVariantMap KWinActiveWindowBridge::windowToVariant(PlasmaWindowHandle* w) const
         {"fullscreen", w->isFullscreen()},
         {"maximized", w->isMaximized()},
         {"minimized", w->isMinimized()},
+        {"focused", w->isActive()},
         {"floating", !w->isFullscreen() && !w->isMaximized()}, // Fallback for floating state
         {"output", getOutputNameForGeometry(w->x(), w->y(), w->width(), w->height())},
         {"workspace", QVariantMap{{"id", desktopId}, {"uuid", desktopUuid}}}
