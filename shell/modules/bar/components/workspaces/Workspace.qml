@@ -116,32 +116,6 @@ GridLayout {
             property real lastRawSwipeOffset: 0.0
             property bool isSwiping: false
 
-            onRawSwipeOffsetChanged: {
-                if (rawSwipeOffset !== 0.0) {
-                    if (lastRawSwipeOffset === 0.0) {
-                        swipeStartWsId = root.activeWsId;
-                    }
-                    isSwiping = true;
-                    swipeSettleTimer.stop();
-                } else {
-                    swipeSettleTimer.restart();
-                }
-                lastRawSwipeOffset = rawSwipeOffset;
-            }
-
-            Timer {
-                id: swipeSettleTimer
-                interval: 120
-                repeat: false
-                onTriggered: {
-                    iconRoot.isSwiping = false;
-                    if (!iconRoot.active) {
-                        wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
-                        hasRandomShape = false;
-                    }
-                }
-            }
-
             readonly property real swipeWeight: {
                 if (!isSwiping || rawSwipeOffset === 0.0) return active ? 1.0 : 0.0;
                 
@@ -157,9 +131,46 @@ GridLayout {
             }
 
             property real smoothSwipeWeight: swipeWeight
-            Behavior on smoothSwipeWeight {
-                enabled: iconRoot.isSwiping
-                SmoothedAnimation { velocity: -1; duration: 60; easing.type: Easing.Linear }
+
+            // JavaScript functions
+            function handleActivation() {
+                const wsChanged = lastKnownWs !== root.ws;
+                if (active && (!wasPositionActive || wsChanged)) {
+                    if (!hasRandomShape) {
+                        const shapes = [MaterialShape.Slanted, MaterialShape.Arch, MaterialShape.Oval, MaterialShape.Pill, MaterialShape.Triangle, MaterialShape.Arrow, MaterialShape.Diamond, MaterialShape.Pentagon, MaterialShape.Gem, MaterialShape.VerySunny, MaterialShape.Sunny, MaterialShape.Cookie4Sided, MaterialShape.Cookie6Sided, MaterialShape.Cookie7Sided, MaterialShape.Cookie9Sided, MaterialShape.Cookie12Sided, MaterialShape.Clover4Leaf, MaterialShape.Clover8Leaf, MaterialShape.SoftBurst, MaterialShape.Ghostish];
+                        const shuffled = [...shapes].sort(() => Math.random() - 0.5);
+                        randShape = shuffled[0];
+                        wsShape.shape = randShape;
+                        hasRandomShape = true;
+                    }
+                } else if (!active && (wasPositionActive || wsChanged)) {
+                    if (!isSwiping) {
+                        const targetShape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        wsShape.shape = targetShape;
+                        hasRandomShape = false;
+                    }
+                }
+                wasPositionActive = active;
+                prevWs = lastKnownWs;
+                lastKnownWs = root.ws;
+                prevActiveWsId = root.activeWsId;
+            }
+
+            implicitWidth: barThickness - Tokens.padding.small
+            implicitHeight: barThickness - Tokens.padding.small
+
+            // Signal handlers
+            onRawSwipeOffsetChanged: {
+                if (rawSwipeOffset !== 0.0) {
+                    if (lastRawSwipeOffset === 0.0) {
+                        swipeStartWsId = root.activeWsId;
+                    }
+                    isSwiping = true;
+                    swipeSettleTimer.stop();
+                } else {
+                    swipeSettleTimer.restart();
+                }
+                lastRawSwipeOffset = rawSwipeOffset;
             }
 
             onIsSwipingChanged: {
@@ -186,31 +197,6 @@ GridLayout {
                 }
             }
 
-            // JavaScript functions
-            function handleActivation() {
-                const wsChanged = lastKnownWs !== root.ws;
-                if (active && (!wasPositionActive || wsChanged)) {
-                    if (!hasRandomShape) {
-                        const shapes = [MaterialShape.Slanted, MaterialShape.Arch, MaterialShape.Oval, MaterialShape.Pill, MaterialShape.Triangle, MaterialShape.Arrow, MaterialShape.Diamond, MaterialShape.Pentagon, MaterialShape.Gem, MaterialShape.VerySunny, MaterialShape.Sunny, MaterialShape.Cookie4Sided, MaterialShape.Cookie6Sided, MaterialShape.Cookie7Sided, MaterialShape.Cookie9Sided, MaterialShape.Cookie12Sided, MaterialShape.Clover4Leaf, MaterialShape.Clover8Leaf, MaterialShape.SoftBurst, MaterialShape.Ghostish];
-                        const shuffled = [...shapes].sort(() => Math.random() - 0.5);
-                        randShape = shuffled[0];
-                        wsShape.shape = randShape;
-                        hasRandomShape = true;
-                    }
-                } else if (!active && (wasPositionActive || wsChanged)) {
-                    if (!isSwiping) {
-                        const targetShape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
-                        wsShape.shape = targetShape;
-                        hasRandomShape = false;
-                    }
-                }
-                wasPositionActive = active;
-                prevWs = lastKnownWs;
-                lastKnownWs = root.ws;
-                prevActiveWsId = root.activeWsId;
-            }
-
-            // Signal handlers
             onWatchedWsChanged: {
                 if (lastWatchedWs !== -1 && watchedWs !== lastWatchedWs && !active) {
                     if (!isSwiping) {
@@ -229,10 +215,6 @@ GridLayout {
 
             onActiveChanged: handleActivation()
 
-            // Bindings
-            implicitWidth: barThickness - Tokens.padding.small
-            implicitHeight: barThickness - Tokens.padding.small
-
             // Initialize state when component is created
             Component.onCompleted: {
                 if (active) {
@@ -246,6 +228,26 @@ GridLayout {
                 lastKnownWs = root.ws;
                 prevActiveWsId = root.activeWsId;
                 lastWatchedWs = root.ws;
+            }
+
+            Timer {
+                id: swipeSettleTimer
+
+                interval: 120
+                repeat: false
+                onTriggered: {
+                    iconRoot.isSwiping = false;
+                    if (!iconRoot.active) {
+                        wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        hasRandomShape = false;
+                    }
+                }
+            }
+
+            Behavior on smoothSwipeWeight {
+                enabled: iconRoot.isSwiping
+
+                SmoothedAnimation { velocity: -1; duration: 60; easing.type: Easing.Linear }
             }
 
             MaterialShape {
