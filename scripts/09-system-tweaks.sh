@@ -100,6 +100,14 @@ tweak_reload_kde() {
 # 
 # TWEAK: Set default Caelestia shell scheme
 # 
+tweak_default_scheme() {
+    info "Setting default Caelestia color scheme..."
+    if command -v caelestia >/dev/null 2>&1; then
+        caelestia scheme set -n dynamic >/dev/null 2>&1 || true
+    fi
+    ok "Default Caelestia color scheme set."
+}
+
 
 # 
 # TWEAK: Set default shell to Fish
@@ -214,6 +222,7 @@ fi
 
 tweak_disable_kde_osd
 tweak_default_shell
+tweak_default_scheme
 tweak_patch_caelestia_cli
 tweak_reload_kde
 
