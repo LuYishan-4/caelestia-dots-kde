@@ -129,8 +129,8 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | [0x0nYx](https://github.com/0x0nYx) | 1 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
+| [caelestia-automation[bot]](https://github.com/caelestia-automation[bot]) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
-| — | 0 |
 | — | 0 |
 
 </td>
