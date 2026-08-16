@@ -48,5 +48,5 @@ jobs:
               --base dev \
               --head "$BRANCH_NAME" \
               --title "chore: update submodules" \
-              --body "This PR automatically updates your git submodules to their latest upstream commits."
+              --body "This PR automatically updates the git submodules to their latest upstream commits."
           fi
