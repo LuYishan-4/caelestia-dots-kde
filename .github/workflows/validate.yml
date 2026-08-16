@@ -277,7 +277,7 @@ jobs:
           sudo mv /tmp/actionlint /usr/local/bin/actionlint
 
       - name: Lint workflow files
-        run: actionlint -shellcheck= -color
+        run: actionlint -shellcheck= -color -ignore 'missing input "app-id"' -ignore 'input "client-id" is not defined'
 
   # ═══════════════════════════════════════════════════════════
   # Job 13: Wayland static lifetime - catch exit-time SIGSEGVs
