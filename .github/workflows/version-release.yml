@@ -71,9 +71,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          PREVIOUS_VERSION_TAG=$(git rev-parse -q --verify "refs/tags/$VERSION" || true)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
 
-          echo "PREVIOUS_VERSION_TAG=$PREVIOUS_VERSION_TAG" >> $GITHUB_ENV
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
           git tag -f "$VERSION" "$GITHUB_SHA"
           git push origin "refs/tags/$VERSION" --force
@@ -84,8 +84,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -n "$PREVIOUS_VERSION_TAG" ] && [ "$PREVIOUS_VERSION_TAG" != "$VERSION" ]; then
-            git log "$PREVIOUS_VERSION_TAG..$GITHUB_SHA" --no-merges --invert-grep --grep='\[skip ci\]' --pretty='- %s (%h)' > commit_notes.txt
+          if [ -n "$LAST_TAG" ] && [ "$LAST_TAG" != "$VERSION" ]; then
+            git log "$LAST_TAG..$GITHUB_SHA" --no-merges --invert-grep --grep='\[skip ci\]' --pretty='- %s (%h)' > commit_notes.txt
           else
             git log origin/main -n 15 --no-merges --invert-grep --grep='\[skip ci\]' --pretty='- %s (%h)' > commit_notes.txt
           fi
@@ -95,7 +95,29 @@ jobs:
             echo
 
             if [ -s commit_notes.txt ]; then
-              cat commit_notes.txt
+              if grep -qiE '^- (major):' commit_notes.txt; then
+                echo "#### Major Changes"
+                grep -iE '^- (major):' commit_notes.txt | sed -E 's/^- (major): /- /i'
+                echo
+              fi
+
+              if grep -qiE '^- (feat|feature):' commit_notes.txt; then
+                echo "#### Features"
+                grep -iE '^- (feat|feature):' commit_notes.txt | sed -E 's/^- (feat|feature): /- /i'
+                echo
+              fi
+
+              if grep -qiE '^- (perf|performance):' commit_notes.txt; then
+                echo "#### Performance"
+                grep -iE '^- (perf|performance):' commit_notes.txt | sed -E 's/^- (perf|performance): /- /i'
+                echo
+              fi
+
+              if grep -qiE '^- (fix|bug):' commit_notes.txt; then
+                echo "#### Bug Fixes"
+                grep -iE '^- (fix|bug):' commit_notes.txt | sed -E 's/^- (fix|bug): /- /i'
+                echo
+              fi
             else
               echo "- Maintenance release for $VERSION."
             fi
