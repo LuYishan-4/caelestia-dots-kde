@@ -25,12 +25,20 @@ jobs:
         with:
           ref: ${{ matrix.branch }}
       - name: Prepare Arch
-        run: pacman -Syu --noconfirm base-devel git sudo
+        run: |
+          pacman -Syu --noconfirm base-devel git sudo
+          useradd -m builduser
+          echo "builduser ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builduser
+          # yay and makepkg refuse to run as root, so we install it as our builduser
+          su - builduser -c "git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin && cd /tmp/yay-bin && makepkg -si --noconfirm"
       - name: Verify Arch Dependencies
         run: |
-          ./sdata/arch-dist/installDP.sh || true
-          if [ -s ~/.cache/caelestia-kde/failed_packages.txt ]; then
-            FAILED=$(cat ~/.cache/caelestia-kde/failed_packages.txt | tr '\n' ' ')
+          # Give builduser ownership of the workspace so it can run the script
+          chown -R builduser:builduser .
+          su - builduser -c "cd $GITHUB_WORKSPACE && ./sdata/arch-dist/installDP.sh || true"
+          
+          if [ -s /home/builduser/.cache/caelestia-kde/failed_packages.txt ]; then
+            FAILED=$(cat /home/builduser/.cache/caelestia-kde/failed_packages.txt | tr '\n' ' ')
             echo "::error::[ARCH] Failed to install packages: $FAILED"
             exit 1
           fi
