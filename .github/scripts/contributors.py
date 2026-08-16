@@ -39,6 +39,7 @@ EXCLUDED_LOGINS = {
     "renovate[bot]",
     "imgbot[bot]",
     "pre-commit-ci[bot]",
+    "caelestia-automation[bot]",
 }
 
 
