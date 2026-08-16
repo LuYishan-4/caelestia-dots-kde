@@ -38,7 +38,7 @@ LazyListView {
     model: ScriptModel {
         values: {
             const map = new Map();
-            for (const n of Notifs.notClosed)
+            for (const n of Notifs.list.filter(n => !n.closed))
                 map.set(n.appName, null);
             for (const n of Notifs.list)
                 map.set(n.appName, null);
@@ -101,18 +101,21 @@ LazyListView {
             Timer {
                 id: clearTimer
 
+                // One-shot: detach-first mirrors Notifs.clear() to avoid the
+                // O(n) self-removal inside NotifData.close() firing per item.
                 interval: 15
-                repeat: true
+                repeat: false
                 triggeredOnStart: true
                 onTriggered: {
-                    const notifs = Notifs.notClosed.filter(n => n.appName === notif.modelData);
-                    if (notifs.length === 0) {
-                        stop();
+                    // Collect targets, remove from list in one assignment,
+                    // then close each \u2014 NotifData.close() skips its own filter
+                    // path when the item is no longer in Notifs.list.
+                    const toClose = Notifs.list.filter(n => !n.closed && n.appName === notif.modelData);
+                    if (toClose.length === 0)
                         return;
-                    }
-
-                    for (const n of notifs.slice(0, 30))
-                        n.close();
+                    Notifs.list = Notifs.list.filter(n => !toClose.includes(n));
+                    Notifs.openCount = Math.max(0, Notifs.openCount - toClose.length);
+                    for (const n of toClose) n.close();
                 }
             }
 

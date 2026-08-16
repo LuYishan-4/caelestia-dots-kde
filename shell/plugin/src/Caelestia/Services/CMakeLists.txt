@@ -1,10 +1,19 @@
 find_package(KF6GlobalAccel REQUIRED)
 find_package(KF6Config REQUIRED)
+find_package(KF6NetworkManagerQt REQUIRED)
 find_package(X11 REQUIRED)
 # For QPlatformNativeInterface, the only way to reach a QWindow's wl_surface:
 # Qt exposes no public native interface for it. Ships with qt6-base on Arch and
 # with qt6-qtbase-private-devel on Fedora, both already installed by setup.
 find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
+# Cava audio visualizer — optional on systems where it's not packaged.
+set(CAVA_SOURCES "")
+set(CAVA_LIBRARIES "")
+if(Cava_FOUND)
+    list(APPEND CAVA_SOURCES cavaprovider.cpp)
+    list(APPEND CAVA_LIBRARIES PkgConfig::Cava)
+endif()
+
 qml_module(caelestia-services
     URI Caelestia.Services
     SOURCES
@@ -13,7 +22,7 @@ qml_module(caelestia-services
         beattracker.cpp
         audiocollector.cpp
         audioprovider.cpp
-        cavaprovider.cpp
+        ${CAVA_SOURCES}
         tickingservice.cpp
         sensorslib.cpp
         usagefmt.cpp
@@ -66,6 +75,8 @@ qml_module(caelestia-services
         plasmawindowicon.hpp
         screenedges.cpp
         screenedges.hpp
+        NmQt.cpp
+        NmQt.hpp
     LIBRARIES
         Qt::DBus
         Qt::Gui
@@ -77,8 +88,9 @@ qml_module(caelestia-services
         X11::X11
         PkgConfig::Pipewire
         PkgConfig::Aubio
-        PkgConfig::Cava
+        ${CAVA_LIBRARIES}
         Sensors::Sensors
+        KF6::NetworkManagerQt
         caelestia-core
         caelestia-config
         caelestia-internal
@@ -89,9 +101,13 @@ qml_module(caelestia-services
 qt6_generate_wayland_protocol_client_sources(caelestia-services FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/zkde-screencast-unstable-v1.xml
     ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/plasma-window-management.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/kde-output-device-v2.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/kde-output-management-v2.xml
 )
 set_source_files_properties(
     ${CMAKE_CURRENT_BINARY_DIR}/wayland-zkde-screencast-unstable-v1-protocol.c
     ${CMAKE_CURRENT_BINARY_DIR}/wayland-plasma-window-management-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-kde-output-device-v2-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-kde-output-management-v2-protocol.c
     PROPERTIES SKIP_PRECOMPILE_HEADERS ON
 )

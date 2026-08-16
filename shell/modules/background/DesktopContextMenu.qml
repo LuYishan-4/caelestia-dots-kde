@@ -130,6 +130,12 @@ Controls.Menu {
     thisSideY: _flipY ? Controls.Menu.Bottom : Controls.Menu.Top
     transparentBackground: true
 
+    // While the menu is open the ContentWindow mask expands to cover the whole
+    // screen, so desktop right-clicks land on this full-screen catcher instead of
+    // Background.qml's TapHandler. Forward them so the menu reopens at the new spot.
+    rightClickReposition: true
+    onRightClickedAt: (x, y) => ContextMenuStore.openDesktopContextMenu(x, y, root.screenName)
+
     onExpandedChanged: {
         if (expanded) {
             root.perfMenuOpenStartedAt = Date.now();

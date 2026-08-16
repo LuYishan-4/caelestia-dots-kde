@@ -25,7 +25,7 @@ StyledRect {
         text: {
             if (Notifs.dnd)
                 return "notifications_off";
-            if (Notifs.notClosed.length > 0)
+            if (Notifs.openCount > 0)
                 return "notifications_unread";
             return "notifications";
         }

@@ -260,7 +260,7 @@ PageBase {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         width: root.cappedWidth
-        spacing: Tokens.spacing.large
+        spacing: Tokens.spacing.extraSmall / 2
 
         // Non-visual helpers live inside the single Item child (PageBase's default
         // property is one Item; Process objects are kept as layout resources).
@@ -363,87 +363,120 @@ PageBase {
             }
         }
 
-        // ── Providers ──────────────────────────────────────────────
         SectionHeader {
             first: true
-            text: qsTr("Providers")
+            text: qsTr("Local provider")
         }
+
         ToggleRow {
             first: true
-            text: qsTr("Enable Ollama")
+            last: true
+            text: qsTr("Ollama")
             checked: GlobalConfig.ai.enableOllama
             onToggled: GlobalConfig.ai.enableOllama = checked
         }
+
+        SectionHeader {
+            text: qsTr("Claude")
+        }
+
         ToggleRow {
-            text: qsTr("Enable Claude Code")
-            subtext: qsTr("Uses the claude CLI + your Claude login — no API key")
+            first: true
+            text: qsTr("Claude Code")
+            subtext: qsTr("Uses the Claude CLI and your Claude login")
             checked: GlobalConfig.ai.enableClaudeCode
             onToggled: GlobalConfig.ai.enableClaudeCode = checked
         }
+
         ToggleRow {
-            text: qsTr("Enable Claude API (API key)")
-            subtext: qsTr("Pay-per-token HTTP API; needs ANTHROPIC_API_KEY")
+            last: true
+            text: qsTr("Claude API")
+            subtext: qsTr("Pay-per-token API with an Anthropic key")
             checked: GlobalConfig.ai.enableClaude
             onToggled: GlobalConfig.ai.enableClaude = checked
         }
+
+        SectionHeader {
+            text: qsTr("Other providers")
+        }
+
         ToggleRow {
-            text: qsTr("Enable ChatGPT (API key)")
-            subtext: qsTr("OpenAI pay-per-token API; needs OPENAI_API_KEY")
+            first: true
+            text: qsTr("OpenAI (ChatGPT)")
+            subtext: qsTr("Pay-per-token API with an OpenAI key")
             checked: GlobalConfig.ai.enableOpenai
             onToggled: GlobalConfig.ai.enableOpenai = checked
         }
+
         ToggleRow {
-            text: qsTr("Enable Gemini (API key)")
-            subtext: qsTr("Google's OpenAI-compatible endpoint; needs GEMINI_API_KEY")
+            text: qsTr("Gemini")
+            subtext: qsTr("Google's OpenAI-compatible endpoint")
             checked: GlobalConfig.ai.enableGemini
             onToggled: GlobalConfig.ai.enableGemini = checked
         }
+
         ToggleRow {
-            text: qsTr("Enable OpenRouter (API key)")
-            subtext: qsTr("One key for many vendors' models; needs OPENROUTER_API_KEY")
+            text: qsTr("OpenRouter")
+            subtext: qsTr("One key for models from multiple vendors")
             checked: GlobalConfig.ai.enableOpenrouter
             onToggled: GlobalConfig.ai.enableOpenrouter = checked
         }
+
         ToggleRow {
-            text: qsTr("Enable opencode Zen (API key)")
-            subtext: qsTr("Curated coding models, pay as you go; needs OPENCODE_API_KEY")
+            text: qsTr("opencode Zen")
+            subtext: qsTr("Curated coding models, pay as you go")
             checked: GlobalConfig.ai.enableOpencode
             onToggled: GlobalConfig.ai.enableOpencode = checked
         }
+
         ToggleRow {
             last: true
-            text: qsTr("Enable opencode Go (API key)")
-            subtext: qsTr("Monthly opencode subscription; same key as Zen")
+            text: qsTr("opencode Go")
+            subtext: qsTr("Monthly subscription; shares Zen's key")
             checked: GlobalConfig.ai.enableOpencodeGo
             onToggled: GlobalConfig.ai.enableOpencodeGo = checked
         }
 
-        // Key entry, shown only for the providers that are actually enabled.
+        SectionHeader {
+            visible: GlobalConfig.ai.enableClaude
+                     || GlobalConfig.ai.enableOpenai
+                     || GlobalConfig.ai.enableGemini
+                     || GlobalConfig.ai.enableOpenrouter
+                     || GlobalConfig.ai.enableOpencode
+                     || GlobalConfig.ai.enableOpencodeGo
+            text: qsTr("API keys")
+        }
+
+        // Show key fields only for enabled API providers.
         ApiKeyField {
             visible: GlobalConfig.ai.enableClaude
             value: root.apiKeyFor("claude")
             envName: "ANTHROPIC_API_KEY"
             onCommitted: v => root.storeApiKey("claude", v)
         }
+
         ApiKeyField {
             visible: GlobalConfig.ai.enableOpenai
             value: root.apiKeyFor("openai")
             envName: "OPENAI_API_KEY"
             onCommitted: v => root.storeApiKey("openai", v)
         }
+
         ApiKeyField {
             visible: GlobalConfig.ai.enableGemini
             value: root.apiKeyFor("gemini")
             envName: "GEMINI_API_KEY"
             onCommitted: v => root.storeApiKey("gemini", v)
         }
+
         ApiKeyField {
             visible: GlobalConfig.ai.enableOpenrouter
             value: root.apiKeyFor("openrouter")
             envName: "OPENROUTER_API_KEY"
             onCommitted: v => root.storeApiKey("openrouter", v)
         }
-        // One field for both opencode products — they are one account.
+
+        // opencode Zen and Go share one account key.
         ApiKeyField {
             visible: GlobalConfig.ai.enableOpencode || GlobalConfig.ai.enableOpencodeGo
             value: root.apiKeyFor("opencode")
@@ -452,12 +485,12 @@ PageBase {
         }
 
         // ── Claude Code ────────────────────────────────────────────
-        // Everything below is only meaningful while the provider is on, so it
-        // follows the toggle the same way the API key fields do.
+        // Everything below is only meaningful while the provider is on.
         SectionHeader {
             visible: GlobalConfig.ai.enableClaudeCode
             text: qsTr("Claude Code")
         }
+
         InfoRow {
             visible: GlobalConfig.ai.enableClaudeCode
             first: true

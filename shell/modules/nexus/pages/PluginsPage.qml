@@ -8,36 +8,50 @@ import qs.modules.nexus.common
 
 PageBase {
     id: root
-    
+
     title: qsTr("Plugins")
 
     ColumnLayout {
-        anchors.centerIn: parent
-        spacing: Tokens.spacing.medium
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        width: root.cappedWidth
+        spacing: Tokens.spacing.extraSmall / 2
 
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            text: "🧩"
-            font: Tokens.font.icon.extraExtraLarge
-            color: Colours.palette.m3onSurfaceVariant
-            animate: true
+        SectionHeader {
+            first: true
+            text: qsTr("Plugin support")
         }
 
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Plugins are coming soon")
-            font: Tokens.font.headline.small
-            color: Colours.palette.m3onSurface
-            animate: true
-        }
+        ConnectedRect {
+            Layout.fillWidth: true
+            first: true
+            last: true
+            implicitHeight: status.implicitHeight + Tokens.padding.largeIncreased * 2
 
-        StyledText {
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("A plugin framework is planned for v2.3.0.\nStay tuned for the ability to extend your shell with community plugins.")
-            font: Tokens.font.body.medium
-            color: Colours.palette.m3onSurfaceVariant
-            horizontalAlignment: Text.AlignHCenter
-            animate: true
+            RowLayout {
+                id: status
+
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.largeIncreased
+                spacing: Tokens.spacing.medium
+
+                MaterialIcon {
+                    Layout.alignment: Qt.AlignTop
+                    text: "extension_off"
+                    fontStyle: Tokens.font.icon.large
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: qsTr("Plugins are not available yet")
+                        font: Tokens.font.title.medium
+                    }
+                }
+            }
         }
     }
 }

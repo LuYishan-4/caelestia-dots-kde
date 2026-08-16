@@ -18,7 +18,7 @@ PACKAGE_GROUP="${PACKAGE_GROUP:-all}"
 CORE_PACKAGES=(
     cmake ninja-build ccache
     wl-clipboard cliphist wl-clip-persist inotify-tools wireplumber trash-cli jq aubio lm_sensors lm_sensors-devel
-    pipewire-devel glibc qt6-qtdeclarative qt6-qtdeclarative-devel qt6-qtwayland qt6-qtwayland-devel kf6-kglobalaccel-devel qt6-qtbase-private-devel qt6-qtsvg qt6-qtsvg-devel qt6-qtshadertools-devel libgcc qt6-qtbase libqalculate libqalculate-devel aubio-devel kf6-kpipewire kf6-kpipewire-devel kf6-kwindowsystem-devel libsecret
+    pipewire-devel glibc qt6-qtdeclarative qt6-qtdeclarative-devel qt6-qtwayland qt6-qtwayland-devel kf6-kglobalaccel-devel qt6-qtbase-private-devel qt6-qtsvg qt6-qtsvg-devel qt6-qtshadertools-devel libgcc qt6-qtbase libqalculate libqalculate-devel aubio-devel kf6-kpipewire kf6-kpipewire-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel libsecret
 )
 
 SHELL_PACKAGES=(
@@ -26,11 +26,11 @@ SHELL_PACKAGES=(
 )
 
 THEME_PACKAGES=(
-    adw-gtk3-theme google-rubik-fonts
+    adw-gtk3-theme google-rubik-fonts google-noto-sans-fonts google-noto-sans-cjk-fonts google-noto-emoji-fonts
 )
 
 UTILITY_PACKAGES=(
-    fuzzel swappy brightnessctl ddcutil NetworkManager ImageMagick tesseract tesseract-langpack-eng spectacle gpu-screen-recorder slurp grim xdg-utils sassc
+    fuzzel swappy ddcutil NetworkManager ImageMagick tesseract tesseract-langpack-eng spectacle gpu-screen-recorder slurp grim xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
 )
 
 # Packages known to need copr or manual fallback
@@ -284,6 +284,10 @@ else
 fi
 
 fi  # end of PACKAGE_GROUP themes/all block
+
+if command -v xdg-user-dirs-update >/dev/null 2>&1; then
+    xdg-user-dirs-update || true
+fi
 
 if [[ "$PACKAGE_GROUP" == "all" || "$PACKAGE_GROUP" == "shell" ]]; then
 

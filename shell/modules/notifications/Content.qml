@@ -82,7 +82,7 @@ Item {
             id: list
 
             model: ScriptModel {
-                values: Notifs.popups.filter(n => !n.closed)
+                values: Notifs.list.filter(n => n.popup && !n.closed)
             }
 
             anchors.fill: parent

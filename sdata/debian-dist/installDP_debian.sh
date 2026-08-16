@@ -21,7 +21,7 @@ CORE_PACKAGES=(
     libaubio-dev aubio-tools lm-sensors libsensors-dev
     libpipewire-0.3-dev pipewire libc6
     qt6-base-dev qt6-base-private-dev qt6-declarative-dev qml6-module-qtquick qt6-wayland qt6-wayland-dev qt6-svg-dev qt6-shadertools-dev
-    libkf6globalaccel-dev libkf6windowsystem-dev libkpipewire-dev libsecret-1-dev
+    libkf6globalaccel-dev libkf6windowsystem-dev libkf6networkmanagerqt-dev libkpipewire-dev libsecret-1-dev
     ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libqalculate-dev qalc
 )
 
@@ -34,7 +34,7 @@ THEME_PACKAGES=(
 )
 
 UTILITY_PACKAGES=(
-    fuzzel swappy brightnessctl ddcutil network-manager imagemagick tesseract-ocr tesseract-ocr-eng kde-spectacle slurp grim xdg-utils sassc python3-venv uv konsave
+    fuzzel swappy ddcutil network-manager imagemagick tesseract-ocr tesseract-ocr-eng kde-spectacle slurp grim xdg-utils sassc python3-venv uv konsave
 )
 
 # Packages that need manual build or script fallback on Debian if apt package missing

@@ -51,12 +51,10 @@ QtObject {
         {
             label: qsTr("Network"),
             icon: "wifi",
-            description: qsTr("Wi-Fi, ethernet, proxy, VPNs"),
+            description: qsTr("Wi-Fi and VPN connections"),
             category: "connectivity",
             settings: [
                 { label: qsTr("Wi-Fi"), keywords: ["wireless", "internet", "connections"] },
-                { label: qsTr("Ethernet"), keywords: ["wired", "lan", "internet"] },
-                { label: qsTr("Proxy"), keywords: ["proxy", "network"] },
                 { label: qsTr("VPN"), keywords: ["vpn", "tunnel", "secure"] }
             ]
         },
@@ -73,35 +71,39 @@ QtObject {
         {
             label: qsTr("Audio & Sound"),
             icon: "volume_up",
-            description: qsTr("Speakers, mics, mixing, EQ"),
+            description: qsTr("Output, input, app volume, sound effects"),
             category: "connectivity",
             settings: [
                 { label: qsTr("Speakers & Output"), keywords: ["volume", "playback", "sink"] },
                 { label: qsTr("Microphones"), keywords: ["input", "recording", "source"] },
-                { label: qsTr("App Volumes"), pagePath: "audio/AppVolumes.qml", subPageIdx: 1 }
+                { label: qsTr("App Volumes"), pagePath: "audio/AppVolumes.qml", subPageIdx: 1 },
+                { label: qsTr("Sound Effects"), pagePath: "audio/SoundEffectsPage.qml", subPageIdx: 2, keywords: ["sfx", "feedback", "camera", "screen lock"] },
+                { label: qsTr("Muted Notification Apps"), pagePath: "audio/NotificationSilencingPage.qml", subPageIdx: 3, keywords: ["silence", "mute", "notification sound"] }
             ]
         },
         // Controls
         {
             label: qsTr("Notifications"),
             icon: "notifications",
-            description: qsTr("Toasts, alerts, notification behaviour"),
+            description: qsTr("Alerts, toasts, and delivery behavior"),
             category: "controls",
             settings: [
-                { label: qsTr("Do Not Disturb"), keywords: ["dnd", "silent", "quiet"] },
-                { label: qsTr("Popup Banners"), pagePath: "services/NotificationsPage.qml", keywords: ["toasts", "alerts", "popups"] },
-                { label: qsTr("Notification History"), keywords: ["log", "past", "sidebar"] }
+                { label: qsTr("Notification behavior"), pagePath: "services/NotificationPreferencesPage.qml", subPageIdx: 1, keywords: ["fullscreen", "position", "timeout", "taskbar"] },
+                { label: qsTr("Toasts"), pagePath: "services/ToastPreferencesPage.qml", subPageIdx: 2, keywords: ["popup", "banner", "sound", "volume"] },
+                { label: qsTr("Toast events"), pagePath: "services/ToastEventsPage.qml", subPageIdx: 3, keywords: ["charging", "clipboard", "vpn", "keyboard", "audio"] }
             ]
         },
         {
             label: qsTr("Utilities"),
             icon: "build",
-            description: qsTr("Quick toggles, assistant, game mode"),
+            description: qsTr("Quick controls, clipboard, game mode"),
             category: "controls",
             settings: [
-                { label: qsTr("Quick Settings"), keywords: ["toggles", "dashboard", "switches"] },
-                { label: qsTr("Game Mode"), pagePath: "services/GameModePage.qml", subPageIdx: 1 },
-                { label: qsTr("Screenshot & Record"), keywords: ["capture", "screen", "video"] }
+                { label: qsTr("On-screen Sliders"), subPageIdx: 3, keywords: ["volume", "microphone", "brightness", "osd"] },
+                { label: qsTr("Clipboard"), subPageIdx: 4, keywords: ["history", "copied", "paste"] },
+                { label: qsTr("Utilities Panel"), subPageIdx: 5, keywords: ["keep awake", "screenshot", "record"] },
+                { label: qsTr("Quick Toggles"), subPageIdx: 6, keywords: ["toggles", "dashboard", "switches"] },
+                { label: qsTr("Game Mode"), pagePath: "services/GameModePage.qml", subPageIdx: 1 }
             ]
         },
         {
@@ -174,11 +176,10 @@ QtObject {
         {
             label: qsTr("Plugins"),
             icon: "extension",
-            description: qsTr("Manage quickshell plugins"),
+            description: qsTr("Plugin support is not available yet"),
             category: "system",
             settings: [
-                { label: qsTr("Installed Plugins"), keywords: ["extensions", "addons", "manage"] },
-                { label: qsTr("Plugin Store"), keywords: ["download", "browse", "community"] }
+                { label: qsTr("Plugin support"), description: qsTr("Not available yet"), keywords: ["extensions", "addons", "plugins"] }
             ]
         },
         {
@@ -198,7 +199,7 @@ QtObject {
             label: qsTr("AI Assistant"),
             icon: "smart_toy",
             description: qsTr("Claude Code, accounts, providers"),
-            category: "controls",
+            category: "assistant",
             settings: [
                 { label: qsTr("Claude Code"), keywords: ["claude", "cli", "subscription", "login"] },
                 { label: qsTr("Accounts"), keywords: ["claude", "account", "login", "switch"] },

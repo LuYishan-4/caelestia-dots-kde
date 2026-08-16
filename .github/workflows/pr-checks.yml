@@ -129,6 +129,69 @@ jobs:
           echo "Commit message review complete."
 
   # ═══════════════════════════════════════════════════════════
+  # Job 5: QML source compatibility
+  # ═══════════════════════════════════════════════════════════
+  # This is intentionally independent of the native dependency build. It
+  # catches unsupported QML root types even when package installation fails.
+  qml-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check QML singleton roots
+        run: python3 .github/scripts/check_qml_deployment.py --source-root shell
+
+      - name: Check QML import completeness
+        run: python3 .github/scripts/check_qml_imports.py --shell-root shell
+
+  # ═══════════════════════════════════════════════════════════
+  # Job 6: Shell build and QML deployment smoke check
+  # ═══════════════════════════════════════════════════════════
+  # The installer C++ job only builds installer/. This job builds the actual
+  # shell against KF6 headers and verifies that every generated QML plugin is
+  # installed with its qmldir metadata.
+  shell-build:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install shell build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cmake ninja git pkgconf python \
+            qt6-base qt6-declarative qt6-shadertools qt6-wayland \
+            kconfig kguiaddons kglobalaccel kwindowsystem networkmanager-qt kpipewire \
+            libqalculate pipewire aubio cava lm_sensors
+
+      - name: Configure shell
+        run: |
+          cmake -S shell -B shell/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/_install" \
+            -DINSTALL_QMLDIR=lib/qt6/qml \
+            -DINSTALL_LIBDIR=lib/caelestia \
+            -DINSTALL_QSCONFDIR=etc/xdg/quickshell/caelestia
+
+      - name: Build and install shell
+        run: |
+          cmake --build shell/build --parallel 2
+          cmake --install shell/build
+
+      - name: Validate installed QML modules
+        run: python3 .github/scripts/check_qml_deployment.py --qml-root _install/lib/qt6/qml --source-root shell
+
+      - name: Validate launch wrapper
+        run: bash -n src/bin/caelestia && test -s src/bin/caelestia
+
+  # ═══════════════════════════════════════════════════════════
   # Final PR gate
   # ═══════════════════════════════════════════════════════════
   pr-gate:
@@ -137,6 +200,8 @@ jobs:
       - branch-name
       - changed-files
       - commit-messages
+      - qml-compatibility
+      - shell-build
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -150,6 +215,8 @@ jobs:
           job_results[branch-name]="${{ needs.branch-name.result }}"
           job_results[changed-files]="${{ needs.changed-files.result }}"
           job_results[commit-messages]="${{ needs.commit-messages.result }}"
+          job_results[qml-compatibility]="${{ needs.qml-compatibility.result }}"
+          job_results[shell-build]="${{ needs.shell-build.result }}"
 
           all_passed=true
           for job in "${!job_results[@]}"; do

@@ -24,6 +24,12 @@
           "default": true
         },
         {
+          "id": "INSTALL_THUNAR",
+          "type": "boolean",
+          "title": "Thunar integration files",
+          "default": false
+        },
+        {
           "id": "INSTALL_KVANTUM",
           "type": "boolean",
           "title": "Kvantum theme engine",

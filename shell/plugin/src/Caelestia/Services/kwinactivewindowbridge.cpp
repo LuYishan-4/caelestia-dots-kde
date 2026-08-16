@@ -1,311 +1,26 @@
 #include "kwinactivewindowbridge.hpp"
-#include <QCoreApplication>
-#include <QDateTime>
-#include <QDebug>
-#include <QDir>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QProcess>
-#include <QTemporaryFile>
-#include <QTimer>
+#include "plasmawindows.hpp"
+#include "kwinworkspacestate.hpp"
+#include <QGuiApplication>
+#include <QScreen>
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusReply>
 
 namespace caelestia::services {
 
-namespace {
-
-// Window addresses are interpolated into double-quoted JS string literals in
-// the generated KWin scripts. They come from KWin's own internalId today, but
-// nothing enforces that, so escape them rather than trusting the source.
-QString escapeJsString(const QString& value) {
-    QString escaped = value;
-    escaped.replace('\\', QStringLiteral("\\\\"));
-    escaped.replace('"', QStringLiteral("\\\""));
-    escaped.replace('\n', QStringLiteral("\\n"));
-    escaped.replace('\r', QStringLiteral("\\r"));
-    return escaped;
-}
-
-} // namespace
-
-KWinActiveWindowBridgeAdaptor::KWinActiveWindowBridgeAdaptor(QObject* parent)
-    : QDBusAbstractAdaptor(parent) {}
-
-void KWinActiveWindowBridgeAdaptor::notifyActiveWindow(const QString& uuid, const QString& title,
-    const QString& appClass, const QString& activeOutputName, bool isFullscreen, bool isMaximized) {
-    if (auto* bridge = qobject_cast<KWinActiveWindowBridge*>(parent())) {
-        bridge->updateActiveWindow(uuid, title, appClass, activeOutputName, isFullscreen, isMaximized);
-    }
-}
-
-void KWinActiveWindowBridgeAdaptor::notifyWindowList(const QString& windowsJson) {
-    if (auto* bridge = qobject_cast<KWinActiveWindowBridge*>(parent())) {
-        bridge->updateWindowList(windowsJson);
-    }
-}
-
-void KWinActiveWindowBridgeAdaptor::notifyCurrentDesktop(int desktop) {
-    if (auto* bridge = qobject_cast<KWinActiveWindowBridge*>(parent())) {
-        bridge->updateCurrentDesktop(desktop);
-    }
-}
-
-// The single description of a window-list entry, shared by every path that
-// produces one.
-//
-// Both the persistent bridge script and the one-shot refresh replace the same
-// m_windowList wholesale, so a field present in only one of them silently
-// disappears from the shell's view whenever that path happens to run last —
-// which is exactly how the `output` field went missing and blinded the
-// per-monitor fullscreen check after a workspace switch. Interpolated into both
-// rather than restated, so they cannot drift again.
-static const QString kWindowListJs = R"js(
-function caelestiaDesktopIndex(w) {
-    if (!w.desktops || w.desktops.length === 0) return -1;
-    let d = w.desktops[0];
-    if (!d) return -1;
-    let allD = workspace.desktops;
-    if (!allD) return -1;
-    for (let j = 0; j < allD.length; ++j) {
-        if (allD[j].id === d.id || allD[j] === d) return j + 1;
-    }
-    return -1;
-}
-
-function caelestiaWindowEntry(w) {
-    return {
-        address: w.internalId ? String(w.internalId) : "",
-        pid: w.pid || 0,
-        title: w.caption || "",
-        class: w.resourceClass || "",
-        x: w.frameGeometry ? w.frameGeometry.x : (w.x || 0),
-        y: w.frameGeometry ? w.frameGeometry.y : (w.y || 0),
-        width: w.frameGeometry ? w.frameGeometry.width : (w.width || 0),
-        height: w.frameGeometry ? w.frameGeometry.height : (w.height || 0),
-        fullscreen: w.fullScreen ? true : false,
-        maximized: (w.maximizeMode === 3) ? true : false,
-        minimized: w.minimized ? true : false,
-        floating: !w.tile,
-        output: (w.output && w.output.name) ? w.output.name : "",
-        workspace: { id: caelestiaDesktopIndex(w) }
-    };
-}
-
-function caelestiaWindowList() {
-    let arr = [];
-    let wins = workspace.windowList();
-    if (!wins) return arr;
-    for (let i = 0; i < wins.length; ++i) {
-        try {
-            let w = wins[i];
-            if (!w.normalWindow) continue;
-            if (w.resourceClass === "quickshell") continue;
-            arr.push(caelestiaWindowEntry(w));
-        } catch (e) {
-            console.info("Caelestia: Error processing window: " + e);
-        }
-    }
-    return arr;
-}
-)js";
-
-static const QString kScriptSource = R"js(
-const BUS = "dev.caelestia.KWinActiveWindow";
-const PATH = "/dev/caelestia/KWinActiveWindow";
-const IFACE = "dev.caelestia.KWinActiveWindow";
-
-let currentActiveWindow = null;
-let lastActiveUuid = null;
-let lastFullscreen = null;
-let lastMaximized = null;
-let lastOut = null;
-let lastTitle = null;
-
-function notifyActiveWindowReal() {
-    let window = workspace.activeWindow;
-    let cursorScreen = workspace.screenAt(workspace.cursorPos);
-    let out = cursorScreen ? cursorScreen.name : "";
-    if (window && (window.resourceClass === "quickshell" || window.resourceClass === "plasmashell")) {
-        return; // Ignore shell panels taking focus
-    }
-    
-    if (!window) {
-        if (lastActiveUuid !== null) {
-            lastActiveUuid = null;
-            callDBus(BUS, PATH, IFACE, "notifyActiveWindow", "", "", "", out, false, false);
-        }
-        return;
-    }
-
-    let uuid = window.internalId ? String(window.internalId) : "";
-    let title = window.caption || "";
-    let appClass = window.resourceClass || "";
-    let isFullscreen = window.fullScreen ? true : false;
-    let isMaximized = (window.maximizeMode === 3) ? true : false;
-
-    if (lastActiveUuid === uuid && lastFullscreen === isFullscreen && lastMaximized === isMaximized && lastOut === out && lastTitle === title) {
-        return;
-    }
-
-    lastActiveUuid = uuid;
-    lastFullscreen = isFullscreen;
-    lastMaximized = isMaximized;
-    lastOut = out;
-    lastTitle = title;
-
-    callDBus(BUS, PATH, IFACE, "notifyActiveWindow", uuid, title, appClass, out, isFullscreen, isMaximized);
-}
-
-function onActiveWindowChanged() {
-    let window = workspace.activeWindow;
-    if (currentActiveWindow !== window) {
-        if (currentActiveWindow) {
-            try { currentActiveWindow.frameGeometryChanged.disconnect(notifyActiveWindowReal); } catch(e){}
-            try { currentActiveWindow.fullScreenChanged.disconnect(notifyActiveWindowReal); } catch(e){}
-            try { currentActiveWindow.maximizedChanged.disconnect(notifyActiveWindowReal); } catch(e){}
-        }
-        currentActiveWindow = window;
-        if (currentActiveWindow) {
-            try { currentActiveWindow.frameGeometryChanged.connect(notifyActiveWindowReal); } catch(e){}
-            try { currentActiveWindow.fullScreenChanged.connect(notifyActiveWindowReal); } catch(e){}
-            try { currentActiveWindow.maximizedChanged.connect(notifyActiveWindowReal); } catch(e){}
-        }
-    }
-    notifyActiveWindowReal();
-}
-
-function notifyWindowList() {
-    callDBus(BUS, PATH, IFACE, "notifyWindowList", JSON.stringify(caelestiaWindowList()));
-}
-
-workspace.windowActivated.connect(onActiveWindowChanged);
-
-function onWindowAdded(window) {
-    console.info("Caelestia: windowAdded fired");
-    try {
-        if (window && window.normalWindow) {
-            try { window.minimizedChanged.connect(notifyWindowList); } catch(e){}
-            try { window.desktopsChanged.connect(notifyWindowList); } catch(e){}
-            try { window.frameGeometryChanged.connect(notifyWindowList); } catch(e){}
-            // fullScreen/maximize changes update the fullscreen and floating
-            // fields in the window list entry, so the shell must be told
-            // whenever either property flips — without this the bar stays
-            // hidden after exiting fullscreen until the app is closed.
-            try { window.fullScreenChanged.connect(notifyWindowList); } catch(e){}
-            try { window.maximizedChanged.connect(notifyWindowList); } catch(e){}
-        }
-    } catch (e) {
-        console.info("Caelestia: Error in onWindowAdded: " + e);
-    }
-    notifyWindowList();
-}
-
-function onCurrentDesktopChanged() {
-    let curr = workspace.currentDesktop;
-    let idx = 1;
-    let d = workspace.desktops;
-    if (d) {
-        for (let i = 0; i < d.length; ++i) {
-            if (d[i].id === curr.id || d[i] === curr) {
-                idx = i + 1;
-                break;
-            }
-        }
-    }
-    callDBus(BUS, PATH, IFACE, "notifyCurrentDesktop", idx);
-}
-
-workspace.currentDesktopChanged.connect(onCurrentDesktopChanged);
-workspace.windowAdded.connect(onWindowAdded);
-workspace.windowRemoved.connect(function(w) {
-    console.info("Caelestia: windowRemoved fired");
-    notifyWindowList();
-});
-workspace.desktopsChanged.connect(notifyWindowList);
-
-// Initial push
-let initialWins = workspace.windowList();
-for (let i = 0; i < initialWins.length; ++i) {
-    try {
-        if (initialWins[i].normalWindow) {
-            try { initialWins[i].minimizedChanged.connect(notifyWindowList); } catch(e){}
-            try { initialWins[i].desktopsChanged.connect(notifyWindowList); } catch(e){}
-            try { initialWins[i].frameGeometryChanged.connect(notifyWindowList); } catch(e){}
-            try { initialWins[i].fullScreenChanged.connect(notifyWindowList); } catch(e){}
-            try { initialWins[i].maximizedChanged.connect(notifyWindowList); } catch(e){}
-        }
-    } catch (e) {
-        console.info("Caelestia: Error initializing window: " + e);
-    }
-}
-onActiveWindowChanged();
-notifyWindowList();
-if (workspace.currentDesktop) {
-    onCurrentDesktopChanged();
-}
-)js";
-
-KWinActiveWindowBridge::KWinActiveWindowBridge(QObject* parent)
+KWinActiveWindowBridge::KWinActiveWindowBridge(QObject *parent)
     : QObject(parent) {
-    new KWinActiveWindowBridgeAdaptor(this);
 
-    m_windowListDebounce = new QTimer(this);
-    m_windowListDebounce->setInterval(150); // Throttle geometry updates to ~6 fps to save QML CPU
-    m_windowListDebounce->setSingleShot(true);
-    connect(m_windowListDebounce, &QTimer::timeout, this, [this]() {
-        if (!m_pendingWindowListJson.isEmpty()) {
-            QJsonDocument doc = QJsonDocument::fromJson(m_pendingWindowListJson.toUtf8());
-            if (doc.isArray()) {
-                m_windowList = doc.array().toVariantList();
-                emit windowListChanged();
-            }
+    m_updateTimer.setSingleShot(true);
+    m_updateTimer.setInterval(50);
+    connect(&m_updateTimer, &QTimer::timeout, this, &KWinActiveWindowBridge::buildWindowList);
 
-            QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
-            QFile f(runtimeDir + "/qs_kwin_windows.json");
-            if (f.open(QIODevice::WriteOnly)) {
-                f.write(m_pendingWindowListJson.toUtf8());
-                f.close();
-            }
-            m_pendingWindowListJson.clear();
-        }
-    });
-
-    QDBusConnection bus = QDBusConnection::sessionBus();
-    bus.registerObject("/dev/caelestia/KWinActiveWindow", this,
-        QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals | QDBusConnection::ExportAllProperties |
-            QDBusConnection::ExportAdaptors);
-    bus.registerService("dev.caelestia.KWinActiveWindow");
-
-    // Clean up orphan KWin scripts from previous crashed sessions before
-    // injecting a fresh one, so duplicate D-Bus notifications don't pile up.
-    QDBusMessage listMsg =
-        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadedScripts");
-    QDBusReply<QStringList> listReply = bus.call(listMsg);
-    if (listReply.isValid()) {
-        for (const auto& name : listReply.value()) {
-            if (name.startsWith("caelestia-active-window-")) {
-                QDBusMessage unloadMsg = QDBusMessage::createMethodCall(
-                    "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript");
-                unloadMsg << name;
-                bus.call(unloadMsg, QDBus::NoBlock);
-            }
-        }
-    }
-
-    injectKWinScript();
+    auto* plasmaWindows = PlasmaWindows::instance();
+    connect(plasmaWindows, &PlasmaWindows::windowAdded, this, &KWinActiveWindowBridge::onWindowAdded);
+    connect(plasmaWindows, &PlasmaWindows::handleLost, this, &KWinActiveWindowBridge::onWindowLost);
 }
 
-KWinActiveWindowBridge::~KWinActiveWindowBridge() {
-    if (!m_scriptName.isEmpty()) {
-        QDBusMessage msg =
-            QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript");
-        msg << m_scriptName;
-        QDBusConnection::sessionBus().call(msg, QDBus::NoBlock);
-    }
-}
+KWinActiveWindowBridge::~KWinActiveWindowBridge() = default;
 
 QVariantMap KWinActiveWindowBridge::activeWindow() const {
     return m_activeWindow;
@@ -315,346 +30,204 @@ QString KWinActiveWindowBridge::activeOutputName() const {
     return m_activeOutputName;
 }
 
-void KWinActiveWindowBridge::setActiveOutputName(const QString& outputName) {
+void KWinActiveWindowBridge::setActiveOutputName(const QString &outputName) {
     if (m_activeOutputName != outputName) {
         m_activeOutputName = outputName;
-        emit activeWindowChanged();
-
-        QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
-        QFile f(runtimeDir + "/qs_kwin_active_output.txt");
-        if (f.open(QIODevice::WriteOnly)) {
-            f.write(outputName.toUtf8());
-            f.close();
-        }
+        emit activeOutputNameChanged();
     }
-}
-
-void KWinActiveWindowBridge::updateActiveWindow(const QString& uuid, const QString& title, const QString& appClass,
-    const QString& activeOutputName, bool isFullscreen, bool isMaximized) {
-    m_activeWindow = QVariantMap{ { "address", uuid }, { "title", title }, { "class", appClass },
-        { "fullscreen", isFullscreen }, { "maximized", isMaximized } };
-    if (m_activeOutputName != activeOutputName) {
-        m_activeOutputName = activeOutputName;
-        QString runtimeDir = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
-        QFile f(runtimeDir + "/qs_kwin_active_output.txt");
-        if (f.open(QIODevice::WriteOnly)) {
-            f.write(activeOutputName.toUtf8());
-            f.close();
-        }
-    }
-    emit activeWindowChanged();
 }
 
 QVariantList KWinActiveWindowBridge::windowList() const {
     return m_windowList;
 }
 
-int KWinActiveWindowBridge::currentDesktop() const {
-    return m_currentDesktop;
-}
-
-void KWinActiveWindowBridge::updateCurrentDesktop(int desktop) {
-    if (m_currentDesktop != desktop) {
-        m_currentDesktop = desktop;
-        emit currentDesktopChanged();
+void KWinActiveWindowBridge::onWindowAdded(const QString& uuid) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(uuid)) {
+        connect(handle, &PlasmaWindowHandle::titleChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
+        connect(handle, &PlasmaWindowHandle::appIdChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
+        connect(handle, &PlasmaWindowHandle::geometryChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
+        connect(handle, &PlasmaWindowHandle::stateChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
+        connect(handle, &PlasmaWindowHandle::desktopsChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
+        scheduleWindowListUpdate();
     }
 }
 
-void KWinActiveWindowBridge::executeKWinScriptAction(const QString& scriptBody) {
-    QString scriptName = "caelestia-kwin-action-" + QString::number(QCoreApplication::applicationPid()) + "-" +
-                         QString::number(QDateTime::currentMSecsSinceEpoch());
-    QString fileName = QDir::tempPath() + "/" + scriptName + ".js";
-    QFile tempFile(fileName);
-    if (!tempFile.open(QIODevice::WriteOnly)) {
-        return;
+void KWinActiveWindowBridge::onWindowLost(const QString& uuid) {
+    Q_UNUSED(uuid);
+    scheduleWindowListUpdate();
+}
+
+void KWinActiveWindowBridge::scheduleWindowListUpdate() {
+    if (!m_updateTimer.isActive()) {
+        m_updateTimer.start();
     }
-    tempFile.write(scriptBody.toUtf8());
-    tempFile.close();
+}
 
-    QDBusConnection bus = QDBusConnection::sessionBus();
-    QDBusMessage loadMsg =
-        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadScript");
-    loadMsg << fileName << scriptName;
-    QDBusReply<int> reply = bus.call(loadMsg);
+QString KWinActiveWindowBridge::getOutputNameForGeometry(int x, int y, int w, int h) const {
+    QRect windowRect(x, y, w, h);
+    int maxIntersectArea = 0;
+    QString bestScreenName = "";
 
-    if (reply.isValid()) {
-        int scriptId = reply.value();
-        QDBusMessage runMsg = QDBusMessage::createMethodCall(
-            "org.kde.KWin", QString("/Scripting/Script%1").arg(scriptId), "org.kde.kwin.Script", "run");
-        bus.call(runMsg);
-
-        QDBusMessage unloadMsg =
-            QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "unloadScript");
-        unloadMsg << scriptName;
-        bus.call(unloadMsg, QDBus::NoBlock);
-    } else {
-        qWarning() << "Failed to load script:" << reply.error().message();
+    for (QScreen* screen : QGuiApplication::screens()) {
+        QRect intersect = screen->geometry().intersected(windowRect);
+        int area = intersect.width() * intersect.height();
+        if (area > maxIntersectArea) {
+            maxIntersectArea = area;
+            bestScreenName = screen->name();
+        }
     }
 
-    QFile::remove(fileName);
+    return bestScreenName;
 }
 
-void KWinActiveWindowBridge::runArbitraryScript(const QString& script) {
-    executeKWinScriptAction(script);
-}
-
-void KWinActiveWindowBridge::focusWindow(const QString& address) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                wins[i].minimized = false;
-                workspace.activeWindow = wins[i];
-                break;
+QVariantMap KWinActiveWindowBridge::windowToVariant(PlasmaWindowHandle* w) const {
+    QVariant desktopId = -1;
+    QVariant desktopUuid = "";
+    if (!w->desktops().isEmpty()) {
+        QString firstDesktop = w->desktops().first();
+        bool ok;
+        int parsed = firstDesktop.toInt(&ok);
+        if (ok) {
+            desktopId = parsed;
+            desktopUuid = firstDesktop;
+        } else {
+            // Plasma 6 uses UUIDs for desktops. Pass the UUID string directly to QML.
+            desktopUuid = firstDesktop;
+            if (auto wsState = KWinWorkspaceState::instance()) {
+                int idx = wsState->indexForId(firstDesktop);
+                if (idx != -1) desktopId = idx;
             }
         }
-    )")
-                         .arg(escapeJsString(address));
-    executeKWinScriptAction(script);
+    }
+
+    QVariantMap map = {
+        {"address", w->uuid()},
+        {"pid", w->pid()},
+        {"title", w->title()},
+        {"class", w->appId()},
+        {"x", w->x()},
+        {"y", w->y()},
+        {"width", w->width()},
+        {"height", w->height()},
+        {"fullscreen", w->isFullscreen()},
+        {"maximized", w->isMaximized()},
+        {"minimized", w->isMinimized()},
+        {"focused", w->isActive()},
+        {"floating", !w->isFullscreen() && !w->isMaximized()}, // Fallback for floating state
+        {"output", getOutputNameForGeometry(w->x(), w->y(), w->width(), w->height())},
+        {"workspace", QVariantMap{{"id", desktopId}, {"uuid", desktopUuid}}}
+    };
+    return map;
 }
 
-void KWinActiveWindowBridge::closeWindow(const QString& address) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                wins[i].closeWindow();
-                break;
+void KWinActiveWindowBridge::buildWindowList() {
+    m_windowList.clear();
+    QVariantMap newActiveWindow;
+    bool activeWindowFound = false;
+
+    auto* plasmaWindows = PlasmaWindows::instance();
+// qDebug() << "KWinActiveWindowBridge::buildWindowList called, total UUIDs:" << plasmaWindows->windowUuids().size();
+    for (const QString& uuid : plasmaWindows->windowUuids()) {
+        if (auto* handle = plasmaWindows->handleFor(uuid)) {
+            QVariantMap w = windowToVariant(handle);
+            m_windowList.append(w);
+            if (handle->isActive()) {
+                newActiveWindow = w;
+                activeWindowFound = true;
             }
+        } else {
+// qDebug() << "KWinActiveWindowBridge: handleFor returned nullptr for uuid" << uuid;
         }
-    )")
-                         .arg(escapeJsString(address));
-    executeKWinScriptAction(script);
+    }
+
+// qDebug() << "KWinActiveWindowBridge: Emitting windowListChanged with" << m_windowList.size() << "windows.";
+    emit windowListChanged();
+
+    if (activeWindowFound && m_activeWindow != newActiveWindow) {
+        m_activeWindow = newActiveWindow;
+        emit activeWindowChanged();
+    } else if (!activeWindowFound && !m_activeWindow.isEmpty()) {
+        m_activeWindow.clear();
+        emit activeWindowChanged();
+    }
 }
 
-void KWinActiveWindowBridge::minimizeWindow(const QString& address) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                wins[i].minimized = true;
-                break;
-            }
-        }
-    )")
-                         .arg(escapeJsString(address));
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::focusWindow(const QString &address) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        // To focus a window, we set the active state
+        handle->set_state(QtWayland::org_kde_plasma_window_management::state_active, QtWayland::org_kde_plasma_window_management::state_active);
+    }
 }
 
-void KWinActiveWindowBridge::maximizeWindow(const QString& address, bool horz, bool vert) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                wins[i].setMaximize(%2, %3);
-                break;
-            }
-        }
-    )")
-                         .arg(escapeJsString(address), vert ? QStringLiteral("true") : QStringLiteral("false"),
-                             horz ? QStringLiteral("true") : QStringLiteral("false"));
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::closeWindow(const QString &address) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        handle->close();
+    }
 }
 
-void KWinActiveWindowBridge::raiseWindow(const QString& address) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                workspace.raiseWindow(wins[i]);
-                break;
-            }
-        }
-    )")
-                         .arg(escapeJsString(address));
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::minimizeWindow(const QString &address) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        handle->set_state(QtWayland::org_kde_plasma_window_management::state_minimized, QtWayland::org_kde_plasma_window_management::state_minimized);
+    }
 }
 
-void KWinActiveWindowBridge::moveWindow(const QString& address, int x, int y) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                let q = Object.assign({}, wins[i].frameGeometry);
-                q.x = %2;
-                q.y = %3;
-                wins[i].frameGeometry = q;
-                break;
-            }
-        }
-    )")
-                         .arg(escapeJsString(address), QString::number(x), QString::number(y));
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::maximizeWindow(const QString &address, bool horz, bool vert) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        handle->set_state(QtWayland::org_kde_plasma_window_management::state_maximized, QtWayland::org_kde_plasma_window_management::state_maximized);
+    }
 }
 
-void KWinActiveWindowBridge::resizeWindow(const QString& address, int width, int height) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                let q = Object.assign({}, wins[i].frameGeometry);
-                q.width = %2;
-                q.height = %3;
-                wins[i].frameGeometry = q;
-                break;
-            }
-        }
-    )")
-                         .arg(escapeJsString(address), QString::number(width), QString::number(height));
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::raiseWindow(const QString &address) {
+    focusWindow(address);
 }
 
-void KWinActiveWindowBridge::setWindowProperty(const QString& address, const QString& property, bool enable) {
-    QString kwinProp;
-    if (property == "above")
-        kwinProp = "keepAbove";
-    else if (property == "below")
-        kwinProp = "keepBelow";
-    else if (property == "skip_taskbar")
-        kwinProp = "skipTaskbar";
-    else if (property == "skip_pager")
-        kwinProp = "skipPager";
-    else if (property == "fullscreen")
-        kwinProp = "fullScreen";
-    else if (property == "shaded")
-        kwinProp = "shade";
-    else if (property == "demands_attention")
-        kwinProp = "demandsAttention";
-    else if (property == "no_border")
-        kwinProp = "noBorder";
-    else if (property == "minimized")
-        kwinProp = "minimized";
-    else
-        return;
+void KWinActiveWindowBridge::setWindowProperty(const QString &address, const QString &property, bool enable) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        uint32_t state = 0;
+        if (property == "keep_above") state = QtWayland::org_kde_plasma_window_management::state_keep_above;
+        else if (property == "keep_below") state = QtWayland::org_kde_plasma_window_management::state_keep_below;
+        else if (property == "skip_taskbar") state = QtWayland::org_kde_plasma_window_management::state_skiptaskbar;
+        else if (property == "demands_attention") state = QtWayland::org_kde_plasma_window_management::state_demands_attention;
 
-    QString script =
-        QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                wins[i].%2 = %3;
-                break;
-            }
+        if (state != 0) {
+            handle->set_state(enable ? state : 0, state);
         }
-    )")
-            .arg(escapeJsString(address), kwinProp, enable ? QStringLiteral("true") : QStringLiteral("false"));
-    executeKWinScriptAction(script);
+    }
 }
 
-void KWinActiveWindowBridge::setWindowDesktop(const QString& address, int desktopId) {
-    QString script = QString(R"(
-        let wins = workspace.windowList();
-        for (let i = 0; i < wins.length; ++i) {
-            if (wins[i].internalId && String(wins[i].internalId) === "%1") {
-                let id = %2;
-                if (id == -1) {
-                    wins[i].desktops = [workspace.currentDesktop];
-                } else if (id == -2) {
-                    wins[i].onAllDesktops = true;
-                } else {
-                    let dList = workspace.desktops;
-                    let idx = id - 1;
-                    if (dList && idx >= 0 && idx < dList.length) {
-                        wins[i].desktops = [dList[idx]];
+void KWinActiveWindowBridge::setWindowDesktop(const QString &address, int desktopId) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        if (auto wsState = KWinWorkspaceState::instance()) {
+            QString uuid = wsState->uuidForIndex(desktopId);
+            if (!uuid.isEmpty()) {
+                QStringList currentDesktops = handle->desktops();
+                for (const QString& oldUuid : currentDesktops) {
+                    if (oldUuid != uuid) {
+                        handle->request_leave_virtual_desktop(oldUuid);
                     }
                 }
-                break;
+                handle->request_enter_virtual_desktop(uuid);
             }
         }
-    )")
-                         .arg(escapeJsString(address), QString::number(desktopId));
-    executeKWinScriptAction(script);
+    }
 }
 
-void KWinActiveWindowBridge::setDesktop(int desktopId) {
-    QString script = QString(R"(
-        let d = workspace.desktops;
-        let idx = %1 - 1;
-        if (d && idx >= 0 && idx < d.length) {
-            workspace.currentDesktop = d[idx];
-        }
-    )")
-                         .arg(desktopId);
-    executeKWinScriptAction(script);
+void KWinActiveWindowBridge::setFullscreen(const QString& address, bool fullscreen) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        handle->set_state(fullscreen ? QtWayland::org_kde_plasma_window_management::state_fullscreen : 0, QtWayland::org_kde_plasma_window_management::state_fullscreen);
+    }
 }
+
+void KWinActiveWindowBridge::setMaximized(const QString& address, bool maximized) {
+    if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        handle->set_state(maximized ? QtWayland::org_kde_plasma_window_management::state_maximized : 0, QtWayland::org_kde_plasma_window_management::state_maximized);
+    }
+}
+
+
 
 void KWinActiveWindowBridge::refreshWindows() {
-    QString script = kWindowListJs + R"(
-        callDBus("dev.caelestia.KWinActiveWindow", "/dev/caelestia/KWinActiveWindow", "dev.caelestia.KWinActiveWindow", "notifyWindowList", JSON.stringify(caelestiaWindowList()));
-    )";
-    executeKWinScriptAction(script);
-}
-
-void KWinActiveWindowBridge::nextDesktop() {
-    QString script = QString(R"(
-        let curr = workspace.currentDesktop;
-        let d = workspace.desktops;
-        for (let i = 0; i < d.length; ++i) {
-            if (d[i] === curr) {
-                let nextIdx = (i + 1) % d.length;
-                workspace.currentDesktop = d[nextIdx];
-                break;
-            }
-        }
-    )");
-    executeKWinScriptAction(script);
-}
-
-void KWinActiveWindowBridge::previousDesktop() {
-    QString script = QString(R"(
-        let curr = workspace.currentDesktop;
-        let d = workspace.desktops;
-        for (let i = 0; i < d.length; ++i) {
-            if (d[i] === curr) {
-                let prevIdx = (i - 1 + d.length) % d.length;
-                workspace.currentDesktop = d[prevIdx];
-                break;
-            }
-        }
-    )");
-    executeKWinScriptAction(script);
-}
-
-void KWinActiveWindowBridge::updateWindowList(const QString& windowsJson) {
-    m_pendingWindowListJson = windowsJson;
-    if (!m_windowListDebounce->isActive()) {
-        m_windowListDebounce->start();
-    }
-}
-
-void KWinActiveWindowBridge::injectKWinScript() {
-    m_scriptName = "caelestia-active-window-" + QString::number(QCoreApplication::applicationPid()) + "-" +
-                   QString::number(QDateTime::currentMSecsSinceEpoch());
-
-    QTemporaryFile f(QDir::tempPath() + "/caelestia-kwin-bridge-XXXXXX.js");
-    f.setAutoRemove(false);
-    if (!f.open()) {
-        qWarning() << "Failed to create temporary file for KWin bridge script";
-        return;
-    }
-    f.write((kWindowListJs + kScriptSource).toUtf8());
-    f.close();
-    const QString scriptPath = f.fileName();
-
-    QDBusConnection bus = QDBusConnection::sessionBus();
-
-    QDBusMessage loadMsg =
-        QDBusMessage::createMethodCall("org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", "loadScript");
-    loadMsg << scriptPath << m_scriptName;
-
-    QDBusReply<int> reply = bus.call(loadMsg);
-    if (reply.isValid()) {
-        int scriptId = reply.value();
-        QDBusMessage runMsg = QDBusMessage::createMethodCall(
-            "org.kde.KWin", QString("/Scripting/Script%1").arg(scriptId), "org.kde.kwin.Script", "run");
-        bus.call(runMsg);
-    } else {
-        qWarning() << "Failed to inject KWin active window script:" << reply.error().message();
-    }
-
-    // KWin has loaded the script into its own JS engine; the temp file on disk
-    // is no longer needed.
-    QFile::remove(scriptPath);
+    scheduleWindowListUpdate();
 }
 
 } // namespace caelestia::services

@@ -98,6 +98,7 @@ GridLayout {
             property bool wasPositionActive: false
             property int lastKnownWs: -1
             property int prevActiveWsId: -1
+            property bool hasRandomShape: false
 
             // Track the previous workspace at this position (before current change)
             property int prevWs: -1
@@ -108,25 +109,46 @@ GridLayout {
             // Track the last watched ws separately for detecting changes
             property int lastWatchedWs: -1
 
+            property int swipeStartWsId: -1
+            property bool generatedShapeThisSwipe: false
+
+            property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+            property real lastRawSwipeOffset: 0.0
+            property bool isSwiping: false
+
+            readonly property real swipeWeight: {
+                if (!isSwiping || rawSwipeOffset === 0.0) return active ? 1.0 : 0.0;
+                
+                // Use swipeStartWsId to prevent KWin desyncs when activeWsId changes before rawSwipeOffset resets
+                const startId = swipeStartWsId !== -1 ? swipeStartWsId : root.activeWsId;
+                const activeIdx = startId - 1;
+                const targetIdx = rawSwipeOffset > 0 ? activeIdx + 1 : activeIdx - 1;
+                const t = Math.abs(rawSwipeOffset);
+                const myIdx = root.ws - 1;
+                if (myIdx === activeIdx) return 1.0 - t;
+                if (myIdx === targetIdx) return t;
+                return 0.0;
+            }
+
+            property real smoothSwipeWeight: swipeWeight
+
             // JavaScript functions
             function handleActivation() {
                 const wsChanged = lastKnownWs !== root.ws;
                 if (active && (!wasPositionActive || wsChanged)) {
-                    const shapes = [MaterialShape.Slanted, MaterialShape.Arch, MaterialShape.Oval, MaterialShape.Pill, MaterialShape.Triangle, MaterialShape.Arrow, MaterialShape.Diamond, MaterialShape.Pentagon, MaterialShape.Gem, MaterialShape.VerySunny, MaterialShape.Sunny, MaterialShape.Cookie4Sided, MaterialShape.Cookie6Sided, MaterialShape.Cookie7Sided, MaterialShape.Cookie9Sided, MaterialShape.Cookie12Sided, MaterialShape.Clover4Leaf, MaterialShape.Clover8Leaf, MaterialShape.SoftBurst, MaterialShape.Ghostish];
-                    const shuffled = [...shapes].sort(() => Math.random() - 0.5);
-                    randShape = shuffled[0];
-                    wsShape.shape = randShape;
-                    wsShape.scale = 1 / 3;
-                    deactivateAnim.stop();
-                    activateAnim.fromValue = 1 / 3;
-                    activateAnim.toValue = 2 / 3;
-                    activateAnim.running = true;
+                    if (!hasRandomShape) {
+                        const shapes = [MaterialShape.Slanted, MaterialShape.Arch, MaterialShape.Oval, MaterialShape.Pill, MaterialShape.Triangle, MaterialShape.Arrow, MaterialShape.Diamond, MaterialShape.Pentagon, MaterialShape.Gem, MaterialShape.VerySunny, MaterialShape.Sunny, MaterialShape.Cookie4Sided, MaterialShape.Cookie6Sided, MaterialShape.Cookie7Sided, MaterialShape.Cookie9Sided, MaterialShape.Cookie12Sided, MaterialShape.Clover4Leaf, MaterialShape.Clover8Leaf, MaterialShape.SoftBurst, MaterialShape.Ghostish];
+                        const shuffled = [...shapes].sort(() => Math.random() - 0.5);
+                        randShape = shuffled[0];
+                        wsShape.shape = randShape;
+                        hasRandomShape = true;
+                    }
                 } else if (!active && (wasPositionActive || wsChanged)) {
-                    const targetShape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
-                    wsShape.shape = targetShape;
-                    wsShape.scale = 1 / 3;
-                    activateAnim.stop();
-                    deactivateAnim.stop();
+                    if (!isSwiping) {
+                        const targetShape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        wsShape.shape = targetShape;
+                        hasRandomShape = false;
+                    }
                 }
                 wasPositionActive = active;
                 prevWs = lastKnownWs;
@@ -134,13 +156,53 @@ GridLayout {
                 prevActiveWsId = root.activeWsId;
             }
 
+            implicitWidth: barThickness - Tokens.padding.small
+            implicitHeight: barThickness - Tokens.padding.small
+
             // Signal handlers
+            onRawSwipeOffsetChanged: {
+                if (rawSwipeOffset !== 0.0) {
+                    if (lastRawSwipeOffset === 0.0) {
+                        swipeStartWsId = root.activeWsId;
+                    }
+                    isSwiping = true;
+                    swipeSettleTimer.stop();
+                } else {
+                    swipeSettleTimer.restart();
+                }
+                lastRawSwipeOffset = rawSwipeOffset;
+            }
+
+            onIsSwipingChanged: {
+                if (!isSwiping) {
+                    generatedShapeThisSwipe = false;
+                }
+            }
+
+            onSmoothSwipeWeightChanged: {
+                if (isSwiping) {
+                    if (smoothSwipeWeight >= 0.05 && !hasRandomShape) {
+                        if (!generatedShapeThisSwipe && !active) {
+                            const shapes = [MaterialShape.Slanted, MaterialShape.Arch, MaterialShape.Oval, MaterialShape.Pill, MaterialShape.Triangle, MaterialShape.Arrow, MaterialShape.Diamond, MaterialShape.Pentagon, MaterialShape.Gem, MaterialShape.VerySunny, MaterialShape.Sunny, MaterialShape.Cookie4Sided, MaterialShape.Cookie6Sided, MaterialShape.Cookie7Sided, MaterialShape.Cookie9Sided, MaterialShape.Cookie12Sided, MaterialShape.Clover4Leaf, MaterialShape.Clover8Leaf, MaterialShape.SoftBurst, MaterialShape.Ghostish];
+                            const shuffled = [...shapes].sort(() => Math.random() - 0.5);
+                            randShape = shuffled[0];
+                            generatedShapeThisSwipe = true;
+                        }
+                        wsShape.shape = randShape;
+                        hasRandomShape = true;
+                    } else if (smoothSwipeWeight < 0.05 && hasRandomShape) {
+                        wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        hasRandomShape = false;
+                    }
+                }
+            }
+
             onWatchedWsChanged: {
                 if (lastWatchedWs !== -1 && watchedWs !== lastWatchedWs && !active) {
-                    activateAnim.stop();
-                    deactivateAnim.stop();
-                    wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
-                    wsShape.scale = 1 / 3;
+                    if (!isSwiping) {
+                        wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        hasRandomShape = false;
+                    }
                 }
                 lastWatchedWs = watchedWs;
             }
@@ -153,22 +215,39 @@ GridLayout {
 
             onActiveChanged: handleActivation()
 
-            // Bindings
-            implicitWidth: barThickness - Tokens.padding.small
-            implicitHeight: barThickness - Tokens.padding.small
-
             // Initialize state when component is created
             Component.onCompleted: {
                 if (active) {
                     handleActivation();
                 } else {
                     wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                    hasRandomShape = false;
                 }
                 wasPositionActive = active;
                 prevWs = -1;
                 lastKnownWs = root.ws;
                 prevActiveWsId = root.activeWsId;
                 lastWatchedWs = root.ws;
+            }
+
+            Timer {
+                id: swipeSettleTimer
+
+                interval: 120
+                repeat: false
+                onTriggered: {
+                    iconRoot.isSwiping = false;
+                    if (!iconRoot.active) {
+                        wsShape.shape = root.isOccupied ? MaterialShape.Square : MaterialShape.Circle;
+                        hasRandomShape = false;
+                    }
+                }
+            }
+
+            Behavior on smoothSwipeWeight {
+                enabled: iconRoot.isSwiping
+
+                SmoothedAnimation { velocity: -1; duration: 60; easing.type: Easing.Linear }
             }
 
             MaterialShape {
@@ -178,47 +257,25 @@ GridLayout {
                 implicitSize: iconRoot.width
                 width: implicitWidth
                 height: implicitHeight
-                scale: iconRoot.active ? 2 / 3 : 1 / 3
-                color: Config.bar.workspaces.occupiedBg || root.isOccupied || root.activeWsId === root.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
+                scale: {
+                    if (iconRoot.isSwiping) {
+                        return (1 / 3) + (iconRoot.smoothSwipeWeight * (1 / 3));
+                    }
+                    return iconRoot.active ? 2 / 3 : 1 / 3;
+                }
+                color: {
+                    const isActiveVisual = iconRoot.isSwiping ? (iconRoot.smoothSwipeWeight >= 0.8) : iconRoot.active;
+                    return Config.bar.workspaces.occupiedBg || root.isOccupied || isActiveVisual ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2);
+                }
 
                 Behavior on color {
                     CAnim {}
                 }
 
                 Behavior on scale {
-                    enabled: !activateAnim.running && !deactivateAnim.running
+                    enabled: !iconRoot.isSwiping
 
                     Anim {
-                        type: Anim.DefaultEffects
-                    }
-                }
-
-                SequentialAnimation {
-                    id: activateAnim
-
-                    property real fromValue: 1 / 3
-                    property real toValue: 2 / 3
-
-                    Anim {
-                        target: wsShape
-                        property: "scale"
-                        from: activateAnim.fromValue
-                        to: activateAnim.toValue
-                        type: Anim.FastSpatial
-                    }
-                }
-
-                SequentialAnimation {
-                    id: deactivateAnim
-
-                    property real fromValue: 2 / 3
-                    property real toValue: 1 / 3
-
-                    Anim {
-                        target: wsShape
-                        property: "scale"
-                        from: deactivateAnim.fromValue
-                        to: deactivateAnim.toValue
                         type: Anim.FastSpatial
                     }
                 }

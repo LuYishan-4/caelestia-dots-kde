@@ -47,6 +47,11 @@ PageBase {
             target: Nmcli
         }
 
+        SectionHeader {
+            first: true
+            text: qsTr("Wi-Fi")
+        }
+
         ToggleRow {
             first: true
             text: qsTr("Wi-Fi")
@@ -200,6 +205,10 @@ PageBase {
             }
         }
 
+        SectionHeader {
+            text: qsTr("VPN")
+        }
+
         ItemList {
             id: vpnList
 
@@ -321,37 +330,6 @@ PageBase {
                             }
                         }
                     }
-                }
-            }
-        }
-
-        ConnectedRect {
-            Layout.fillWidth: true
-            implicitHeight: addNetworkLayout.implicitHeight + addNetworkLayout.anchors.margins * 2
-            last: true
-
-            StateLayer {}
-
-            RowLayout {
-                id: addNetworkLayout
-
-                anchors.fill: parent
-                anchors.margins: Tokens.padding.medium
-                anchors.leftMargin: Tokens.padding.largeIncreased
-                anchors.rightMargin: Tokens.padding.largeIncreased
-
-                spacing: Tokens.spacing.medium
-
-                MaterialIcon {
-                    text: "add"
-                    fontStyle: Tokens.font.icon.medium
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: qsTr("Add network")
-                    font: Tokens.font.body.small
-                    elide: Text.ElideRight
                 }
             }
         }

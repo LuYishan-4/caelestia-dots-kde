@@ -229,17 +229,17 @@ journalctl --user -u kde-material-you-colors.service -n 50
 | Symptom | Cause |
 |---|---|
 | Recording appears stuck | `gpu-screen-recorder` not installed or not in PATH |
-| Portal dialog doesn't appear | The build script patches `record.py` to restart `plasma-xdg-desktop-portal-kde`. If it doesn't restart in time, the target selector won't show. |
-| OpenCV linking errors | Symlinks like `libopencv_core.so.413 → libopencv_core.so.5.0.0` break when OpenCV updates. |
+| Portal dialog doesn't appear | The `caelestia-record` wrapper restarts `plasma-xdg-desktop-portal-kde` and `xdg-desktop-portal` before launching `gpu-screen-recorder`. If the portal still doesn't appear, restart them manually: `systemctl --user restart plasma-xdg-desktop-portal-kde xdg-desktop-portal`. |
+| Recording doesn't start | `caelestia-record` wraps `gpu-screen-recorder` directly with KDE-specific monitor detection (via `kscreen-doctor`) and portal management. No Python/OpenCV dependency. |
 
 The recorder now verifies both `pidof gpu-screen-recorder` AND that `recording.mp4` exists, preventing false positives from stale PID matches.
 
 ### 3.6 Screenshot Issues
 
-The screenshot tool was patched to use `spectacle` (KDE) instead of `grim` (wlroots).
+The screenshot tool uses `spectacle` (KDE's native screenshot utility) via the `caelestia-screenshot` wrapper.
 
 - If `spectacle` isn't installed, screenshots silently fail
-- Screenshots are written to `/tmp/qs-screenshot.png` — if `/tmp` is cleaned during the session, this may fail
+- Full-screen screenshots save to `~/Pictures/Screenshots/` by default
 
 ---
 
@@ -349,10 +349,11 @@ bash scripts/09-system-tweaks.sh
 
 ### 6.1 Pacman Mirror Ranking Fails
 
-The installer uses `reflector` to rank mirrors. Failure modes:
-- **Offline:** `curl -fsSL https://ipapi.co/country_name/` fails → falls back to global pool
-- **reflector not installed:** Auto-installed via `pacman -Sy reflector`. If that fails, ranking is skipped
-- **cachyos-rate-mirrors:** CachyOS-specific; if it fails, existing mirrors are kept
+On CachyOS, the installer uses the native `cachyos-rate-mirrors` command, which ranks both Arch and CachyOS repositories. Other Arch-based systems use `reflector` as a fallback. Fedora refreshes its configured DNF metadata and Debian-based systems refresh their configured APT indexes; neither needs mirror-list rewriting during installation. Failure modes:
+- **Offline:** Mirror ranking fails and the existing mirror lists are kept
+- **cachyos-rate-mirrors unavailable:** CachyOS mirror ranking is skipped and the existing mirror lists are kept
+- **reflector not installed:** On non-Cachy Arch systems, it is auto-installed via `pacman -Sy reflector`; if that fails, ranking is skipped
+- **DNF or APT refresh fails:** Fedora/Debian package installation continues and reports the package-manager error later if the configured sources remain unavailable
 
 ### 6.2 Git / Submodule Failures
 

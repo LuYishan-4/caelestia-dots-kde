@@ -222,8 +222,8 @@ Item {
     // If cursor is in the default corner, flip to opposite. On close, keep the flip until
     // the next fresh arrival re-evaluates — this prevents a flicker during dismiss animation.
     Connections {
-        function onPopupsChanged() {
-            const len = Notifs.popups.length;
+        function onPopupCountChanged() {
+            const len = Notifs.popupCount;
             // Only act on 0 → 1 transition (fresh batch arrival)
             if (len > 0 && root._prevPopupCount === 0 && GlobalConfig.notifs.position === "auto") {
                 const defV = Config.bar.position === "bottom" ? "bottom" : "top";

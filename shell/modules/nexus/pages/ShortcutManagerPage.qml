@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Caelestia.Config
 import Caelestia.Services
 import qs.components
+import qs.components.controls
 import qs.utils
 import qs.modules.nexus.common
 
@@ -20,6 +21,18 @@ PageBase {
     property var workspaceShortcuts: []
 
     property var tilingShortcuts: []
+    property string shortcutQuery
+
+    function matchesShortcut(item: var): bool {
+        const query = root.shortcutQuery.trim().toLowerCase();
+        if (!query)
+            return true;
+
+        const searchable = [item.name, item.description, item.bind]
+            .map(value => String(value ?? "").toLowerCase())
+            .join(" ");
+        return searchable.includes(query);
+    }
 
     function updateLists() {
         let all = KeybindsModel.query("")
@@ -34,6 +47,8 @@ PageBase {
 
         for (let i = 0; i < all.length; i++) {
             let item = all[i]
+            if (!root.matchesShortcut(item))
+                continue;
             if (item.name.match(shellRegex)) {
                 shell.push(item)
             } else if (item.name.match(workspaceRegex)) {
@@ -55,6 +70,8 @@ PageBase {
         workspaceShortcuts = workspaces
         tilingShortcuts = tiling
     }
+
+    onShortcutQueryChanged: updateLists()
 
     function openCaptureDialog(name: string, currentKey: string, targetItem: var) {
         dialogLoader.active = true
@@ -97,14 +114,56 @@ PageBase {
             }
         }
 
-        SectionHeader {
-            first: true
-            text: qsTr("Shell UI")
+        StyledRect {
+            Layout.fillWidth: true
+            implicitHeight: searchLayout.implicitHeight + Tokens.padding.medium * 2
+            radius: Tokens.rounding.full
+            color: Colours.tPalette.m3surfaceContainerLowest
+            border.color: Colours.palette.m3outlineVariant
+
+            RowLayout {
+                id: searchLayout
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.small
+
+                MaterialIcon {
+                    text: "search"
+                    color: Colours.palette.m3onSurfaceVariant
+                    fontStyle: Tokens.font.icon.medium
+                }
+
+                StyledTextField {
+                    id: searchField
+
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Search shortcuts")
+                    color: Colours.palette.m3onSurface
+                    font: Tokens.font.body.medium
+                    onTextChanged: root.shortcutQuery = text
+                }
+
+                IconButton {
+                    visible: searchField.text.length > 0
+                    icon: "close"
+                    font: Tokens.font.icon.medium
+                    type: IconButton.Text
+                    padding: Tokens.padding.extraSmall
+                    isRound: true
+                    onClicked: searchField.clear()
+                }
+            }
         }
 
         SectionHeader {
-            text: qsTr("Hover the indicator to identify the affected app")
+            first: true
+            text: qsTr("Shell UI")
+            visible: root.shellShortcuts.length > 0
         }
+
         Repeater {
             model: root.shellShortcuts
             delegate: ShortcutRow {
@@ -126,7 +185,9 @@ PageBase {
         }
 
         SectionHeader {
+            first: root.shellShortcuts.length === 0
             text: qsTr("Applications")
+            visible: root.appShortcuts.length > 0
         }
 
         Repeater {
@@ -149,7 +210,9 @@ PageBase {
         }
 
         SectionHeader {
+            first: root.shellShortcuts.length === 0 && root.appShortcuts.length === 0
             text: qsTr("Workspaces")
+            visible: root.workspaceShortcuts.length > 0
         }
 
         Repeater {
@@ -172,8 +235,9 @@ PageBase {
         }
 
         SectionHeader {
+            first: root.shellShortcuts.length === 0 && root.appShortcuts.length === 0 && root.workspaceShortcuts.length === 0
             text: qsTr("Window Tiling (Krohnkite)")
-            visible: Config.general.krohnkiteEnabled
+            visible: Config.general.krohnkiteEnabled && root.tilingShortcuts.length > 0
         }
 
         Repeater {
@@ -193,6 +257,20 @@ PageBase {
                 onKeybindEdited: (newKey) => KeybindsModel.setKey(modelData.name, newKey)
                 onResetClicked: KeybindsModel.resetKey(modelData.name)
             }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.large
+            visible: root.shortcutQuery.length > 0
+                     && root.shellShortcuts.length === 0
+                     && root.appShortcuts.length === 0
+                     && root.workspaceShortcuts.length === 0
+                     && root.tilingShortcuts.length === 0
+            text: qsTr("No shortcuts found")
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.body.medium
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 }

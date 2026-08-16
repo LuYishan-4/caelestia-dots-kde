@@ -22,9 +22,19 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     info "Running standalone update mode... syncing submodules first."
     
     if [[ -f "$BUNDLE_DIR/.gitmodules" ]]; then
-        info "Initializing all submodule..."
+        info "Initializing all submodules..."
         git submodule sync --recursive >/dev/null 2>&1 || true
         git submodule update --init --recursive --force >/dev/null 2>&1 || die "Failed to initialize all submodules"
+
+        # Pin plasma-wallpaper-application to the tagged release.
+        WALLPAPER_DIR="$BUNDLE_DIR/src/plasma-wallpaper-application"
+        WALLPAPER_TAG="v1.2"
+        if [[ -e "$WALLPAPER_DIR/.git" ]]; then
+            info "Pinning plasma-wallpaper-application to tag $WALLPAPER_TAG..."
+            git -C "$WALLPAPER_DIR" fetch --tags --quiet 2>/dev/null || true
+            git -C "$WALLPAPER_DIR" checkout "tags/$WALLPAPER_TAG" --quiet 2>/dev/null || \
+                warn "Could not checkout tag $WALLPAPER_TAG for plasma-wallpaper-application; using current HEAD."
+        fi
     fi
 
     info "Installing Caelestia Services..."
@@ -32,11 +42,11 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
         bash "$BUNDLE_DIR/scripts/06-services.sh" || warn "06-services.sh failed"
     fi
 
-    info "Installing plasma-wallpaper-application"
-    if [[ -d "$BUNDLE_DIR/src/plasma-wallpaper-application/package" ]]; then
-        kpackagetool6 -t Plasma/Wallpaper -i "$BUNDLE_DIR/src/plasma-wallpaper-application/package" >/dev/null 2>&1 || kpackagetool6 -t Plasma/Wallpaper -u "$BUNDLE_DIR/src/plasma-wallpaper-application/package" || warn "plasma-wallpaper-application installation failed"
+    info "Installing plasma-wallpaper-application..."
+    if [[ -f "$BUNDLE_DIR/scripts/02-packages.sh" ]]; then
+        bash "$BUNDLE_DIR/scripts/02-packages.sh" || warn "02-packages.sh failed"
     else
-        warn "plasma-wallpaper-application not found, Skipping installation"
+        warn "02-packages.sh not found; skipping wallpaper plugin installation."
     fi
 
     info "Installing qt6-wayland if missing..."
@@ -53,17 +63,27 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     
     if [[ "${CAELESTIA_SKIP_DEPLOY:-0}" == "0" ]]; then
         info "Configuring KDE Lock Screen to use Caelestia..."
-        if command -v kwriteconfig6 >/dev/null 2>&1 && command -v kpackagetool6 >/dev/null 2>&1; then
-            if kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
-                kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin net.dosowisko.PlasmaApplicationWallpaper
-                kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key command "quickshell -p $HOME/.config/quickshell/caelestia/lockscreen.qml"
-                kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key fps 1
-                kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key alwaysShowClock false
-                kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key showMediaControls false
-                ok "KDE Lock Screen configured."
-            else
-                warn "plasma-wallpaper-application plugin not installed. Skipping KDE Lock Screen configuration."
-            fi
+        WALLPAPER_STAMP="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/wallpaper-plugin-installed"
+        PLUGIN_OK=false
+        if [[ "${CAELESTIA_WALLPAPER_PLUGIN_INSTALLED:-false}" == "true" ]]; then
+            PLUGIN_OK=true
+        elif command -v kpackagetool6 >/dev/null 2>&1 \
+            && kpackagetool6 --list -t Plasma/Wallpaper 2>/dev/null \
+            | grep -q "net.dosowisko.PlasmaApplicationWallpaper"; then
+            PLUGIN_OK=true
+        elif ! command -v kpackagetool6 >/dev/null 2>&1 && [[ -f "$WALLPAPER_STAMP" ]]; then
+            PLUGIN_OK=true
+        fi
+
+        if $PLUGIN_OK && command -v kwriteconfig6 >/dev/null 2>&1; then
+            kwriteconfig6 --file kscreenlockerrc --group Greeter --key WallpaperPlugin net.dosowisko.PlasmaApplicationWallpaper
+            kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key command "quickshell -p $HOME/.config/quickshell/caelestia/lockscreen.qml"
+            kwriteconfig6 --file kscreenlockerrc --group Greeter --group Wallpaper --group net.dosowisko.PlasmaApplicationWallpaper --group General --key fps 1
+            kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key alwaysShowClock false
+            kwriteconfig6 --file kscreenlockerrc --group Greeter --group LnF --group General --key showMediaControls false
+            ok "KDE Lock Screen configured."
+        elif ! $PLUGIN_OK; then
+            warn "plasma-wallpaper-application plugin not installed. Skipping KDE Lock Screen configuration."
         else
             warn "KDE config tools not found. Skipping KDE Lock Screen configuration."
         fi
@@ -92,15 +112,18 @@ fi
 
 # UPDATER ONLY BLOCK END
 
-info "Patching Recorder.qml to wait for portal selection..."
-sed -i 's/command: \["pidof", "gpu-screen-recorder"\]/command: \["sh", "-c", "pidof gpu-screen-recorder >\\\/dev\\\/null \&\& test -f $HOME\\\/.local\\\/state\\\/caelestia\\\/record\\\/recording.mp4"\]/g' "$HOME/.local/share/caelestia-shell/services/Recorder.qml" 2>/dev/null || true
-sed -i 's/command: \["pidof", "gpu-screen-recorder"\]/command: \["sh", "-c", "pidof gpu-screen-recorder >\\\/dev\\\/null \&\& test -f $HOME\\\/.local\\\/state\\\/caelestia\\\/record\\\/recording.mp4"\]/g' "shell/services/Recorder.qml" 2>/dev/null || true
-
 info "Building Caelestia Shell..."
 
 if [ ! -d "$SHELL_DIR" ]; then
     err "Shell directory not found at $SHELL_DIR!"
     exit 1
+fi
+
+if command -v python3 >/dev/null 2>&1 && [[ -f "$BUNDLE_DIR/.github/scripts/check_qml_deployment.py" ]]; then
+    python3 "$BUNDLE_DIR/.github/scripts/check_qml_deployment.py" --source-root "$SHELL_DIR" || {
+        err "QML source compatibility validation failed."
+        exit 1
+    }
 fi
 
 cd "$SHELL_DIR" || exit 1
@@ -124,20 +147,59 @@ cmake --install build || {
     exit 1
 }
 
-# Validate critical QML module presence before declaring success.
-CONFIG_MODULE_DIR="$HOME/.local/lib/qt6/qml/Caelestia/Config"
-if [[ ! -f "$CONFIG_MODULE_DIR/qmldir" ]]; then
-    err "Missing QML module metadata: $CONFIG_MODULE_DIR/qmldir"
-    exit 1
+info "Building and installing workspace-tracker KWin Effect..."
+rm -rf kwin-effects/workspace-tracker/build
+cmake -B kwin-effects/workspace-tracker/build -S kwin-effects/workspace-tracker -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr > /dev/null || {
+    warn "Workspace tracker configuration failed."
+}
+cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" > /dev/null || {
+    warn "Workspace tracker build failed."
+}
+sudo cmake --install kwin-effects/workspace-tracker/build > /dev/null || {
+    warn "Workspace tracker system installation failed."
+}
+
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+    kwriteconfig6 --file kwinrc --group Plugins --key kwin_workspace_trackerEnabled true
 fi
 
-shopt -s nullglob
-CONFIG_PLUGIN_FILES=("$CONFIG_MODULE_DIR"/*.so)
-shopt -u nullglob
-if [[ ${#CONFIG_PLUGIN_FILES[@]} -eq 0 ]]; then
-    err "Missing Caelestia.Config plugin library in $CONFIG_MODULE_DIR"
-    exit 1
-fi
+qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
+ok "Installed workspace-tracker to KDE."
+
+# Validate every generated QML module before declaring success. Checking only
+# Caelestia.Config lets a partial install reach Quickshell and fail as a large
+# cascade of "Type unavailable" errors.
+QML_BASE="$HOME/.local/lib/qt6/qml"
+QML_MODULES=(
+    Caelestia
+    Caelestia/Components
+    Caelestia/Config
+    Caelestia/Internal
+    Caelestia/Models
+    Caelestia/Services
+    Caelestia/Blobs
+    Caelestia/Images
+    Caelestia/Layouts
+    M3Shapes
+)
+
+for module in "${QML_MODULES[@]}"; do
+    module_dir="$QML_BASE/$module"
+    if [[ ! -f "$module_dir/qmldir" ]]; then
+        err "Missing QML module metadata: $module_dir/qmldir"
+        exit 1
+    fi
+
+    shopt -s nullglob
+    plugin_files=("$module_dir"/*.so)
+    shopt -u nullglob
+    if [[ ${#plugin_files[@]} -eq 0 ]]; then
+        err "Missing QML plugin library in $module_dir"
+        exit 1
+    fi
+done
+
+export QML2_IMPORT_PATH="$QML_BASE${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
 
 # Add wrapper config to bashrc/fish
 if ! grep -q "QML2_IMPORT_PATH=.*caelestia" ~/.bashrc; then
@@ -153,249 +215,14 @@ fi
 
 mkdir -p ~/.local/bin ~/.config/systemd/user
 
-info "Patching caelestia-cli record/screenshot (requires root)..."
-sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
-USER_HOME="$1"
-USER_CACHE="$2"
-
-OPENCV_IMGPROC=$(ldconfig -p 2>/dev/null | awk '/libopencv_imgproc\.so\.5/ {print $NF; exit}')
-OPENCV_CORE=$(ldconfig -p 2>/dev/null | awk '/libopencv_core\.so\.5/ {print $NF; exit}')
-if [ -n "$OPENCV_IMGPROC" ]; then
-    ln -sf "$OPENCV_IMGPROC" "$(dirname "$OPENCV_IMGPROC")/libopencv_imgproc.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv imgproc"
-else
-    echo "[WARN] libopencv_imgproc.so.5 not found via ldconfig - recording may not work"
-fi
-if [ -n "$OPENCV_CORE" ]; then
-    ln -sf "$OPENCV_CORE" "$(dirname "$OPENCV_CORE")/libopencv_core.so.413" 2>/dev/null || echo "[WARN] Failed to link opencv core"
-else
-    echo "[WARN] libopencv_core.so.5 not found via ldconfig - recording may not work"
-fi
-
-if ! python3 -c '
-import sys, os, glob, re
-search_paths = sys.path + glob.glob("'"$USER_HOME"'/.local/lib/python*/site-packages")
-file_path = None
-for p in search_paths:
-    candidate = os.path.join(p, "caelestia", "subcommands", "record.py")
-    if os.path.exists(candidate):
-        file_path = candidate
-        break
-if not file_path:
-    print("Could not find caelestia/subcommands/record.py to patch")
-    sys.exit(1)
-try:
-    with open(file_path, "r") as f: code = f.read()
-    
-    code = code.replace("args += [\"-a\", \"default_output\"]", "args += [\"-a\", \"default_output\", \"-a\", \"default_input\"]")
-    code = code.replace("args += [\"-f\", str(max_rr)]", "args += [\"-f\", str(max_rr if max_rr > 0 else 60)]")
-    if "-fallback-cpu-encoding" not in code:
-        code = code.replace("recording_path.parent.mkdir(parents=True, exist_ok=True)", """recording_path.parent.mkdir(parents=True, exist_ok=True)
-        args += ["-fallback-cpu-encoding", "yes"]""")
-    
-    # Inject KWin focused monitor refresh rate logic
-    kwin_logic = """        import json, os, subprocess
-        focused_rr = 60
-        try:
-            runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-            with open(os.path.join(runtime_dir, "qs_kwin_active_output.txt"), "r") as f:
-                active_output = f.read().strip()
-            kscreen_out = subprocess.check_output(["kscreen-doctor", "-j"], text=True)
-            kscreen_data = json.loads(kscreen_out)
-            for output in kscreen_data.get("outputs", []):
-                if output.get("name") == active_output and output.get("connected"):
-                    for mode in output.get("modes", []):
-                        if mode.get("id") == output.get("currentModeId"):
-                            focused_rr = round(mode.get("refreshRate", 60))
-                            break
-        except Exception:
-            pass
-"""
-    code = code.replace("        monitors = hypr.message(\"monitors\")", kwin_logic)
-
-    # Use portal and the focused_rr
-    code = re.sub(r"focused_monitor = next\(monitor for monitor in monitors if monitor\[\"focused\"\]\)\n\s*if focused_monitor:\n\s*args \+= \[focused_monitor\[\"name\"\]?, \"-f\", str\(round\(focused_monitor\[\"refreshRate\"\]\)\)\]", "args += [\"portal\", \"-f\", str(focused_rr)]", code, flags=re.MULTILINE|re.DOTALL)
-    code = re.sub(r"focused_monitor = next\(monitor for monitor in monitors if monitor\[\"focused\"\]\)\n\s*if focused_monitor:\n\s*args \+= \[\"portal\", \"-f\", str\(round\(focused_monitor\[\"refreshRate\"\]\)\)\]", "args += [\"portal\", \"-f\", str(focused_rr)]", code, flags=re.MULTILINE|re.DOTALL)
-
-    code = code.replace("if self.args.region:", "if False:")
-    code = code.replace("text=True)", "text=True).strip()")
-    code = code.replace("args += [\"region\", \"-region\", region]", "args += [region]")
-    
-    launch_orig = """        proc = subprocess.Popen([RECORDER, *args, "-o", str(recording_path)], start_new_session=True)
-
-        notif = notify("-p", "Recording started", "Recording...")"""
-    launch_new = """        recording_path.unlink(missing_ok=True)
-        subprocess.run(["sh", "-c", "if ! systemctl --user is-active --quiet plasma-xdg-desktop-portal-kde || ! systemctl --user is-active --quiet xdg-desktop-portal; then systemctl --user restart plasma-xdg-desktop-portal-kde; systemctl --user restart xdg-desktop-portal; sleep 1; fi"])
-        proc = subprocess.Popen([RECORDER, *args, "-o", str(recording_path)], start_new_session=True)
-        while proc.poll() is None and not recording_path.exists():
-            time.sleep(0.1)
-        if proc.poll() is not None:
-            return
-        notif = notify("-p", "Recording started", "Recording...")"""
-    import re
-    # Match the block whether it is unpatched or already patched in any form
-    pattern = r"(?:\s*recording_path\.unlink\(missing_ok=True\)[\s\S]*?)?\s*proc = subprocess\.Popen\(\[RECORDER[\s\S]*?notif = notify\(\"-p\", \"Recording started\", \"Recording\.\.\.\"\)"
-    code = re.sub(pattern, "\n" + launch_new, code)
-    
-    code = code.replace("[\"app2unit\", \"-O\", new_path]", "[\"xdg-open\", str(new_path)]")
-    
-    old_dbus = """            p = subprocess.run(
-                [
-                    "dbus-send",
-                    "--session",
-                    "--dest=org.freedesktop.FileManager1",
-                    "--type=method_call",
-                    "/org/freedesktop/FileManager1",
-                    "org.freedesktop.FileManager1.ShowItems",
-                    f"array:string:file://{new_path}",
-                    "string:",
-                ]
-            )
-            if p.returncode != 0:
-                subprocess.Popen(["app2unit", "-O", new_path.parent], start_new_session=True)"""
-    new_xdg = "            subprocess.Popen([\"xdg-open\", str(new_path.parent)], start_new_session=True)"
-    code = code.replace(old_dbus, new_xdg)
-    code = code.replace("[\"dolphin\", \"--select\", str(new_path)]", "[\"xdg-open\", str(new_path.parent)]")
-    
-    with open(file_path, "w") as f: f.write(code)
-        
-    screenshot_path = None
-    for p in search_paths:
-        candidate = os.path.join(p, "caelestia", "subcommands", "screenshot.py")
-        if os.path.exists(candidate):
-            screenshot_path = candidate
-            break
-    if screenshot_path:
-        with open(screenshot_path, "r") as f: scode = f.read()
-        scode = scode.replace("cmd = [\"grim\"]", "cmd = [\"spectacle\", \"-b\", \"-f\", \"-n\", \"-o\"]")
-        scode = scode.replace("if focused_monitor:\n            cmd += [\"-o\", focused_monitor[\"name\"]]", "")
-        scode = scode.replace("cmd += [\"-\"]\n        sc_data = subprocess.check_output(cmd)", "tmp_file = \"/tmp/qs-screenshot.png\"\n        cmd += [tmp_file]\n        subprocess.run(cmd)\n        try:\n            with open(tmp_file, \"rb\") as f:\n                sc_data = f.read()\n        except Exception:\n            sc_data = b\"\"")
-        with open(screenshot_path, "w") as f: f.write(scode)
-except Exception as e:
-    print(f"Failed to patch record.py: {e}")
-    sys.exit(1)
-'; then
-    echo "Caelestia CLI Record/Dolphin Patch" >> "$USER_CACHE/caelestia-kde/failed_patches.txt"
-fi
-EOF
-
-info "Patching caelestia-cli shell/emoji/clipboard/search for path-based config resolution (requires root)..."
-sudo bash -s -- "$HOME" << 'EOF'
-USER_HOME="$1"
-SHELL_CONFIG="$USER_HOME/.config/quickshell/caelestia/shell.qml"
-
-if ! python3 -c '
-import sys, os, glob
-
-user_home = "'"$USER_HOME"'"
-shell_cfg  = "'"$SHELL_CONFIG"'"
-search_paths = sys.path + glob.glob(user_home + "/.local/lib/python*/site-packages")
-
-# All subcommand files that use qs -c caelestia for IPC / lifecycle management
-sub_files = ["shell.py", "emoji.py", "clipboard.py", "screenshot.py", "search.py"]
-
-old_pat = "\"qs\", \"-c\", \"caelestia\""
-new_pat = "\"quickshell\", \"-p\", \"" + shell_cfg + "\""
-
-patched = 0
-for fn in sub_files:
-    fp = None
-    for sp in search_paths:
-        cand = os.path.join(sp, "caelestia", "subcommands", fn)
-        if os.path.exists(cand):
-            fp = cand
-            break
-    if not fp:
-        continue
-    with open(fp, "r") as f:
-        code = f.read()
-    if old_pat not in code:
-        continue
-    code = code.replace(old_pat, new_pat)
-    with open(fp, "w") as f:
-        f.write(code)
-    patched += 1
-    print(f"  Patched {fp}  → path-based config resolution")
-
-if patched == 0:
-    print("  No caelestia-cli subcommand files needed patching (already done or not found)")
-else:
-    print(f"  Successfully patched {patched} file(s)")
-'; then
-    echo "Caelestia CLI path-based config resolution patch applied successfully"
-else
-    mkdir -p "$USER_HOME/.cache/caelestia-kde" 2>/dev/null || true
-    echo "Caelestia CLI path-based config resolution patch failed" >> "$USER_HOME/.cache/caelestia-kde/failed_patches.txt" 2>/dev/null || true
-fi
-EOF
-
-info "Patching caelestia-cli wallpaper.py for video support (requires root)..."
-sudo bash -s -- "$HOME" "${XDG_CACHE_HOME:-$HOME/.cache}" << 'EOF'
-USER_HOME="$1"
-USER_CACHE="$2"
-
-if ! python3 -c '
-import sys, os, glob
-search_paths = sys.path + glob.glob("'"$USER_HOME"'/.local/lib/python*/site-packages")
-file_path = None
-for p in search_paths:
-    candidate = os.path.join(p, "caelestia", "utils", "wallpaper.py")
-    if os.path.exists(candidate):
-        file_path = candidate
-        break
-if not file_path:
-    print("Could not find caelestia/utils/wallpaper.py to patch")
-    sys.exit(1)
-try:
-    with open(file_path, "r") as f: code = f.read()
-
-    # Patch is_valid_image
-    old_is_valid = "return path.is_file() and path.suffix in [\".jpg\", \".jpeg\", \".png\", \".webp\", \".tif\", \".tiff\", \".gif\"]"
-    new_is_valid = "return path.is_file() and path.suffix.lower() in [\".jpg\", \".jpeg\", \".png\", \".webp\", \".tif\", \".tiff\", \".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"]"
-    code = code.replace(old_is_valid, new_is_valid)
-
-    # Patch convert_gif to convert_animated
-    code = code.replace("def convert_gif(wall: Path) -> Path:", "def convert_animated(wall: Path) -> Path:")
-    
-    old_convert = """        with Image.open(wall) as img:
-            try:
-                img.seek(0)
-            except EOFError:
-                pass
-
-            img = img.convert("RGB")
-            img.save(output_path, "PNG")"""
-    new_convert = """        if wall.suffix.lower() == ".gif":
-            with Image.open(wall) as img:
-                try:
-                    img.seek(0)
-                except EOFError:
-                    pass
-                img = img.convert("RGB")
-                img.save(output_path, "PNG")
-        else:
-            import subprocess
-            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wall), "-vf", "thumbnail,scale=640:-1", "-frames:v", "1", str(output_path)], stderr=subprocess.DEVNULL)"""
-    code = code.replace(old_convert, new_convert)
-
-    # Patch get_colours_for_wall
-    old_gif_check = "if wall.suffix.lower() == \".gif\":"
-    new_animated_check = "if wall.suffix.lower() in [\".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"]:"
-    code = code.replace(old_gif_check, new_animated_check)
-    code = code.replace("wall = convert_gif(wall)", "wall = convert_animated(wall)")
-
-    # Patch set_wallpaper
-    old_wall_cache = "wall_cache = convert_gif(wall) if wall.suffix.lower() == \".gif\" else wall"
-    new_wall_cache = "wall_cache = convert_animated(wall) if wall.suffix.lower() in [\".gif\", \".mp4\", \".webm\", \".mkv\", \".avi\", \".mov\", \".wmv\", \".flv\"] else wall"
-    code = code.replace(old_wall_cache, new_wall_cache)
-
-    with open(file_path, "w") as f: f.write(code)
-except Exception as e:
-    print(f"Failed to patch wallpaper.py: {e}")
-    sys.exit(1)
-'; then
-    echo "Caelestia CLI Wallpaper Patch" >> "$USER_CACHE/caelestia-kde/failed_patches.txt"
-fi
-EOF
+info "Installing Caelestia bin wrappers..."
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia-record" ~/.local/bin/caelestia-record
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia-screenshot" ~/.local/bin/caelestia-screenshot
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia-shell-ipc" ~/.local/bin/caelestia-shell-ipc
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia" ~/.local/bin/caelestia
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia-update" ~/.local/bin/caelestia-update
+install -m 755 "$BUNDLE_DIR/src/bin/caelestia-check-updates" ~/.local/bin/caelestia-check-updates
+ok "Caelestia bin wrappers installed to ~/.local/bin"
 
 
 # Copying mono icon theme
