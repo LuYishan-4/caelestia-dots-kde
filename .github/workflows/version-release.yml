@@ -155,3 +155,17 @@ jobs:
             git commit -m "[skip ci] Update contributor stats for $VERSION"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
+
+      - name: Open Sync PR to dev
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          echo "Attempting to open a PR to sync main into dev..."
+          
+          gh pr create \
+            --base dev \
+            --head main \
+            --title "chore: sync main back to dev after $VERSION" \
+            --body "This is an automated PR to sync the newly updated contributor stats and release tags from \`main\` back into \`dev\`." || true
