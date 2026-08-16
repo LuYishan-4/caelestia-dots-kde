@@ -124,12 +124,12 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | PRs |
 | --- | ---: |
-| [WinTone01](https://github.com/WinTone01) | 39 |
+| [WinTone01](https://github.com/WinTone01) | 40 |
+| [Vinax89](https://github.com/Vinax89) | 5 |
+| [0x0nYx](https://github.com/0x0nYx) | 1 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
-| — | 0 |
-| — | 0 |
 | — | 0 |
 | — | 0 |
 
@@ -140,8 +140,8 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | Issues |
 | --- | ---: |
-| [0x0nYx](https://github.com/0x0nYx) | 101 |
-| [Kyedae](https://github.com/Kyedae) | 16 |
+| [0x0nYx](https://github.com/0x0nYx) | 106 |
+| [Kyedae](https://github.com/Kyedae) | 17 |
 | [bubbleo0](https://github.com/bubbleo0) | 11 |
 | [RaceConditionWinner](https://github.com/RaceConditionWinner) | 10 |
 | [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
@@ -151,6 +151,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 </td>
 </tr></table>
+
 <!-- contributors-end -->
 
 ## Credits
