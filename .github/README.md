@@ -126,12 +126,12 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | --- | ---: |
 | [WinTone01](https://github.com/WinTone01) | 40 |
 | [Vinax89](https://github.com/Vinax89) | 5 |
+| [caelestia-automation[bot]](https://github.com/caelestia-automation[bot]) | 2 |
 | [0x0nYx](https://github.com/0x0nYx) | 1 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
+| [Klivan49](https://github.com/Klivan49) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
-| — | 0 |
-| — | 0 |
 
 </td>
 <td width="50%">
