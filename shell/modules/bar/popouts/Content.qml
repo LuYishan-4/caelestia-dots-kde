@@ -14,14 +14,29 @@ Item {
     readonly property Popout currentPopout: content.children.find(c => c.shouldBeActive) ?? null
     readonly property Item current: currentPopout?.item ?? null
 
-    implicitWidth: ((currentPopout?.item?.width || currentPopout?.implicitWidth) ?? 0) + Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0)
-    implicitHeight: ((currentPopout?.item?.height || currentPopout?.implicitHeight) ?? 0) + Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0)
+    readonly property real contentMargin: Tokens.padding.large * (currentPopout?.item?.scaleOffset ?? 1.0)
+    readonly property real availableWidth: Math.max(0, ((QsWindow.window as QsWindow)?.screen?.width ?? 0) - contentMargin * 2 - Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0))
+    readonly property real availableHeight: Math.max(0, ((QsWindow.window as QsWindow)?.screen?.height ?? 0) - contentMargin * 2 - Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0))
 
-    Item {
-        id: content
+    implicitWidth: Math.min(((currentPopout?.item?.width || currentPopout?.implicitWidth) ?? 0) + Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0), availableWidth)
+    implicitHeight: Math.min(((currentPopout?.item?.height || currentPopout?.implicitHeight) ?? 0) + Tokens.padding.extraLargeIncreased * (currentPopout?.item?.scaleOffset ?? 1.0), availableHeight)
+
+    Flickable {
+        id: viewport
 
         anchors.fill: parent
-        anchors.margins: Tokens.padding.large * (currentPopout?.item?.scaleOffset ?? 1.0)
+        anchors.margins: root.contentMargin
+
+        clip: true
+        contentWidth: width
+        contentHeight: Math.max(height, content.implicitHeight)
+
+        Item {
+            id: content
+
+            width: viewport.width
+            height: Math.max(viewport.height, implicitHeight)
+            implicitHeight: currentPopout?.item?.implicitHeight ?? 0
 
         Popout {
             name: "activewindow"
@@ -208,6 +223,7 @@ Item {
                 }
             }
         }
+    }
     }
 
     component Popout: Loader {
