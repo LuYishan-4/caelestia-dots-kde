@@ -36,7 +36,7 @@ jobs:
           # Give builduser ownership of the workspace so it can run the script
           chown -R builduser:builduser .
           su - builduser -c "cd $GITHUB_WORKSPACE && ./sdata/arch-dist/installDP.sh || true"
-          
+
           if [ -s /home/builduser/.cache/caelestia-kde/failed_packages.txt ]; then
             FAILED=$(cat /home/builduser/.cache/caelestia-kde/failed_packages.txt | tr '\n' ' ')
             echo "::error::[ARCH] Failed to install packages: $FAILED"

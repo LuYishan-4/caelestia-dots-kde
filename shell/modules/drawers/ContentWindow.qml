@@ -44,7 +44,18 @@ StyledWindow {
     readonly property bool hasFullscreen: actualFullscreen && !hasOpenOverlay
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
-    property real dynamicBorderThickness: visibilities.overview ? Math.min(root.width, root.height) * 0.15 : Config.border.thickness
+    // Where dynamicBorderThickness lands once the overview is open. It is the
+    // target of a 300ms animation, and anything that lays content out inside the
+    // overview wants this rather than the animating value — laying out against a
+    // moving rect makes the result slide into place from wherever the first frame
+    // happened to put it.
+    readonly property real overviewBorderThickness: Math.min(root.width, root.height) * 0.15
+    property real dynamicBorderThickness: visibilities.overview ? overviewBorderThickness : Config.border.thickness
+    property real overviewVerticalOffset: {
+        if (!visibilities.overview) return 0;
+        const grid = panels && panels.overview ? panels.overview.windowGrid : null;
+        return grid ? grid.verticalOffset : 0;
+    }
     readonly property real borderThickness: dynamicBorderThickness * (1 - fsTransitionProg)
     readonly property real borderRounding: Config.border.rounding * (1 - fsTransitionProg)
     readonly property real shadowOpacity: 0.7 * (1 - fsTransitionProg)
@@ -115,6 +126,7 @@ StyledWindow {
         category: "Blur"
     }
     Behavior on dynamicBorderThickness { NumberAnimation { duration: animConfig.blobDuration; easing.type: animConfig.easingType } }
+    Behavior on overviewVerticalOffset { NumberAnimation { duration: animConfig.blobDuration; easing.type: animConfig.easingType } }
     Behavior on fsTransitionProg {
         Anim {}
     }
@@ -191,7 +203,7 @@ StyledWindow {
             }
             onTriggered: {
                 let anyActive = root.active || root.activeFocusItem !== null;
-                
+
                 if (anyActive) {
                     parent._wasActive = true;
                 } else if (parent._wasActive && !anyActive) {
@@ -210,7 +222,13 @@ StyledWindow {
     Item {
         id: overviewWallpaperLayer
 
-        property bool active: visibilities.overview
+        property bool active: visibilities.overview || warming
+        // Paint this layer once, invisibly, shortly after startup. The first
+        // time the shell covers the whole screen the driver has to allocate for
+        // it, and that lands as ~80-100ms of blocked swap on whichever frame
+        // triggers it. Paying it here costs nothing anyone sees; leaving it to
+        // the user's first overview drops most of that transition's frames.
+        property bool warming: false
         property real _maxBorder: Math.max(1, Math.min(root.width, root.height) * 0.15)
         property real bgScale: 1.0 + (dynamicBorderThickness / _maxBorder) * 0.1
 
@@ -218,9 +236,20 @@ StyledWindow {
         visible: active || opacity > 0
         layer.enabled: true
         // Ensure fade-in starts only after the wallpaper has actually loaded
-        opacity: (visibilities.overview && wallpaperLoader.status === Loader.Ready) ? 1 : 0
+        opacity: warming ? 0.004 : ((visibilities.overview && wallpaperLoader.status === Loader.Ready) ? 1 : 0)
 
-        Behavior on opacity { NumberAnimation { duration: animConfig.wallpaperDuration; easing.type: animConfig.easingType } }
+        Behavior on opacity { NumberAnimation { duration: overviewWallpaperLayer.warming ? 0 : animConfig.wallpaperDuration; easing.type: animConfig.easingType } }
+        Timer {
+            running: true
+            interval: 2500
+            onTriggered: { overviewWallpaperLayer.warming = true; warmDone.start(); }
+        }
+        Timer {
+            id: warmDone
+
+            interval: 400
+            onTriggered: overviewWallpaperLayer.warming = false
+        }
         Item {
             id: scaledWallpaperContainer
 
@@ -254,8 +283,8 @@ StyledWindow {
                 radius: root.borderRounding
                 borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
                 borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-                borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-                borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
+                borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
+                borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) + root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
                 Config.screen: root.screen.name
             }
         }
@@ -307,8 +336,8 @@ StyledWindow {
             radius: root.borderRounding
             borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
             borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-            borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-            borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
+            borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
+            borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) + root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
             Config.screen: root.screen.name
         }
         BlobRect {
@@ -561,6 +590,7 @@ StyledWindow {
             visibilities: visibilities
             bar: bar
             borderThickness: root.borderThickness
+            overviewBorderThickness: root.overviewBorderThickness
             overviewAnimConfig: root.overviewAnimConfig
             utilities.horizontalStretch: (sidebarBg.rawDeformMatrix.m11 - 1) / 2 + 1
             utilities.deformMatrix: utilsBg.rawDeformMatrix
@@ -709,7 +739,7 @@ StyledWindow {
             rLeft: !GlobalConfig.appearance.islands ? root.borderRounding : 0
             rRight: !GlobalConfig.appearance.islands ? root.borderRounding : 0
         }
-        BlurMask { 
+        BlurMask {
             target: bar
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -719,7 +749,7 @@ StyledWindow {
             vAnchor: bar.vAnchor
             hAnchor: bar.hAnchor
         }
-        BlurMask { 
+        BlurMask {
             target: panels.sidebar
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -731,7 +761,7 @@ StyledWindow {
             offsetScale: panels.sidebar.offsetScale
             deformMatrix: sidebarBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.notifications
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -742,7 +772,7 @@ StyledWindow {
             hAnchor: panels.notifications.hAnchor
             deformMatrix: notifsBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.osdWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -754,7 +784,7 @@ StyledWindow {
             offsetScale: panels.osd.offsetScale
             deformMatrix: osdBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.sessionWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -766,7 +796,7 @@ StyledWindow {
             offsetScale: panels.session.offsetScale
             deformMatrix: sessionBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.launcher
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -778,7 +808,7 @@ StyledWindow {
             offsetScale: panels.launcher.offsetScale
             deformMatrix: launcherBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.dashboard
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -790,7 +820,7 @@ StyledWindow {
             offsetScale: panels.dashboard.offsetScale
             deformMatrix: dashBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.popoutsWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -802,7 +832,7 @@ StyledWindow {
             offsetScale: panels.popoutsWrapper.offsetScale
             deformMatrix: popoutBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.utilities
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -838,7 +868,7 @@ StyledWindow {
         }
     }
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: (actualFullscreen && (hasOpenOverlay || fsTransitionProg < 1)) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.layer: hasOpenOverlay || (actualFullscreen && fsTransitionProg < 1) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     component PanelBg: BlobRect {

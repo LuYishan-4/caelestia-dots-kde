@@ -20,6 +20,7 @@ Item {
     readonly property real scaleFactor: requiredWidth > maxWidth ? maxWidth / requiredWidth : 1.0
     property real swipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
     property bool isSwiping: false
+    property var closingWindows: []
     readonly property var occupied: {
         let occ = {};
         for (let i = 1; i <= root.count; ++i) {
@@ -125,6 +126,7 @@ Item {
                     groupOffset: 0
                     swipeOffset: root.swipeOffset
                     isSwiping: root.isSwiping
+                    closingWindows: root.closingWindows
                     onSelected: root.workspaceSelected(ws - 1)
                     onReselected: root.workspaceReselected(ws - 1)
                 }

@@ -31,7 +31,7 @@ StyledRect {
 
     signal closeRequested()
 
-    color: Colours.tPalette.m3surfaceContainer
+    color: Colours.palette.m3surfaceContainer
     radius: Tokens.rounding.large
     clip: true
     implicitWidth: 1100

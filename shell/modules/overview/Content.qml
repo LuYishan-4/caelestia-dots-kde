@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import qs.components
+import qs.services
 import qs.modules.windowinfo as WInfo
 
 Item {
@@ -31,6 +32,7 @@ Item {
         onRequestWindowInfo: client => {
             windowGrid.activeInfoClient = client
             windowInfoOverlay.clientAddress = client.address
+            windowInfoOverlay.isOpen = true
         }
         onRequestClose: {
             root.visibilities.overview = false
@@ -47,11 +49,18 @@ Item {
         id: windowInfoOverlay
 
         property string clientAddress: ""
+        property bool isOpen: false
 
         z: 100
         anchors.fill: parent
         visible: opacity > 0
-        opacity: clientAddress ? 1 : 0
+        opacity: isOpen ? 1 : 0
+        onOpacityChanged: {
+            if (opacity <= 0 && !isOpen) {
+                windowInfoOverlay.clientAddress = ""
+                windowGrid.activeInfoClient = null
+            }
+        }
 
         Behavior on opacity {
             NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
@@ -64,8 +73,7 @@ Item {
             WheelHandler { } // block scroll
             TapHandler {
                 onTapped: {
-                    windowInfoOverlay.clientAddress = ""
-                    windowGrid.activeInfoClient = null
+                    windowInfoOverlay.isOpen = false
                 }
             }
         }
@@ -82,9 +90,10 @@ Item {
 
                 anchors.fill: parent
                 clientAddress: windowInfoOverlay.clientAddress
+                border.width: 2
+                border.color: Colours.palette.m3primary
                 onCloseRequested: {
-                    windowInfoOverlay.clientAddress = ""
-                    windowGrid.activeInfoClient = null
+                    windowInfoOverlay.isOpen = false
                 }
             }
         }

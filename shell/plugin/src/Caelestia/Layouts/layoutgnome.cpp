@@ -1,5 +1,6 @@
 #include "layoutgnome.hpp"
-#include <QDebug>
+
+#include "layoututils.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -45,7 +46,6 @@ bool LayoutGnome::isBetterScaleAndSpace(double oldScale, double oldSpace, double
 
 QVariantMap LayoutGnome::calculateLayout(const QVariantList& windows, double areaWidth, double areaHeight, double columnSpacing, double rowSpacing) {
     QVariantMap result;
-    qDebug() << "LayoutGnome::calculateLayout called with" << windows.size() << "windows, areaWidth:" << areaWidth << "areaHeight:" << areaHeight;
     if (windows.isEmpty() || areaWidth <= 0 || areaHeight <= 0) return result;
 
     QList<WindowInfo> winInfos;
@@ -200,7 +200,8 @@ QVariantMap LayoutGnome::calculateLayout(const QVariantList& windows, double are
         }
     }
 
-    qDebug() << "LayoutGnome::calculateLayout completed. Returning" << result.size() << "windows.";
+    centreLayout(result, areaWidth, areaHeight);
+
     return result;
 }
 

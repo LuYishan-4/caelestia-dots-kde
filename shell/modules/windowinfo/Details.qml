@@ -15,6 +15,7 @@ ColumnLayout {
     Label {
         text: root.client?.title ?? qsTr("No active client")
         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+        maximumLineCount: 2
         font: Tokens.font.body.builders.large.weight(Font.Medium).build()
         Layout.topMargin: Tokens.padding.extraLargeIncreased
     }

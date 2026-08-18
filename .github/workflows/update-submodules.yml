@@ -35,15 +35,15 @@ jobs:
             echo "All submodules are fully up to date."
           else
             BRANCH_NAME="chore/update-dependencies-$(date +%s)"
-            
+
             git checkout -b "$BRANCH_NAME"
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            
+
             git add .
             git commit -m "chore: update submodules to latest upstream commits"
             git push origin "$BRANCH_NAME"
-            
+
             gh pr create \
               --base dev \
               --head "$BRANCH_NAME" \

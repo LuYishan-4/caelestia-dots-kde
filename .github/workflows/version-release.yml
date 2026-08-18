@@ -164,7 +164,7 @@ jobs:
           set -euo pipefail
 
           echo "Attempting to open a PR to sync main into dev..."
-          
+
           gh pr create \
             --base dev \
             --head main \
