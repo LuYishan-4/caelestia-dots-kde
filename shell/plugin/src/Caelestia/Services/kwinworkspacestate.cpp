@@ -49,6 +49,10 @@ QString KWinWorkspaceState::uuidForIndex(int index) const {
     return QString();
 }
 
+uint KWinWorkspaceState::rows() const {
+    return m_rows;
+}
+
 double KWinWorkspaceState::swipeOffset() const {
     return m_swipeOffset;
 }
@@ -286,8 +290,10 @@ void KWinWorkspaceState::onCountChanged(uint count) {
 }
 
 void KWinWorkspaceState::onRowsChanged(uint rows) {
-    if (rows > 0)
+    if (rows > 0 && rows != m_rows) {
         m_rows = rows;
+        emit rowsChanged();
+    }
 }
 
 } // namespace caelestia::services
