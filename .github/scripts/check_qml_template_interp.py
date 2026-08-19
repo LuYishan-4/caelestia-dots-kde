@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check for unescaped bash parameter expansion inside QML template literals.
+r"""Check for unescaped bash parameter expansion inside QML template literals.
 
 QML (like JavaScript) treats `` `...${...}...` `` as a template literal where
 ``${...}`` is evaluated as JavaScript before the string is used. Embedded bash

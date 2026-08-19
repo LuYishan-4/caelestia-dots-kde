@@ -34,13 +34,16 @@ jobs:
   qml-lint:
     runs-on: ubuntu-latest
     continue-on-error: true
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install qmllint
         run: |
-          sudo apt-get update -qq
+          export DEBIAN_FRONTEND=noninteractive
+          # Bound apt so a stuck lock or slow mirror cannot hang the job.
+          sudo timeout 300 apt-get update -qq || true
           sudo apt-get install -y -qq qml6-modules-qtquick-controls qml6-modules-qtquick-layouts \
             qml6-modules-qtquick-window qml6-modules-qtqml-workerscript \
             qml6-modules-qtquick-templates || true
