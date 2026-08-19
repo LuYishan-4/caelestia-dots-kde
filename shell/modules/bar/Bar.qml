@@ -416,6 +416,13 @@ Item {
                 }
             }
             DelegateChoice {
+                roleValue: "updateIndicator"
+                delegate: WrappedLoader {
+                    visible: enabled && GlobalConfig.general.checkUpdates
+                    sourceComponent: UpdateIndicator {}
+                }
+            }
+            DelegateChoice {
                 roleValue: "perfCpu"
                 delegate: WrappedLoader {
                     visible: enabled && Cpu.name.length > 0

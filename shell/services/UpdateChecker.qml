@@ -611,18 +611,9 @@ git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --ski
                             root.previousVersion = root.availableVersions[1];
                         }
                     }
-                    const prevCount = root.pendingCount;
                     root.pendingCount = parsedPendingCount;
                     root.hasUpdate = parsedHasUpdate;
                     root.versionSummaryMode = parsedVersionSummaryMode;
-                    
-                    if (root.hasUpdate && prevCount === 0 && root.loaded) {
-                        const summaryText = root.currentBranch === "main"
-                            ? qsTr("Main branch version update available")
-                            : qsTr("%1 new commits on %2 branch").arg(root.pendingCount).arg(root.currentBranch);
-                        if (GlobalConfig.utilities.toasts.updateAvailable)
-                            Toaster.toast(qsTr("System Update Available"), summaryText, "update");
-                    }
                 } catch(e) {
                     console.log("UpdateChecker git parse error:", e);
                 }
