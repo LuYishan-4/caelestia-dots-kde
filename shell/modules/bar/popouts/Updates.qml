@@ -183,7 +183,7 @@ ColumnLayout {
                     anchors.rightMargin: -Tokens.padding.medium * root.scaleOffset
 
                     radius: parent.radius
-                    enabled: !root.checking
+                    enabled: !root.checking && !root.updateRunning
                     onClicked: UpdateChecker.checkUpdates()
                 }
 

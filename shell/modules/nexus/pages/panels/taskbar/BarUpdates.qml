@@ -43,8 +43,8 @@ PageBase {
 
         ToggleRow {
             last: true
-            text: qsTr("Check for updates automatically")
-            subtext: qsTr("The indicator checks every 30 minutes and switches icon when a new version is available")
+            text: qsTr("Enable update checking")
+            subtext: qsTr("Enables the update indicator and periodic checks (every 30 minutes)")
             checked: GlobalConfig.general.checkUpdates
             onToggled: GlobalConfig.general.checkUpdates = checked
         }

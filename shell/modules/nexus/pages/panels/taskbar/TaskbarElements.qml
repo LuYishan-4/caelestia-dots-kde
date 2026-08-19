@@ -72,6 +72,7 @@ PageBase {
         }
 
         NavRow {
+            last: true
             icon: "update"
             label: qsTr("Updates")
             status: qsTr("Indicator visibility, automatic checks")
