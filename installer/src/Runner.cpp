@@ -29,6 +29,20 @@ bool tmux_has_worker_pane() {
   return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 }
 
+const int kProgressPaneWidth = 46;
+
+bool is_tmux_master() {
+  return getenv("CAELESTIA_TMUX_MASTER") != nullptr;
+}
+
+void apply_tmux_pane_cap() {
+  if (!is_tmux_master())
+    return;
+  system(("tmux resize-pane -t caelestia_install:0.0 -x " +
+          to_string(kProgressPaneWidth) + " 2>/dev/null || true")
+             .c_str());
+}
+
 bool ensure_tmux_worker_pane() {
   if (tmux_has_worker_pane()) {
     return true;
@@ -37,11 +51,11 @@ bool ensure_tmux_worker_pane() {
   system("tmux split-window -h -t caelestia_install \"bash -c 'trap "
          "\\\":\\\" SIGINT SIGQUIT SIGTSTP; clear; echo \\\"Waiting for "
          "installer...\\\"; exec 3<> /tmp/caelestia_cmd; while read -u 3 -r "
-         "cmd; do if [[ \\\"\\$cmd\\\" == \\\"EXIT\\\" ]]; then break; fi; "
-         "bash -c \\\"\\$cmd\\\"; echo \\$? > /tmp/caelestia_status; done'\"");
-  // Cap the stages pane (left) at 30 columns — just enough for the progress
-  // list to render — so the logs pane (right) absorbs the remaining width.
-  system("tmux resize-pane -t caelestia_install:0.0 -x 30 2>/dev/null || true");
+         "cmd; do if [[ \\\"\\\$cmd\\\" == \\\"EXIT\\\" ]]; then break; fi; "
+         "bash -c \\\"\\\$cmd\\\"; echo \\\$? > /tmp/caelestia_status; done'\"");
+  // Cap the stages pane (left) at a fixed width — just enough for the progress
+  // list to render — so the logs pane (right) absorbs all remaining width.
+  apply_tmux_pane_cap();
   system("tmux select-pane -t caelestia_install:0.0");
   this_thread::sleep_for(
       chrono::milliseconds(50)); // tiny wait for terminal resize propagation
@@ -177,6 +191,13 @@ string show_error_dialog(const string &step_name, const string &script_path,
 
 void draw_progress_ui(int current_step) {
   if (g_resized) {
+    // Re-assert the left-pane cap whenever the terminal resizes — tmux
+    // re-proportions panes on window resize, which would otherwise let the
+    // progress pane balloon and leave a wall of empty space. All surplus
+    // width goes to the logs pane instead.
+    apply_tmux_pane_cap();
+    this_thread::sleep_for(
+        chrono::milliseconds(50)); // let the pane resize propagate
     Term::get_size();
     g_resized = false;
   }
