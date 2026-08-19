@@ -37,7 +37,7 @@ CORE_PACKAGES=(
 )
 
 SHELL_PACKAGES=(
-    caelestia-cli quickshell-git
+    caelestia-cli quickshell
     foot eza fastfetch starship btop bash
 )
 
