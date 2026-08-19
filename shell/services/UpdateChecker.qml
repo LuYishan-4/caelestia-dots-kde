@@ -29,6 +29,15 @@ Singleton {
     property bool loaded: false
     property bool checkingUpdates: false
 
+    // Periodic auto-check heartbeat (drives the tray indicator popout's
+    // "last check X ago / next check in Y" readout, CachyOS-updater style).
+    // A single-shot timer is restarted every time a check completes so the
+    // next auto-check always lands one interval after the most recent one,
+    // manual or otherwise.
+    property double lastCheckMs: 0
+
+    property int checkIntervalMs: 1800000 // 30 minutes
+
     // Dev-branch commit pagination: the update checker only fetches the
     // first page (devCommitLimit commits) and exposes a "load more" affordance
     // for the rest, so we never pull the whole dev history up front.
@@ -434,6 +443,9 @@ git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --ski
         command: []
         onExited: _code => { // qmllint disable signal-handler-parameters
             root.checkingUpdates = false;
+            root.lastCheckMs = Date.now();
+            if (autoCheckTimer.running)
+                autoCheckTimer.restart();
         }
         stdout: StdioCollector {
             onStreamFinished: {
@@ -756,6 +768,18 @@ echo "$INSTALLED|$LATEST"
                 root.stallNoticeShown = true;
                 root.updateLogs += "[WARN] No updater output for 120s. If this persists, stop and retry.\n";
             }
+        }
+    }
+
+    Timer {
+        id: autoCheckTimer
+
+        interval: root.checkIntervalMs
+        repeat: false
+        running: GlobalConfig.general.checkUpdates && root.loaded
+        onTriggered: {
+            if (!root.checkingUpdates && !root.updateRunning)
+                root.checkUpdates();
         }
     }
 

@@ -140,6 +140,13 @@ Item {
         }
 
         Popout {
+            name: "updateIndicator"
+            sourceComponent: Updates {
+                popouts: root.popouts
+            }
+        }
+
+        Popout {
             name: "audio"
             sourceComponent: Audio {
                 popouts: root.popouts

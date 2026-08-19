@@ -65,11 +65,17 @@ PageBase {
         }
 
         NavRow {
-            last: true
             icon: "code"
             label: qsTr("GitHub")
             status: qsTr("Contributions, token setup")
             onClicked: root.nState.openSubPage(13)
+        }
+
+        NavRow {
+            icon: "update"
+            label: qsTr("Updates")
+            status: qsTr("Indicator visibility, automatic checks")
+            onClicked: root.nState.openSubPage(17)
         }
     }
 }
