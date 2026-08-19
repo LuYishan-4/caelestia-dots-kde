@@ -130,6 +130,69 @@ fi
 log "Installing packages (group: $PACKAGE_GROUP)..."
 FAILED_PKGS=()
 
+# Source-compilation fallbacks for AUR packages with no reliable binary repo
+# copy. When yay can't download/fetch an AUR package (or its source), build it
+# directly from the upstream source instead of failing outright.
+# Key: AUR package name -> source repo URL. Labels under "build type" below
+# select the build backend.
+SOURCE_BUILD_REPOS=(
+    # package            repo
+    "darkly              https://github.com/vinceliuice/Darkly"
+    "libcava             https://github.com/LukashonakV/cava"
+    "ttf-rubik-vf        https://github.com/googlefonts/rubik"
+    "app2unit            https://github.com/Vladimir-csp/app2unit"
+    "python-materialyoucolor https://github.com/gregwym/MaterialYouColor.py"
+    "caelestia-cli       https://github.com/dim-ghub/caelestia-cli"
+)
+
+# Resolve a package name to its source repo URL (empty if not a source-build target)
+source_repo_for() {
+    local name="$1" entry pkg url
+    for entry in "${SOURCE_BUILD_REPOS[@]}"; do
+        read -r pkg url <<<"$entry"
+        if [[ "$pkg" == "$name" ]]; then
+            echo "$url"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
+# Build a package from its upstream source repository. Uses the build backend
+# the project ships (meson, CMake, autotools, or a plain makefile).
+build_from_source() {
+    local pkg="$1" repo="$2" tmpdir
+    tmpdir="$(mktemp -d)"
+    if ! git clone --depth 1 "$repo" "$tmpdir"; then
+        err "Failed to clone source for $pkg from $repo."
+        rm -rf "$tmpdir"
+        return 1
+    fi
+    (
+        cd "$tmpdir" || exit 1
+        if [ -f "meson.build" ]; then
+            meson setup build && meson compile -C build && sudo meson install -C build
+        elif [ -f "CMakeLists.txt" ]; then
+            cmake -B build && cmake --build build && sudo cmake --install build
+        elif [ -x "autogen.sh" ] || [ -f "configure.ac" ] || [ -f "configure" ]; then
+            if [ -x "autogen.sh" ]; then ./autogen.sh; fi
+            ./configure && make && sudo make install
+        elif [ -f "Makefile" ] || [ -f "makefile" ] || [ -f "GNUmakefile" ]; then
+            make && sudo make install
+        else
+            err "No recognized build system for $pkg; skipping source build."
+            exit 1
+        fi
+    ) || {
+        err "Manual build for $pkg failed."
+        rm -rf "$tmpdir"
+        return 1
+    }
+    rm -rf "$tmpdir"
+    return 0
+}
+
 # Batch install all packages at once — much faster than individual yay calls
 if ! yay -S --needed --noconfirm "${PACKAGES[@]}"; then
     log "Batch install had failures. Retrying individually..."
@@ -140,20 +203,36 @@ if ! yay -S --needed --noconfirm "${PACKAGES[@]}"; then
         fi
         if ! yay -S --needed --noconfirm "$pkg"; then
             log "yay failed to install $pkg. Attempting manual build from AUR..."
+            _built=no
             tmpdir="$(mktemp -d)"
             if git clone --depth 1 "https://aur.archlinux.org/${pkg}.git" "$tmpdir"; then
                 (
                     cd "$tmpdir" || exit 1
                     makepkg -si --noconfirm
-                ) || {
-                    err "Manual build for $pkg failed."
-                    FAILED_PKGS+=("$pkg")
+                ) && _built=yes || {
+                    err "Manual build from AUR for $pkg failed."
                 }
             else
-                err "Could not find AUR repository for $pkg."
-                FAILED_PKGS+=("$pkg")
+                err "Could not fetch AUR repository for $pkg."
             fi
             rm -rf "$tmpdir"
+
+            # Last resort: compile straight from upstream source if the AUR
+            # build (or its source download) failed and we know the repo.
+            if [[ "$_built" != "yes" ]]; then
+                repo="$(source_repo_for "$pkg")"
+                if [[ -n "$repo" ]]; then
+                    log "Compiling $pkg from source ($repo)..."
+                    if build_from_source "$pkg" "$repo"; then
+                        log "Built $pkg from source."
+                    else
+                        FAILED_PKGS+=("$pkg")
+                    fi
+                else
+                    err "No source repository mapping for $pkg."
+                    FAILED_PKGS+=("$pkg")
+                fi
+            fi
         fi
     done
 fi

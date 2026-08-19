@@ -90,7 +90,6 @@ silent_refresh_pacman_sources() {
         have_root=1
     else
         # Ask for sudo once upfront; sudo -v caches the ticket.
-        echo "[INFO]  Requesting sudo access to refresh/rank pacman mirrors..."
         if sudo -v; then
             have_root=1
         else
@@ -116,12 +115,11 @@ silent_refresh_pacman_sources() {
             else
                 echo "ParallelDownloads = 5" | as_root tee -a /etc/pacman.conf >/dev/null
             fi
-            echo "[INFO]  Enabled pacman parallel downloads (ParallelDownloads = 5)."
         fi
 
         if is_cachyos; then
             if command -v cachyos-rate-mirrors >/dev/null 2>&1; then
-                echo "[INFO]  Ranking Arch and CachyOS mirrors using cachyos-rate-mirrors..."
+                echo "[INFO]  Ranking CachyOS mirrors..."
                 as_root cachyos-rate-mirrors >/dev/null 2>&1 || echo "[WARN]  cachyos-rate-mirrors failed, continuing with current mirrors."
             else
                 echo "[WARN]  cachyos-rate-mirrors is not installed; continuing with current mirrors."
