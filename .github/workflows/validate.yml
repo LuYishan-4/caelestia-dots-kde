@@ -325,6 +325,27 @@ jobs:
         run: python3 .github/scripts/check_qml_imports.py --shell-root shell
 
   # ═══════════════════════════════════════════════════════════
+  # Job 15: QML template interpolation - unescaped bash ${...}
+  # ═══════════════════════════════════════════════════════════
+  # Bash embedded in QML backtick template literals must escape `${` as
+  # `\${`; an unescaped `${1#v}` is parsed as JavaScript and fails with
+  # "Expected token ','", which then cascades into "Type X unavailable" for
+  # every transitive importer (see shell/services/UpdateChecker.qml).
+  qml-template-interp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check for unescaped bash interpolation in QML template literals
+        run: python3 .github/scripts/check_qml_template_interp.py
+
+  # ═══════════════════════════════════════════════════════════
   # Final gate: require all non-skippable jobs to pass
   # ═══════════════════════════════════════════════════════════
   validate-gate:
@@ -343,6 +364,7 @@ jobs:
       - actionlint
       - wayland-static-lifetime
       - qml-imports
+      - qml-template-interp
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -366,6 +388,7 @@ jobs:
           job_results[actionlint]="${{ needs.actionlint.result }}"
           job_results[wayland-static-lifetime]="${{ needs.wayland-static-lifetime.result }}"
           job_results[qml-imports]="${{ needs.qml-imports.result }}"
+          job_results[qml-template-interp]="${{ needs.qml-template-interp.result }}"
 
           all_passed=true
           # Jobs with pre-existing violations that don't block the gate
