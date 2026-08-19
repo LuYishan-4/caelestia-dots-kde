@@ -78,7 +78,7 @@ if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     if [[ -f "$BUNDLE_DIR/.gitmodules" ]]; then
         info "Initializing all submodules..."
         git submodule sync --recursive >/dev/null 2>&1 || true
-        git submodule update --init --recursive --force --jobs "$(nproc 2>/dev/null || echo 1)" >/dev/null 2>&1 || die "Failed to initialize all submodules"
+        git submodule update --init --recursive --depth 1 --jobs "$(nproc 2>/dev/null || echo 1)" >/dev/null 2>&1 || die "Failed to initialize all submodules"
 
         # Pin plasma-wallpaper-application to the tagged release.
         WALLPAPER_DIR="$BUNDLE_DIR/src/plasma-wallpaper-application"
