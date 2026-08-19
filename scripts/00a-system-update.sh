@@ -3,6 +3,11 @@
 
 set -euo pipefail
 
+if [[ "${SKIP_SYSTEM_UPDATE:-false}" == "true" ]]; then
+    echo "[INFO]  Skipping full system update (SKIP_SYSTEM_UPDATE=true)."
+    exit 0
+fi
+
 if [[ "${BASE_DISTRO:-unknown}" == "arch" ]]; then
     if [[ -n "${CONFIRM_ARG:-}" ]]; then
         sudo pacman -Syu --noconfirm

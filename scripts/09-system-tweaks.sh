@@ -221,6 +221,7 @@ if [[ "${1:-}" == "--list" ]]; then
 fi
 
 tweak_disable_kde_osd
+tweak_five_desktops
 tweak_default_shell
 tweak_default_scheme
 tweak_patch_caelestia_cli

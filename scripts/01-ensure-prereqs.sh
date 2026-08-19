@@ -33,6 +33,19 @@ if [[ "$BASE_DISTRO" == "arch" ]]; then
 
     ensure_yay
 
+    echo "==> Enabling ccache for makepkg builds (caches AUR rebuilds)..."
+    # ccache must be present BEFORE flipping !ccache -> ccache in makepkg.conf,
+    # otherwise every makepkg/yay build aborts with "Cannot find the ccache
+    # binary required for compiler cache usage" (exit status 15).
+    if ! command -v ccache >/dev/null 2>&1; then
+        echo "==> ccache not found  installing..."
+        sudo pacman -S --needed --noconfirm ccache
+    fi
+    if [[ -f /etc/makepkg.conf ]]; then
+        sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf
+    fi
+    echo "[OK]  makepkg ccache configured."
+
     echo "==> Configuring yay sudo looping and disabling interactive menus..."
     yay -Y --sudoloop --nocleanmenu --nodiffmenu --save 2>/dev/null || true
     echo "[OK]  yay configured."

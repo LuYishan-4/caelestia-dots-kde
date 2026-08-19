@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 project(Caelestia)
 
+# Unity builds compile many small translation units together, which speeds up
+# cold builds of the plugin. Opt-in: the installer enables it, while CI and
+# packaging keep per-TU builds for cache friendliness.
+option(CAELESTIA_UNITY_BUILD "Compile plugin sources as CMake unity builds" OFF)
+if(CAELESTIA_UNITY_BUILD)
+    set(CMAKE_UNITY_BUILD ON)
+    set(CMAKE_UNITY_BUILD_BATCH_SIZE 16)
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools Core Qml Gui Quick QuickControls2 Concurrent Sql Network DBus WaylandClient)
 find_package(KF6WindowSystem REQUIRED)
 find_package(KF6GuiAddons REQUIRED)

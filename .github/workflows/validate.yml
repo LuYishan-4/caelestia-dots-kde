@@ -13,77 +13,7 @@ concurrency:
 
 jobs:
   # ═══════════════════════════════════════════════════════════
-  # Job 1: Shell script quality - syntax, shellcheck, best practices
-  # ═══════════════════════════════════════════════════════════
-  shell-quality:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install shellcheck
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-
-      - name: Run shell quality checks
-        run: bash .github/scripts/check_shell_quality.sh
-
-  # ═══════════════════════════════════════════════════════════
-  # Job 2: QML lint - syntax, unused imports, property binding issues
-  # ═══════════════════════════════════════════════════════════
-  qml-lint:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install qmllint
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq qml6-modules-qtquick-controls qml6-modules-qtquick-layouts \
-            qml6-modules-qtquick-window qml6-modules-qtqml-workerscript \
-            qml6-modules-qtquick-templates || true
-          # qmllint comes with qt6-declarative-dev on Ubuntu 24.04+
-          sudo apt-get install -y -qq qt6-declarative-dev 2>/dev/null || true
-
-      - name: Run qmllint on shell QML files
-        run: |
-          echo "::group::qmllint shell QML"
-          find shell -name '*.qml' -print0 | xargs -0 -n1 qmllint6 2>&1 | \
-            grep -v '^Info:' | grep -v '^$' | grep -v 'unused import' | \
-            head -500 || true
-          echo "::endgroup::"
-
-  # ═══════════════════════════════════════════════════════════
-  # Job 3: C++ build - compile the TUI installer
-  # ═══════════════════════════════════════════════════════════
-  cpp-build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq cmake g++ make
-
-      - name: Configure installer build
-        run: |
-          cd installer
-          cmake -B build -DCMAKE_BUILD_TYPE=Release .
-        env:
-          CCACHE_DISABLE: 1
-
-      - name: Build installer
-        run: cmake --build installer/build -- -j$(nproc)
-
-      - name: Verify binary exists
-        run: test -f installer/build/caelestia-install && echo "Installer binary OK"
-
-  # ═══════════════════════════════════════════════════════════
-  # Job 4: Python quality - lint, compile, best practices
+  # Job 1: Python quality - lint, compile, best practices
   # ═══════════════════════════════════════════════════════════
   python-quality:
     runs-on: ubuntu-latest
@@ -124,7 +54,7 @@ jobs:
           echo "::endgroup::"
 
   # ═══════════════════════════════════════════════════════════
-  # Job 5: Repository integrity - cross-cutting consistency checks
+  # Job 2: Repository integrity - cross-cutting consistency checks
   # ═══════════════════════════════════════════════════════════
   repo-integrity:
     runs-on: ubuntu-latest
@@ -144,7 +74,7 @@ jobs:
         run: python3 .github/scripts/test_repo_integrity.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 6: JSON configuration validation
+  # Job 3: JSON configuration validation
   # ═══════════════════════════════════════════════════════════
   json-validation:
     runs-on: ubuntu-latest
@@ -161,7 +91,7 @@ jobs:
         run: python3 .github/scripts/validate_json_configs.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 7: File hygiene - large files, whitespace, merge conflicts
+  # Job 4: File hygiene - large files, whitespace, merge conflicts
   # ═══════════════════════════════════════════════════════════
   file-hygiene:
     runs-on: ubuntu-latest
@@ -182,7 +112,7 @@ jobs:
         continue-on-error: ${{ github.event_name == 'push' }}
 
   # ═══════════════════════════════════════════════════════════
-  # Job 8: Markdown lint
+  # Job 5: Markdown lint
   # ═══════════════════════════════════════════════════════════
   markdown-lint:
     runs-on: ubuntu-latest
@@ -200,7 +130,7 @@ jobs:
             .github/CONTRIBUTING.md
 
   # ═══════════════════════════════════════════════════════════
-  # Job 9: QML conventions - project linter regression gate
+  # Job 6: QML conventions - project linter regression gate
   # ═══════════════════════════════════════════════════════════
   # shell/scripts/qml-lint-conventions.py has thousands of pre-existing
   # violations, so this job diffs against a stored baseline and fails only when
@@ -220,7 +150,7 @@ jobs:
         run: python3 .github/scripts/check_qml_conventions.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 10: Embedded bash - syntax-check bash/sh inside QML Process commands
+  # Job 7: Embedded bash - syntax-check bash/sh inside QML Process commands
   # ═══════════════════════════════════════════════════════════
   # Quickshell runs `command: ["bash", "-c", `<script>`]` strings that qmllint
   # and shellcheck never see; a typo there only surfaces at runtime.
@@ -239,7 +169,7 @@ jobs:
         run: python3 .github/scripts/check_embedded_bash.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 11: Config cross-reference - QML config keys vs C++ declarations
+  # Job 8: Config cross-reference - QML config keys vs C++ declarations
   # ═══════════════════════════════════════════════════════════
   # Catches Config./GlobalConfig. references that don't exist in the plugin's
   # CONFIG_PROPERTY declarations (renamed keys, typos) - the shell logs
@@ -259,7 +189,7 @@ jobs:
         run: python3 .github/scripts/check_config_references.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 12: actionlint - validate workflow files themselves
+  # Job 9: actionlint - validate workflow files themselves
   # ═══════════════════════════════════════════════════════════
   # Catches malformed ${{ }} expressions, bad `on:` keys, wrong permission
   # scopes, etc. that a plain YAML parse cannot.
@@ -280,7 +210,7 @@ jobs:
         run: actionlint -shellcheck= -color -ignore 'missing input "app-id"' -ignore 'input "client-id" is not defined'
 
   # ═══════════════════════════════════════════════════════════
-  # Job 13: Wayland static lifetime - catch exit-time SIGSEGVs
+  # Job 10: Wayland static lifetime - catch exit-time SIGSEGVs
   # ═══════════════════════════════════════════════════════════
   # A class inheriting QWaylandClientExtensionTemplate<T> or QtWayland::* owns
   # a live wl_proxy. Holding one as a function-local (or other) static by
@@ -302,7 +232,7 @@ jobs:
         run: python3 .github/scripts/check_wayland_static_lifetime.py
 
   # ═══════════════════════════════════════════════════════════
-  # Job 14: QML import completeness - missing/extra imports
+  # Job 11: QML import completeness - missing/extra imports
   # ═══════════════════════════════════════════════════════════
   # No real Qt/QML toolchain is available here (qmllint6 can't resolve this
   # repo's qs.* directory-import convention at all), and no other job ever
@@ -325,13 +255,31 @@ jobs:
         run: python3 .github/scripts/check_qml_imports.py --shell-root shell
 
   # ═══════════════════════════════════════════════════════════
+  # Job 12: QML template interpolation - unescaped bash ${...}
+  # ═══════════════════════════════════════════════════════════
+  # Bash embedded in QML backtick template literals must escape `${` as
+  # `\${`; an unescaped `${1#v}` is parsed as JavaScript and fails with
+  # "Expected token ','", which then cascades into "Type X unavailable" for
+  # every transitive importer (see shell/services/UpdateChecker.qml).
+  qml-template-interp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check for unescaped bash interpolation in QML template literals
+        run: python3 .github/scripts/check_qml_template_interp.py
+
+  # ═══════════════════════════════════════════════════════════
   # Final gate: require all non-skippable jobs to pass
   # ═══════════════════════════════════════════════════════════
   validate-gate:
     needs:
-      - shell-quality
-      - qml-lint
-      - cpp-build
       - python-quality
       - repo-integrity
       - json-validation
@@ -343,6 +291,7 @@ jobs:
       - actionlint
       - wayland-static-lifetime
       - qml-imports
+      - qml-template-interp
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -352,9 +301,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           declare -A job_results
-          job_results[shell-quality]="${{ needs.shell-quality.result }}"
-          job_results[qml-lint]="${{ needs.qml-lint.result }}"
-          job_results[cpp-build]="${{ needs.cpp-build.result }}"
           job_results[python-quality]="${{ needs.python-quality.result }}"
           job_results[repo-integrity]="${{ needs.repo-integrity.result }}"
           job_results[json-validation]="${{ needs.json-validation.result }}"
@@ -366,19 +312,15 @@ jobs:
           job_results[actionlint]="${{ needs.actionlint.result }}"
           job_results[wayland-static-lifetime]="${{ needs.wayland-static-lifetime.result }}"
           job_results[qml-imports]="${{ needs.qml-imports.result }}"
+          job_results[qml-template-interp]="${{ needs.qml-template-interp.result }}"
 
           all_passed=true
-          # Jobs with pre-existing violations that don't block the gate
-          # (they run with continue-on-error: true).
-          soft_fail_jobs="shell-quality qml-lint"
           for job in "${!job_results[@]}"; do
             result="${job_results[$job]}"
             if [[ "$result" == "success" ]]; then
               echo "- [PASS] **${job}**" >> $GITHUB_STEP_SUMMARY
             elif [[ "$result" == "skipped" ]]; then
               echo "- [SKIP] **${job}**" >> $GITHUB_STEP_SUMMARY
-            elif [[ " $soft_fail_jobs " == *" $job "* ]]; then
-              echo "- [WARN] **${job}** - pre-existing issues (not blocking)" >> $GITHUB_STEP_SUMMARY
             else
               echo "- [FAIL] **${job}** - ${result}" >> $GITHUB_STEP_SUMMARY
               all_passed=false

@@ -379,6 +379,17 @@ while (!g_quit) {
             
             int y = top + 2;
 
+            const char* start_epoch_str = getenv("INSTALL_START_EPOCH");
+            if (start_epoch_str) {
+                long elapsed = time(NULL) - atol(start_epoch_str);
+                long hours = elapsed / 3600;
+                long mins = (elapsed % 3600) / 60;
+                long secs = elapsed % 60;
+                char buf[64];
+                snprintf(buf, sizeof(buf), "Total time: %ldh %ldm %lds", hours, mins, secs);
+                Draw::text(left + 2, y++, fit_line(string("[OK] ") + buf, content_width), Draw::color("green"));
+            }
+
             auto print_step = [&](const string& name, const string& desc) {
                 if (y >= top + h - 2) return;
                 bool failed = check_failed(steps_file, name);
@@ -395,7 +406,10 @@ while (!g_quit) {
                 Draw::text(left + 2, y++, color + fit_line(mark + " " + desc, content_width) + Draw::reset);
             };
 
-            if (g_base_distro == "arch") {
+            const char* skip_update = getenv("SKIP_SYSTEM_UPDATE");
+            if (skip_update && std::string(skip_update) == "true") {
+                Draw::text(left + 2, y++, fit_line("[SKIP] System update skipped by user choice", content_width), Draw::color("yellow"));
+            } else if (g_base_distro == "arch") {
                 Draw::text(left + 2, y++, fit_line("[OK] System updated (pacman -Syu)", content_width), Draw::color("green"));
             } else if (g_base_distro == "fedora") {
                 Draw::text(left + 2, y++, fit_line("[OK] System updated (dnf upgrade)", content_width), Draw::color("green"));
@@ -449,19 +463,6 @@ while (!g_quit) {
                 Draw::text(left + 2, y++, fit_line("2) If a kernel update occurred, reboot immediately.", content_width));
                 Draw::text(left + 2, y++, fit_line("3) Remove KDE panels after login (Super+D -> panel config).", content_width));
                 Draw::text(left + 2, y++, fit_line("4) Desktop edit mode later: Super+D -> right click desktop.", content_width));
-            }
-
-            const char* start_epoch_str = getenv("INSTALL_START_EPOCH");
-            if (start_epoch_str && y < top + h - 3) {
-                y++;
-                long start_epoch = atol(start_epoch_str);
-                long elapsed = time(NULL) - start_epoch;
-                long h = elapsed / 3600;
-                long m = (elapsed % 3600) / 60;
-                long s = elapsed % 60;
-                char buf[64];
-                snprintf(buf, sizeof(buf), "Total installation time: %ldh %ldm %lds", h, m, s);
-                Draw::text(left + 2, y++, fit_line(string("[OK] ") + buf, content_width), Draw::color("green"));
             }
 
             Draw::text(left + 2, top + h - 2, fit_line("Would you like to log out now? (y/N): ", content_width), Draw::bold + Draw::color("default"));

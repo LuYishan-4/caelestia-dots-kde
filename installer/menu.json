@@ -119,6 +119,12 @@
           "default": false
         },
         {
+          "id": "SKIP_SYSTEM_UPDATE",
+          "type": "boolean",
+          "title": "Skip the full system update (pacman -Syu / dnf upgrade / apt upgrade)",
+          "default": false
+        },
+        {
           "id": "action_back",
           "type": "action",
           "title": "Back to Main Menu"

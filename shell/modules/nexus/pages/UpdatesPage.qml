@@ -130,11 +130,15 @@ PageBase {
             // Version mode: full timeline with available + current + past
             const versions = UpdateChecker.availableVersions;
             const current = UpdateChecker.currentVersion;
-            const currentIdx = versions.indexOf(current);
+            const currentIdx = current === "unknown" ? -2 : versions.indexOf(current);
             const result = [];
             for (let i = 0; i < versions.length; i++) {
                 let state;
-                if (currentIdx === -1) {
+                if (currentIdx === -2) {
+                    // Unknown install: no release may be presented as the
+                    // installed one, and none counts as an available update.
+                    state = "past";
+                } else if (currentIdx === -1) {
                     state = i === 0 ? "current" : "past";
                 } else if (i < currentIdx) {
                     state = "available";
@@ -220,6 +224,7 @@ PageBase {
                         if (root.updateProgress === 1.0) return "done_all";
                         if (root.updateRunning) return "sync";
                         if (root.selectionIsRevert) return "history";
+                        if (UpdateChecker.currentVersion === "unknown" && !UpdateChecker.hasUpdate) return "help";
                         return UpdateChecker.hasUpdate ? "update" : "check_circle";
                     }
                     color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0)
@@ -249,6 +254,8 @@ PageBase {
                                 ? qsTr("New version available on %1").arg(UpdateChecker.currentBranch)
                                 : qsTr("%1 new commits on %2").arg(UpdateChecker.pendingCount).arg(UpdateChecker.currentBranch);
                         }
+                        if (UpdateChecker.currentVersion === "unknown")
+                            return qsTr("Installed version unknown — pick a release below");
                         return qsTr("You're up to date");
                     }
                 }
