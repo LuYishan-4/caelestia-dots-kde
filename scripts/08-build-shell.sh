@@ -164,7 +164,7 @@ cd "$SHELL_DIR" || exit 1
 
 info "Configuring CMake..."
 prepare_build_dir build
-cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DINSTALL_QSCONFDIR="$HOME/.config/quickshell/caelestia" -DINSTALL_LIBDIR="lib/caelestia" -DINSTALL_QMLDIR="lib/qt6/qml" || {
+cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCAELESTIA_UNITY_BUILD=ON -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DINSTALL_QSCONFDIR="$HOME/.config/quickshell/caelestia" -DINSTALL_LIBDIR="lib/caelestia" -DINSTALL_QMLDIR="lib/qt6/qml" || {
     err "CMake configuration failed."
     exit 1
 }
