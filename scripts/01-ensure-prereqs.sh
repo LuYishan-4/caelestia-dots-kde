@@ -33,6 +33,12 @@ if [[ "$BASE_DISTRO" == "arch" ]]; then
 
     ensure_yay
 
+    echo "==> Enabling ccache for makepkg builds (caches AUR rebuilds)..."
+    if [[ -f /etc/makepkg.conf ]]; then
+        sudo sed -i 's/!ccache/ccache/' /etc/makepkg.conf
+    fi
+    echo "[OK]  makepkg ccache configured."
+
     echo "==> Configuring yay sudo looping and disabling interactive menus..."
     yay -Y --sudoloop --nocleanmenu --nodiffmenu --save 2>/dev/null || true
     echo "[OK]  yay configured."
