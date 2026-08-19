@@ -149,6 +149,18 @@ void KWinWorkspaceState::fetchInitialState() {
         m_currentUuid = currentReply.value().variant().toString();
     }
 
+    QDBusMessage rowsMsg = QDBusMessage::createMethodCall("org.kde.KWin", "/VirtualDesktopManager", "org.freedesktop.DBus.Properties", "Get");
+    rowsMsg << "org.kde.KWin.VirtualDesktopManager" << "rows";
+    QDBusReply<QDBusVariant> rowsReply = QDBusConnection::sessionBus().call(rowsMsg);
+
+    if (rowsReply.isValid()) {
+        const uint rows = rowsReply.value().variant().toUInt();
+        if (rows > 0 && rows != m_rows) {
+            m_rows = rows;
+            emit rowsChanged();
+        }
+    }
+
     updateActiveId();
 }
 
