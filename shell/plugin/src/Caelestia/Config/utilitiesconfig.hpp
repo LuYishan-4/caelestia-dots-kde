@@ -28,7 +28,6 @@ class UtilitiesToasts : public ConfigObject {
     CONFIG_GLOBAL_PROPERTY(bool, nowPlaying, false)
     CONFIG_GLOBAL_PROPERTY(bool, clipboardChanged, true)
     CONFIG_GLOBAL_PROPERTY(bool, nightLightChanged, true)
-    CONFIG_GLOBAL_PROPERTY(bool, updateAvailable, true)
     CONFIG_GLOBAL_PROPERTY(bool, transparency, false)
     CONFIG_GLOBAL_PROPERTY(qreal, transparencyBase, 0.85)
 

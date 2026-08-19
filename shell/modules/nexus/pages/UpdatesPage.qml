@@ -244,7 +244,7 @@ PageBase {
                     maximumLineCount: 2
                     elide: Text.ElideRight
                     text: {
-                        if (root.updateProgress === 1.0) return qsTr("Update complete — log out to apply");
+                        if (root.updateProgress === 1.0) return qsTr("Update complete - log out to apply");
                         if (root.updateRunning) return root.updateStatus || qsTr("Updating…");
                         if (root.selectionIsRevert) return qsTr("Restore to %1?").arg(root.selectedVersionId);
                         if (root.selectionIsFuture && root.selectedVersionId !== "")
@@ -255,7 +255,7 @@ PageBase {
                                 : qsTr("%1 new commits on %2").arg(UpdateChecker.pendingCount).arg(UpdateChecker.currentBranch);
                         }
                         if (UpdateChecker.currentVersion === "unknown")
-                            return qsTr("Installed version unknown — pick a release below");
+                            return qsTr("Installed version unknown");
                         return qsTr("You're up to date");
                     }
                 }

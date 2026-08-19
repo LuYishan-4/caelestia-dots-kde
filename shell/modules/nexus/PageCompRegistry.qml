@@ -132,6 +132,9 @@ QtObject {
                 Component {
                     OverviewPanel {}
                 }
+                Component {
+                    BarUpdates {}
+                }
             }
         },
         // Connectivity

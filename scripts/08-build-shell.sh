@@ -317,6 +317,16 @@ mkdir -p ~/.config/quickshell/caelestia
 if [ -d "$BUNDLE_DIR/.git" ]; then
     git -C "$BUNDLE_DIR" rev-parse HEAD > ~/.config/quickshell/caelestia/.current_commit 2>/dev/null || true
     git -C "$BUNDLE_DIR" rev-parse --abbrev-ref HEAD > ~/.config/quickshell/caelestia/.update_branch 2>/dev/null || true
+
+    # Persist the installed version too. The update checker resolves
+    # unrecognised commits through its bare cache repo, which only mirrors
+    # origin branches - a commit that exists only in this local checkout
+    # would otherwise resolve to "unknown" in the Updates page.
+    if [ -f "$BUNDLE_DIR/.github/version.env" ]; then
+        cp "$BUNDLE_DIR/.github/version.env" ~/.config/quickshell/caelestia/.current_version 2>/dev/null || true
+    else
+        git -C "$BUNDLE_DIR" show HEAD:.github/version.env > ~/.config/quickshell/caelestia/.current_version 2>/dev/null || true
+    fi
 fi
 
 ok "Caelestia Shell and KDE Bridges built and installed successfully to user directory."

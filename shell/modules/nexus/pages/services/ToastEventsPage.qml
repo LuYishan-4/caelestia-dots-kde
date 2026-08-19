@@ -40,12 +40,6 @@ PageBase {
         }
 
         ToggleRow {
-            text: qsTr("System updates")
-            checked: GlobalConfig.utilities.toasts.updateAvailable
-            onToggled: GlobalConfig.utilities.toasts.updateAvailable = checked
-        }
-
-        ToggleRow {
             last: true
             text: qsTr("Configuration loaded")
             checked: GlobalConfig.utilities.toasts.configLoaded
