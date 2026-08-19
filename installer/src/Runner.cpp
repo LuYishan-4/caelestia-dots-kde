@@ -34,11 +34,14 @@ bool ensure_tmux_worker_pane() {
     return true;
   }
 
-  system("tmux split-window -h -p 68 -t caelestia_install \"bash -c 'trap "
+  system("tmux split-window -h -t caelestia_install \"bash -c 'trap "
          "\\\":\\\" SIGINT SIGQUIT SIGTSTP; clear; echo \\\"Waiting for "
          "installer...\\\"; exec 3<> /tmp/caelestia_cmd; while read -u 3 -r "
          "cmd; do if [[ \\\"\\$cmd\\\" == \\\"EXIT\\\" ]]; then break; fi; "
          "bash -c \\\"\\$cmd\\\"; echo \\$? > /tmp/caelestia_status; done'\"");
+  // Cap the stages pane (left) at 30 columns — just enough for the progress
+  // list to render — so the logs pane (right) absorbs the remaining width.
+  system("tmux resize-pane -t caelestia_install:0.0 -x 30 2>/dev/null || true");
   system("tmux select-pane -t caelestia_install:0.0");
   this_thread::sleep_for(
       chrono::milliseconds(50)); // tiny wait for terminal resize propagation
