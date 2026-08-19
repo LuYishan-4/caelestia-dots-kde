@@ -99,6 +99,10 @@ else
     git -C "$REPO" fetch --force origin "$CURRENT_BRANCH:$CURRENT_BRANCH" >/dev/null 2>&1
 fi
 
+normalize_version() {
+    printf '%s' "${1#v}"
+}
+
 resolve_version() {
     local ref="$1"
     local ver
@@ -131,12 +135,15 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
         FROM_VERSION="unknown"
     fi
     [ -n "$FROM_VERSION" ] || FROM_VERSION="unknown"
+    FROM_VERSION="$(normalize_version "$FROM_VERSION")"
 
     TAG_LINES="$(git -C "$REPO" for-each-ref --sort=-creatordate --format='%(refname:short)|%(creatordate:iso8601-strict)' refs/tags 2>/dev/null || true)"
     LATEST_VERSION="$(printf '%s\n' "$TAG_LINES" | sed -n '1s/|.*//p')"
     PREVIOUS_VERSION="$(printf '%s\n' "$TAG_LINES" | sed -n '2s/|.*//p')"
     [ -n "$LATEST_VERSION" ] || LATEST_VERSION="$FROM_VERSION"
     [ -n "$PREVIOUS_VERSION" ] || PREVIOUS_VERSION="$LATEST_VERSION"
+    LATEST_VERSION="$(normalize_version "$LATEST_VERSION")"
+    PREVIOUS_VERSION="$(normalize_version "$PREVIOUS_VERSION")"
     echo "META|$FROM_VERSION|$LATEST_VERSION|$PREVIOUS_VERSION"
 
     if [ "$FROM_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
@@ -234,11 +241,19 @@ from_version = (os.getenv("FROM_VERSION") or "unknown").strip()
 latest = tags[0]["tag"]
 previous = tags[1]["tag"] if len(tags) > 1 else latest
 
+# Strip a leading "v" so "v2.3.1" and "2.3.1" compare equal.
+def norm(v):
+    return (v or "").lstrip("vV")
+
+from_version = norm(from_version)
+latest = norm(latest)
+previous = norm(previous)
+
 print(f"META|{from_version}|{latest}|{previous}")
 
 if from_version != latest:
     distance = 1
-    tag_names = [t["tag"] for t in tags]
+    tag_names = [norm(t["tag"]) for t in tags]
     if from_version in tag_names:
         distance = tag_names.index(from_version)
     print(f"VERSION|{from_version}|{latest}|{max(1, distance)}")
