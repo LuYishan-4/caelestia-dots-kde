@@ -23,7 +23,7 @@ done
 echo "  Disabling legacy quickshell-kde-bridge KWin script..."
 kwriteconfig6 --file kwinrc --group "Plugins" --key "quickshell-kde-bridgeEnabled" "false"
 
-echo "  Ensuring KWin has 5 virtual desktops..."
+echo "  Setting default KWin virtual desktops to 5 (only if not already configured)..."
 EXISTING_DESKTOPS="$(kreadconfig6 --file kwinrc --group "Desktops" --key "Number" 2>/dev/null || true)"
 if [ -z "$EXISTING_DESKTOPS" ]; then
     kwriteconfig6 --file kwinrc --group "Desktops" --key "Number" "5"
