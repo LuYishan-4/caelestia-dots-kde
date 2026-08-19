@@ -41,6 +41,16 @@ prepare_build_dir() {
     caelestia_toolchain_stamp > "$dir/.caelestia_toolchain_stamp"
 }
 
+# Persistent ccache so repeated installs/updates reuse compiled objects even
+# across clean build-directory wipes. The shell build already wires ccache up
+# via CMAKE_CXX_COMPILER_LAUNCHER; this only gives it a stable cache dir.
+CCACHE_DIR="${CCACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/ccache}"
+export CCACHE_DIR
+mkdir -p "$CCACHE_DIR"
+if command -v ccache >/dev/null 2>&1; then
+    ccache --max-size 8G >/dev/null 2>&1 || true
+fi
+
 
 if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     info "Running standalone update mode... syncing submodules first."
