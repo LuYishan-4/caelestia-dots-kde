@@ -190,42 +190,50 @@ cmake -G "$CMAKE_GENERATOR" -B build -DCMAKE_BUILD_TYPE=Release -DCAELESTIA_CACH
 }
 
 info "Building..."
-# Capture the full log and surface only errors on failure, so real issues
-# aren't buried under -Wshadow/-Wconversion warning noise.
+# Stream the build live while filtering compiler warning/note spam, and keep
+# the full output in a log for diagnostics on failure.
 BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/shell-build.log"
 mkdir -p "$(dirname "$BUILD_LOG")"
-if ! cmake --build build -j"$(nproc)" >"$BUILD_LOG" 2>&1; then
+set +e
+cmake --build build -j"$(nproc)" 2>&1 | tee "$BUILD_LOG" | grep -vE --line-buffered 'warning:|note:'
+_build_rc=${PIPESTATUS[0]}
+set -e
+if [[ $_build_rc -ne 0 ]]; then
     err "Build failed. Full log: $BUILD_LOG"
     show_build_errors "$BUILD_LOG"
     exit 1
 fi
 
 info "Installing to user local dir..."
-cmake --install build || {
-    err "Installation failed."
+if ! cmake --install build 2>&1 | tee -a "$BUILD_LOG"; then
+    err "Installation failed. Full log: $BUILD_LOG"
     exit 1
-}
+fi
 
 info "Building and installing workspace-tracker KWin Effect..."
 prepare_build_dir kwin-effects/workspace-tracker/build
-cmake -G "$CMAKE_GENERATOR" -B kwin-effects/workspace-tracker/build -S kwin-effects/workspace-tracker -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr > /dev/null || {
-    warn "Workspace tracker configuration failed."
-}
-WS_BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/workspace-tracker-build.log"
-if ! cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" >"$WS_BUILD_LOG" 2>&1; then
-    warn "Workspace tracker build failed. Full log: $WS_BUILD_LOG"
-    show_build_errors "$WS_BUILD_LOG"
+WS_INSTALLED=0
+if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/workspace-tracker/build -S kwin-effects/workspace-tracker -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr >/dev/null; then
+    WS_BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/workspace-tracker-build.log"
+    if ! cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" >"$WS_BUILD_LOG" 2>&1; then
+        warn "Workspace tracker build failed. Full log: $WS_BUILD_LOG"
+        show_build_errors "$WS_BUILD_LOG"
+    elif ! sudo cmake --install kwin-effects/workspace-tracker/build >/dev/null; then
+        warn "Workspace tracker system installation failed."
+    else
+        WS_INSTALLED=1
+    fi
+else
+    warn "Workspace tracker configuration failed; skipping KWin effect build."
 fi
-sudo cmake --install kwin-effects/workspace-tracker/build > /dev/null || {
-    warn "Workspace tracker system installation failed."
-}
 
-if command -v kwriteconfig6 >/dev/null 2>&1; then
-    kwriteconfig6 --file kwinrc --group Plugins --key kwin_workspace_trackerEnabled true
+if [[ $WS_INSTALLED -eq 1 ]]; then
+    if command -v kwriteconfig6 >/dev/null 2>&1; then
+        kwriteconfig6 --file kwinrc --group Plugins --key kwin_workspace_trackerEnabled true
+    fi
+    qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
+    ok "Installed workspace-tracker to KDE."
 fi
-
-qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
-ok "Installed workspace-tracker to KDE."
 
 # Validate every generated QML module before declaring success. Checking only
 # Caelestia.Config lets a partial install reach Quickshell and fail as a large
