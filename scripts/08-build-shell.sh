@@ -52,6 +52,15 @@ prepare_build_dir() {
     caelestia_toolchain_stamp > "$dir/.caelestia_toolchain_stamp"
 }
 
+# Print only the error lines from a build log (skipping warning spam), plus a
+# short tail for context. The full log is always preserved on disk.
+show_build_errors() {
+    local log="$1"
+    grep -E 'error:|FAILED:|ninja: build stopped|CMake Error|make(\[[0-9]+\])?: \*\*\*|undefined reference|ld: ' "$log" || true
+    echo "----- last 20 lines of $log -----"
+    tail -n 20 "$log"
+}
+
 # Persistent ccache so repeated installs/updates reuse compiled objects even
 # across clean build-directory wipes. The shell build already wires ccache up
 # via CMAKE_CXX_COMPILER_LAUNCHER; this only gives it a stable cache dir.
@@ -181,10 +190,15 @@ cmake -G "$CMAKE_GENERATOR" -B build -DCMAKE_BUILD_TYPE=Release -DCAELESTIA_UNIT
 }
 
 info "Building..."
-cmake --build build -j"$(nproc)" || {
-    err "Build failed."
+# Capture the full log and surface only errors on failure, so real issues
+# aren't buried under -Wshadow/-Wconversion warning noise.
+BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/shell-build.log"
+mkdir -p "$(dirname "$BUILD_LOG")"
+if ! cmake --build build -j"$(nproc)" >"$BUILD_LOG" 2>&1; then
+    err "Build failed. Full log: $BUILD_LOG"
+    show_build_errors "$BUILD_LOG"
     exit 1
-}
+fi
 
 info "Installing to user local dir..."
 cmake --install build || {
@@ -197,9 +211,11 @@ prepare_build_dir kwin-effects/workspace-tracker/build
 cmake -G "$CMAKE_GENERATOR" -B kwin-effects/workspace-tracker/build -S kwin-effects/workspace-tracker -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr > /dev/null || {
     warn "Workspace tracker configuration failed."
 }
-cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" > /dev/null || {
-    warn "Workspace tracker build failed."
-}
+WS_BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/workspace-tracker-build.log"
+if ! cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" >"$WS_BUILD_LOG" 2>&1; then
+    warn "Workspace tracker build failed. Full log: $WS_BUILD_LOG"
+    show_build_errors "$WS_BUILD_LOG"
+fi
 sudo cmake --install kwin-effects/workspace-tracker/build > /dev/null || {
     warn "Workspace tracker system installation failed."
 }
