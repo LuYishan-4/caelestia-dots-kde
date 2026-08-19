@@ -82,7 +82,7 @@ Item {
             id: list
 
             model: ScriptModel {
-                values: Notifs.list.filter(n => n.popup && !n.closed).slice(0, GlobalConfig.notifs.maxPopups)
+                values: Notifs.list.filter(n => n.popup && !n.closed).slice(0, Math.max(0, Math.floor(GlobalConfig.notifs.maxPopups)))
             }
 
             anchors.fill: parent
