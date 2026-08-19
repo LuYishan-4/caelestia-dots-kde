@@ -134,14 +134,18 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
     git -C "$REPO" fetch --tags origin >/dev/null 2>&1 || true
 
     CURRENT_VERSION_FILE="$HOME/.config/quickshell/caelestia/.current_version"
+    FROM_VERSION=""
     if [ -f "$CURRENT_VERSION_FILE" ]; then
         FROM_VERSION="$(sed -nE 's/^VERSION[[:space:]]*=[[:space:]]*([A-Za-z0-9._-]+).*/\\1/p' "$CURRENT_VERSION_FILE" | head -n 1)"
-    elif [ -n "$LOCAL_COMMIT" ]; then
+    fi
+    # Fall through instead of elif-chaining: an existing but empty/unparseable
+    # .current_version file (e.g. truncated by a failed git show) must not
+    # block the commit- and version.env-based fallbacks below.
+    if [ -z "$FROM_VERSION" ] && [ -n "$LOCAL_COMMIT" ]; then
         FROM_VERSION="$(resolve_version "$LOCAL_COMMIT")"
-    elif [ -f "$HOME/.config/quickshell/caelestia/.github/version.env" ]; then
+    fi
+    if [ -z "$FROM_VERSION" ] && [ -f "$HOME/.config/quickshell/caelestia/.github/version.env" ]; then
         FROM_VERSION="$(sed -nE 's/^VERSION[[:space:]]*=[[:space:]]*([A-Za-z0-9._-]+).*/\\1/p' "$HOME/.config/quickshell/caelestia/.github/version.env" | head -n 1)"
-    else
-        FROM_VERSION="unknown"
     fi
     [ -n "$FROM_VERSION" ] || FROM_VERSION="unknown"
     FROM_VERSION="$(normalize_version "$FROM_VERSION")"
