@@ -26,9 +26,9 @@ fi
 
 # If run from an existing checkout (e.g. `sh install.sh` inside the repo),
 # reuse it instead of cloning a fresh copy.
-if [ -f "./setup.sh" ] && [ -d "./scripts" ]; then
+if [ -f "./scripts/setup.sh" ]; then
     echo "[Caelestia] Using existing checkout at $(pwd)"
-    exec bash "$(pwd)/setup.sh"
+    exec bash "$(pwd)/scripts/setup.sh"
 fi
 
 if [ -d "$DEST/.git" ]; then
@@ -42,4 +42,4 @@ else
     git clone -b "$BRANCH" --single-branch --depth 1 "$REPO" "$DEST"
 fi
 
-exec bash "$DEST/setup.sh"
+exec bash "$DEST/scripts/setup.sh"

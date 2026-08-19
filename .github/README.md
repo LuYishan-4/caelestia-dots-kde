@@ -107,7 +107,7 @@ Replace `morning.gif`, `afternoon.gif`, `evening.gif`, and `night.gif` in `shell
 | --- | --- |
 | Widgets not appearing | Log out and back in, or run `caelestia shell -d` |
 | Colors not applying | Run `systemctl status --user kde-material-you-colors.service`; re-run installer if needed |
-| Install failed mid-way | Re-run `bash ./setup.sh` |
+| Install failed mid-way | Re-run `bash ./scripts/setup.sh` |
 | Full reset needed | See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 
 For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then run `caelestia shell -l`.

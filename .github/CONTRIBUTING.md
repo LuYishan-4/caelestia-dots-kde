@@ -7,7 +7,7 @@ We're glad you're here! This guide covers everything you need to start contribut
 ```bash
 git clone https://github.com/ladybug-me/caelestia-dots-kde ~/caelestia-dots-kde
 cd ~/caelestia-dots-kde
-bash setup.sh          # Full install - do this at least once
+bash scripts/setup.sh  # Full install - do this at least once
 ```
 
 Make your changes in the cloned repo, test them (see below), then open a PR. That's it.

@@ -14,7 +14,7 @@ export CAELESTIA_SETUP_RUNNING=1
 tput civis 2>/dev/null || true
 
 # -- Paths ---------------------------------------------------------------------
-BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPTS_DIR="$BUNDLE_DIR/scripts"
 export BUNDLE_DIR
 export INSTALL_START_EPOCH="$(date +%s)"
