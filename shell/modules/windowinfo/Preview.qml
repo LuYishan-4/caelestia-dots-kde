@@ -74,7 +74,8 @@ Item {
             anchors.centerIn: parent
             radius: Tokens.rounding.medium
 
-                        Component.onCompleted: updateStream()
+                        // Deferred out of incubation: see ScreencastManager.
+                        Component.onCompleted: Qt.callLater(updateStream)
                         Component.onDestruction: {
                             if (lastRequestedAddress !== "") {
                                 ScreencastManager.releaseStream(lastRequestedAddress);
