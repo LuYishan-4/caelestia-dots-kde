@@ -26,9 +26,7 @@ A community port of the [Caelestia Hyprland dotfiles](https://github.com/caelest
 **Requirements:** Arch-based distro, Fedora, or Debian · KDE Plasma 6.0+
 
 ```bash
-git clone -b main --single-branch --depth 1 https://github.com/ladybug-me/caelestia-dots-kde ~/caelestia-dots-kde
-cd ~/caelestia-dots-kde
-bash ./setup.sh
+curl -fsSL https://raw.githubusercontent.com/ladybug-me/caelestia-dots-kde/main/install.sh | sh
 ```
 
 ### Updating
