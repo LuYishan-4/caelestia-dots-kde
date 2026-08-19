@@ -395,7 +395,10 @@ while (!g_quit) {
                 Draw::text(left + 2, y++, color + fit_line(mark + " " + desc, content_width) + Draw::reset);
             };
 
-            if (g_base_distro == "arch") {
+            const char* skip_update = getenv("SKIP_SYSTEM_UPDATE");
+            if (skip_update && std::string(skip_update) == "true") {
+                Draw::text(left + 2, y++, fit_line("[SKIP] System update skipped by user choice", content_width), Draw::color("yellow"));
+            } else if (g_base_distro == "arch") {
                 Draw::text(left + 2, y++, fit_line("[OK] System updated (pacman -Syu)", content_width), Draw::color("green"));
             } else if (g_base_distro == "fedora") {
                 Draw::text(left + 2, y++, fit_line("[OK] System updated (dnf upgrade)", content_width), Draw::color("green"));

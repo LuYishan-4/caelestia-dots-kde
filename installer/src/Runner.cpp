@@ -366,6 +366,17 @@ void execute() {
 
   for (size_t i = 0; i < steps.size(); ++i) {
   retry_step:
+    // Optional steps: menu toggles are exported as env vars by main(); a
+    // value of "true" skips the step without failing the install.
+    if (steps[i].name == "System update") {
+      const char *skip_val = getenv("SKIP_SYSTEM_UPDATE");
+      if (skip_val && std::string(skip_val) == "true") {
+        steps[i].status = "IGNORED";
+        draw_progress_ui(i);
+        continue;
+      }
+    }
+
     steps[i].status = "RUNNING";
     draw_progress_ui(i);
 
