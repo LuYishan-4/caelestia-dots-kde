@@ -10,6 +10,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.components.containers
 import qs.services
@@ -73,6 +74,18 @@ StyledWindow {
         return Math.max(...thresholds);
     }
 
+    // Whether anything on this surface needs the keyboard. Taking it makes the
+    // surface the active window; KWin does not give focus back to what had it
+    // when we stop asking, it just leaves nothing focused, so that has to be
+    // put right by hand below.
+    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent
+
+    // Remembered on the way in, not read on the way out: as the application
+    // gives up focus KWin passes through a moment with no active window at all,
+    // and the bridge reports that as empty, so by the time the drawer closes
+    // there is often nothing left to read.
+    property string focusReturn: ""
+
     onHasFullscreenChanged: {
         if (!hasFullscreen)
             return;
@@ -104,7 +117,18 @@ StyledWindow {
     // visibly wrong one for left/right, and a degenerate, invisible one for
     // top, since Bottom's math assumes the icon is below the window, the
     // opposite of where it actually is.
-    WlrLayershell.namespace: "panel"
+    //
+    // Reporting as Dock also keeps Alt+F4 off the shell. KWin gates its window
+    // actions behind USABLE_ACTIVE_WINDOW, which is
+    //   m_activeWindow && !(isDesktop() || isDock())
+    // so a dock is skipped before isCloseable() is ever consulted — that returns
+    // an unconditional true for every layer-shell surface, and window rules are
+    // never evaluated for them either, so this type is the only thing standing
+    // between "close window" and the shell losing a surface. The drawers take
+    // keyboard focus while open, which makes this surface the active window, so
+    // without it Alt+F4 over an open dashboard tears one screen's shell down and
+    // leaves the rest of the process running.
+    WlrLayershell.namespace: "dock"
     mask: {
         if (hasOpenOverlay) return fullRegion;
         if (hasFullscreen) return emptyRegion;
@@ -114,6 +138,36 @@ StyledWindow {
     anchors.bottom: true
     anchors.left: true
     anchors.right: true
+    WlrLayershell.exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.layer: hasOpenOverlay || (actualFullscreen && fsTransitionProg < 1) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.keyboardFocus: wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    onWantsKeyboardChanged: {
+        if (typeof KWinActiveWindowBridge === "undefined")
+            return;
+
+        if (wantsKeyboard) {
+            // The bridge ignores the shell taking focus, so this is still the
+            // application that had it.
+            focusReturn = KWinActiveWindowBridge.activeWindow?.address ?? "";
+            return;
+        }
+
+        // Whatever the user switched to while the drawer was open wins, so this
+        // only falls back to what was remembered.
+        const pending = KWinActiveWindowBridge.pendingFocusAddress ?? "";
+        const addr = (KWinActiveWindowBridge.activeWindow?.address ?? "") || focusReturn;
+        focusReturn = "";
+
+        if (pending) {
+            // A focus switch was explicitly requested by the shell (e.g., clicking
+            // a preview), let it happen.
+            return;
+        }
+
+        if (addr)
+            KWinActiveWindowBridge.focusWindow(addr);
+    }
 
     Overview.Anim {
         id: animConfig
@@ -867,9 +921,6 @@ StyledWindow {
             hAnchor: "both"
         }
     }
-    WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: hasOpenOverlay || (actualFullscreen && fsTransitionProg < 1) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     component PanelBg: BlobRect {
         required property Item panel

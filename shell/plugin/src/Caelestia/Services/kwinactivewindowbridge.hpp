@@ -15,6 +15,7 @@ class KWinActiveWindowBridge : public QObject {
     Q_PROPERTY(QVariantMap activeWindow READ activeWindow NOTIFY activeWindowChanged)
     Q_PROPERTY(QString activeOutputName READ activeOutputName WRITE setActiveOutputName NOTIFY activeOutputNameChanged)
     Q_PROPERTY(QVariantList windowList READ windowList NOTIFY windowListChanged)
+    Q_PROPERTY(QString pendingFocusAddress READ pendingFocusAddress NOTIFY pendingFocusAddressChanged)
     QML_ELEMENT
     QML_SINGLETON
 
@@ -27,6 +28,7 @@ public:
     void setActiveOutputName(const QString &outputName);
 
     QVariantList windowList() const;
+    QString pendingFocusAddress() const;
 
     Q_INVOKABLE void focusWindow(const QString &address);
     Q_INVOKABLE void closeWindow(const QString &address);
@@ -47,6 +49,7 @@ signals:
     void activeWindowChanged();
     void activeOutputNameChanged();
     void windowListChanged();
+    void pendingFocusAddressChanged();
 
 private slots:
     void onWindowAdded(const QString& uuid);
@@ -61,6 +64,7 @@ private:
     QVariantMap m_activeWindow;
     QVariantList m_windowList;
     QString m_activeOutputName;
+    QString m_pendingFocusAddress;
 
     QTimer m_updateTimer;
 };
