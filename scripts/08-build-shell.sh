@@ -17,6 +17,30 @@ die()  { echo -e "${RED}[ERR]   $*${RST}"; exit 1; }
 BUNDLE_DIR="${BUNDLE_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 SHELL_DIR="$BUNDLE_DIR/shell"
 
+# Fingerprint of the toolchain that builds Caelestia. Build directories are
+# kept between runs so repeated installs/updates rebuild incrementally; they
+# are only wiped when this fingerprint changes (e.g. a distro Qt/CMake
+# upgrade that would otherwise leave stale object files behind).
+caelestia_toolchain_stamp() {
+    local cmake_ver qt_ver
+    cmake_ver="$(cmake --version | head -n1)"
+    qt_ver="$(pkg-config --modversion Qt6Core 2>/dev/null || true)"
+    printf 'cmake:%s qt6core:%s\n' "$cmake_ver" "$qt_ver"
+}
+
+# Reuse an existing CMake build directory unless the toolchain fingerprint
+# changed since the last configure.
+prepare_build_dir() {
+    local dir="$1"
+    if [[ -f "$dir/CMakeCache.txt" && -f "$dir/.caelestia_toolchain_stamp" ]] \
+        && [[ "$(cat "$dir/.caelestia_toolchain_stamp")" == "$(caelestia_toolchain_stamp)" ]]; then
+        return 0
+    fi
+    rm -rf "$dir"
+    mkdir -p "$dir"
+    caelestia_toolchain_stamp > "$dir/.caelestia_toolchain_stamp"
+}
+
 
 if [[ "${CAELESTIA_SETUP_RUNNING:-0}" == "0" ]]; then
     info "Running standalone update mode... syncing submodules first."
@@ -129,7 +153,7 @@ fi
 cd "$SHELL_DIR" || exit 1
 
 info "Configuring CMake..."
-rm -rf build
+prepare_build_dir build
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local" -DINSTALL_QSCONFDIR="$HOME/.config/quickshell/caelestia" -DINSTALL_LIBDIR="lib/caelestia" -DINSTALL_QMLDIR="lib/qt6/qml" || {
     err "CMake configuration failed."
     exit 1
@@ -148,7 +172,7 @@ cmake --install build || {
 }
 
 info "Building and installing workspace-tracker KWin Effect..."
-rm -rf kwin-effects/workspace-tracker/build
+prepare_build_dir kwin-effects/workspace-tracker/build
 cmake -B kwin-effects/workspace-tracker/build -S kwin-effects/workspace-tracker -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr > /dev/null || {
     warn "Workspace tracker configuration failed."
 }
