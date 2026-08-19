@@ -108,6 +108,17 @@ silent_refresh_pacman_sources() {
             fi
         }
 
+        # Enable parallel package downloads before anything syncs, so the
+        # large package steps don't download hundreds of packages serially.
+        if [[ -f /etc/pacman.conf ]]; then
+            if grep -q '^#\?ParallelDownloads' /etc/pacman.conf; then
+                as_root sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 5/' /etc/pacman.conf
+            else
+                echo "ParallelDownloads = 5" | as_root tee -a /etc/pacman.conf >/dev/null
+            fi
+            echo "[INFO]  Enabled pacman parallel downloads (ParallelDownloads = 5)."
+        fi
+
         if is_cachyos; then
             if command -v cachyos-rate-mirrors >/dev/null 2>&1; then
                 echo "[INFO]  Ranking Arch and CachyOS mirrors using cachyos-rate-mirrors..."
