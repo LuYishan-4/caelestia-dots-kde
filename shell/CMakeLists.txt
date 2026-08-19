@@ -123,11 +123,18 @@ if("m3shapes" IN_LIST ENABLE_MODULES)
     message(STATUS "Fetching M3Shapes module")
     include(FetchContent)
     set(M3SHAPES_REV bdc327b29f95394a732baf3c9b19658ba23755b6)
+    # Keep the checkout outside the build directory so wiping build/ does not
+    # force a fresh clone on every install/update run.
+    if(DEFINED ENV{XDG_CACHE_HOME} AND NOT "$ENV{XDG_CACHE_HOME}" STREQUAL "")
+        set(_CAELESTIA_CACHE "$ENV{XDG_CACHE_HOME}/caelestia-kde")
+    else()
+        set(_CAELESTIA_CACHE "$ENV{HOME}/.cache/caelestia-kde")
+    endif()
     FetchContent_Declare(
         m3shapes_external
         GIT_REPOSITORY https://github.com/soramanew/m3shapes.git
         GIT_TAG        ${M3SHAPES_REV}
-        SOURCE_DIR     "${CMAKE_BINARY_DIR}/_deps/m3shapes-${M3SHAPES_REV}"
+        SOURCE_DIR     "${_CAELESTIA_CACHE}/m3shapes-${M3SHAPES_REV}"
     )
     FetchContent_MakeAvailable(m3shapes_external)
     message(STATUS "Done fetching M3Shapes module")
