@@ -100,7 +100,7 @@ else
 fi
 
 normalize_version() {
-    printf '%s' "${1#v}"
+    printf '%s' "\${1#v}"
 }
 
 resolve_version() {
