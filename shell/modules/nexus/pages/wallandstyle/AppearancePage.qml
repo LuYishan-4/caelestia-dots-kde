@@ -27,7 +27,7 @@ PageBase {
             Process {
                 id: restartProcess
 
-                command: ["bash", "-c", "nohup bash -c 'caelestia shell -k; sleep 2; caelestia shell -d; sleep 1; caelestia shell nexus openPage 0 8' >/dev/null 2>&1 & disown"]
+                command: ["bash", "-c", "nohup bash -c 'bash \"${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/caelestia/scripts/restart_shell.sh\"; sleep 1; caelestia shell nexus openPage 0 8' >/dev/null 2>&1 & disown"]
             }
         }
     ]

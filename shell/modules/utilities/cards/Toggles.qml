@@ -222,7 +222,7 @@ StyledRect {
                         isToggle: false
                         inactiveOnColour: Colours.palette.m3onSurfaceVariant
                         onClicked: {
-                            Quickshell.execDetached(["bash", "-c", "nohup bash -c 'caelestia shell -k; sleep 2; caelestia shell -d;' >/dev/null 2>&1 & disown"]);
+                            Quickshell.execDetached(["bash", "-c", "nohup bash \"${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/caelestia/scripts/restart_shell.sh\" >/dev/null 2>&1 & disown"]);
                         }
                     }
                 }
