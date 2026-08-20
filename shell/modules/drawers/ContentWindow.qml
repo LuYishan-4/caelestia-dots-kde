@@ -85,6 +85,7 @@ StyledWindow {
     // and the bridge reports that as empty, so by the time the drawer closes
     // there is often nothing left to read.
     property string focusReturn: ""
+    property int workspaceReturn: -1
 
     onHasFullscreenChanged: {
         if (!hasFullscreen)
@@ -150,6 +151,7 @@ StyledWindow {
             // The bridge ignores the shell taking focus, so this is still the
             // application that had it.
             focusReturn = KWinActiveWindowBridge.activeWindow?.address ?? "";
+            workspaceReturn = typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : -1;
             return;
         }
 
@@ -157,11 +159,21 @@ StyledWindow {
         // only falls back to what was remembered.
         const pending = KWinActiveWindowBridge.pendingFocusAddress ?? "";
         const addr = (KWinActiveWindowBridge.activeWindow?.address ?? "") || focusReturn;
+        const oldWorkspace = workspaceReturn;
         focusReturn = "";
+        workspaceReturn = -1;
 
         if (pending) {
             // A focus switch was explicitly requested by the shell (e.g., clicking
             // a preview), let it happen.
+            return;
+        }
+
+        const currentWorkspace = typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : -1;
+        if (oldWorkspace !== -1 && currentWorkspace !== oldWorkspace) {
+            // User explicitly navigated to a different workspace while the drawer
+            // was open (e.g., clicking an empty workspace in the overview).
+            // Do not violently pull them back to the original application.
             return;
         }
 
