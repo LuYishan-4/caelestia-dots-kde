@@ -218,7 +218,7 @@ if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/workspace-tracker/build -S kwin-e
     if ! cmake --build kwin-effects/workspace-tracker/build -j"$(nproc)" >"$WS_BUILD_LOG" 2>&1; then
         warn "Workspace tracker build failed. Full log: $WS_BUILD_LOG"
         show_build_errors "$WS_BUILD_LOG"
-    elif ! sudo cmake --install kwin-effects/workspace-tracker/build >/dev/null; then
+    elif ! sudo cmake --install "$PWD/kwin-effects/workspace-tracker/build" >/dev/null; then
         warn "Workspace tracker system installation failed."
     else
         WS_INSTALLED=1
