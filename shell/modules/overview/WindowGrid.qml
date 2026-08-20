@@ -442,7 +442,8 @@ Item {
                                     height: parent.height - (caption.opacity * (caption.implicitHeight + Tokens.padding.extraSmall * 2))
                                     color: Colours.tPalette.m3surfaceContainerHighest
                                     radius: Tokens.rounding.medium
-                                    Component.onCompleted: updateStream()
+                                    // Deferred out of incubation: see ScreencastManager.
+                                    Component.onCompleted: Qt.callLater(updateStream)
                                     Component.onDestruction: {
                                         if (streamRequest && modelData.address) {
                                             ScreencastManager.releaseStream(modelData.address);

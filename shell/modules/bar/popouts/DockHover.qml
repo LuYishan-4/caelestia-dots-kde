@@ -193,11 +193,11 @@ StyledRect {
 
                             color: Colours.tPalette.m3surfaceContainerHighest
                             radius: Tokens.rounding.small
-                            Component.onCompleted: {
-                                if (card.modelData.address) {
-                                    streamRequest = ScreencastManager.requestStream(card.modelData.address);
-                                }
-                            }
+                            // Deferred out of incubation: see ScreencastManager.
+                            Component.onCompleted: Qt.callLater(function () {
+                                if (card.modelData?.address)
+                                    thumb.streamRequest = ScreencastManager.requestStream(card.modelData.address);
+                            })
                             Component.onDestruction: {
                                 if (card.modelData.address) {
                                     ScreencastManager.releaseStream(card.modelData.address);

@@ -76,6 +76,15 @@ Item {
         root._streams = streams;
     }
 
+    // Must not be called while QML is still creating the object that calls it.
+    // Doing so — from a delegate's Component.onCompleted, say — creates a
+    // screencast object and mutates this singleton's bookkeeping in the middle
+    // of QQmlObjectCreator::finalize, and V4 segfaults writing the entry
+    // (insertMember, under StoreElement). It takes a busy dock popout and a
+    // handful of windows to hit, but then it is reliable — four times in five
+    // on a stress that swaps the hovered icon repeatedly. Callers wrap this in
+    // Qt.callLater; WindowSwitcherItem's 20ms timer predates the explanation
+    // and does the same thing.
     function requestStream(uuid: string): var {
         if (!enableStreams) return null;
         if (!uuid) return null;
