@@ -26,7 +26,7 @@ Searcher {
     property var videoThumbs: ({})
     property var videoThumbsPending: ({})
 
-    property string currentMediaFilter: settings.mediaFilter || "All"
+    property string currentMediaFilter: "All"
 
     property var filteredList: {
         const res = wallpapers.entries || [];
@@ -236,10 +236,6 @@ Searcher {
             Colours.showPreview = false;
     }
 
-    onCurrentMediaFilterChanged: {
-        settings.mediaFilter = currentMediaFilter;
-    }
-
     list: filteredList
     key: "relativePath"
     useFuzzy: GlobalConfig.launcher.useFuzzy.wallpapers
@@ -306,12 +302,5 @@ Searcher {
                 Colours.showPreview = true;
             }
         }
-    }
-
-    Settings {
-        id: settings
-
-        category: "Wallpapers"
-        property string mediaFilter: "All"
     }
 }

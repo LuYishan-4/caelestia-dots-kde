@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtCore
 import Caelestia
 import Caelestia.Config
 import qs.components
@@ -21,6 +22,20 @@ Item {
     required property int rounding
 
     property string currentWallpaperTab: "Main"
+
+    Settings {
+        id: wallpaperSettings
+        category: "Wallpapers"
+        property string mediaFilter: "All"
+    }
+
+    Component.onCompleted: {
+        Wallpapers.currentMediaFilter = wallpaperSettings.mediaFilter;
+    }
+
+    onActiveFocusChanged: {
+        wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+    }
 
     readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
 
@@ -179,19 +194,28 @@ Item {
             text: qsTr("Images")
             icon: "image"
             type: Wallpapers.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
-            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image"
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
         }
         IconTextButton {
             text: qsTr("Animated")
             icon: "animation"
             type: Wallpapers.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
-            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated"
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
         }
         IconTextButton {
             text: qsTr("Videos")
             icon: "videocam"
             type: Wallpapers.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
-            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video"
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
         }
     }
 

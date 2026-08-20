@@ -22,6 +22,7 @@ Singleton {
     }
 
     function isAnimated(name: string): bool {
+        if (!name) return false;
         return name.endsWith(".gif");
     }
 }
