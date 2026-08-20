@@ -12,6 +12,7 @@ blank-before-close-brace	services/Audio.qml	no blank line expected before closin
 blank-before-close-brace	services/DiscordRPC.qml	no blank line expected before closing brace
 missing-section-separator	modules/nexus/pages/ShortcutManagerPage.qml	blank line expected between bindings and property declarations
 missing-section-separator	modules/welcome/WelcomeWidget.qml	blank line expected between id and bindings
+missing-section-separator	services/Wallpapers.qml	blank line expected between bindings and property declarations
 section-order	components/PolkitDialog.qml	bindings should appear before child objects (seen at line N)
 section-order	components/PolkitDialog.qml	property declarations should appear before bindings (seen at line N)
 section-order	components/controls/CustomSpinBox.qml	functions should appear before bindings (seen at line N)
@@ -158,7 +159,6 @@ section-order	modules/sidebar/News.qml	property declarations should appear befor
 section-order	modules/sidebar/NotifDock.qml	property declarations should appear before bindings (seen at line N)
 section-order	modules/utilities/cards/Toggles.qml	property declarations should appear before bindings (seen at line N)
 section-order	modules/welcome/WelcomeWidget.qml	bindings should appear before child objects (seen at line N)
-section-order	modules/welcome/WelcomeWidget.qml	functions should appear before bindings (seen at line N)
 section-order	services/Audio.qml	bindings should appear before child objects (seen at line N)
 section-order	services/Audio.qml	functions should appear before child objects (seen at line N)
 section-order	services/Audio.qml	property declarations should appear before child objects (seen at line N)
@@ -180,6 +180,7 @@ section-order	services/UpdateChecker.qml	functions should appear before child ob
 section-order	services/UpdateChecker.qml	property declarations should appear before bindings (seen at line N)
 section-order	services/UpdateChecker.qml	property declarations should appear before child objects (seen at line N)
 section-order	services/VPN.qml	functions should appear before bindings (seen at line N)
+section-order	services/Wallpapers.qml	property declarations should appear before bindings (seen at line N)
 section-order	services/WinIcons.qml	functions should appear before bindings (seen at line N)
 section-order	shell.qml	bindings should appear before child objects (seen at line N)
 section-order	shell.qml	functions should appear before bindings (seen at line N)

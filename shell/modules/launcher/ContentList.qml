@@ -20,6 +20,8 @@ Item {
     required property int padding
     required property int rounding
 
+    property string currentWallpaperTab: "Main"
+
     readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
 
     onShowWallpapersChanged: {
@@ -41,8 +43,6 @@ Item {
     readonly property bool showAnimations: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}animations `)
 
     readonly property var currentList: showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : appList.item)))
-
-    property string currentWallpaperTab: "Main"
 
     readonly property var wallpaperTabs: {
         const res = [];
@@ -100,7 +100,7 @@ Item {
             PropertyChanges {
                 target: root
                 implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
-                implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight + 56 // Extra space for color buttons
+                implicitHeight: filtersRow.implicitHeight + Tokens.spacing.medium + root.Tokens.sizes.launcher.wallpaperHeight + wallpaperTabsWrapper.implicitHeight + 24
             }
         },
         State {
@@ -166,13 +166,43 @@ Item {
         }
     }
 
+    Row {
+        id: filtersRow
+
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Tokens.spacing.small
+
+        visible: root.state === "wallpapers"
+
+        IconTextButton {
+            text: qsTr("Images")
+            icon: "image"
+            type: Wallpapers.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
+            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image"
+        }
+        IconTextButton {
+            text: qsTr("Animated")
+            icon: "animation"
+            type: Wallpapers.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
+            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated"
+        }
+        IconTextButton {
+            text: qsTr("Videos")
+            icon: "videocam"
+            type: Wallpapers.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
+            onClicked: Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video"
+        }
+    }
+
     Loader {
         id: wallpaperList
 
         asynchronous: true
         active: root.state === "wallpapers"
 
-        anchors.top: parent.top
+        anchors.top: filtersRow.bottom
+        anchors.topMargin: Tokens.spacing.medium
         anchors.horizontalCenter: parent.horizontalCenter
         height: root.Tokens.sizes.launcher.wallpaperHeight
 
@@ -199,16 +229,16 @@ Item {
         Flickable {
             id: tabsFlickable
 
-            anchors.fill: parent
-            contentWidth: tabsRow.implicitWidth
-            contentHeight: parent.height
-            flickableDirection: Flickable.HorizontalFlick
-            clip: true
-            
-            ScrollBar.horizontal: StyledScrollBar {
-                flickable: tabsFlickable
-                active: tabsFlickable.moving || tabsFlickable.dragging
-            }
+                anchors.fill: parent
+                contentWidth: tabsRow.implicitWidth
+                contentHeight: parent.height
+                flickableDirection: Flickable.HorizontalFlick
+                clip: true
+                
+                ScrollBar.horizontal: StyledScrollBar {
+                    flickable: tabsFlickable
+                    active: tabsFlickable.moving || tabsFlickable.dragging
+                }
 
             Row {
                 id: tabsRow
