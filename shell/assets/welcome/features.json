@@ -6,6 +6,19 @@
       "description": "Whenever we introduce exciting new features, they will appear here so you never miss out. Enjoy the refined aesthetic and improved functionality!",
       "icon": "celebration",
       "media_url": "../kurukuru.gif"
+    },
+    {
+      "id": "update_indicator_9b5fa56",
+      "title": "Taskbar Update Indicator",
+      "description": "Caelesita can now be updated from system tray. Hover to show available options, Left click to open Update page and Right click to check for update. Can be enabled from Settings -> Panels -> Taskbar -> Toggle & rearrange -> Updates ",
+      "icon": "system_update",
+      "media_url": "update_indicator_9b5fa56.png"
+    },
+    {
+      "id": "permanent_shell_#495",
+      "title": "Integrated more than ever",
+      "description": "1. Alt+F4 no longer closes the shell. 2. Whenever you open and close any drawer, it will seamlessly return focus to the window you were previously using! 3. Kwin native protocols are used to interact with windows, creating much faster experience!",
+      "icon": "keyboard_return"
     }
   ]
 }
