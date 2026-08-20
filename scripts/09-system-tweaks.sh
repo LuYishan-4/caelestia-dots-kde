@@ -103,7 +103,7 @@ tweak_reload_kde() {
 tweak_default_scheme() {
     info "Setting default Caelestia color scheme..."
     if command -v caelestia >/dev/null 2>&1; then
-        caelestia scheme set -n dynamic >/dev/null 2>&1 || true
+        timeout 10s caelestia scheme set -n dynamic >/dev/null 2>&1 || true
     fi
     ok "Default Caelestia color scheme set."
 }
