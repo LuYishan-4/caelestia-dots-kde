@@ -28,7 +28,7 @@ PanelWindow {
 
     // Modes
     // TODO: Ask: sidebar AI
-    enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound } 
+    enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound }
 
     enum SelectionMode { RectCorners, Circle }
 
@@ -74,6 +74,27 @@ PanelWindow {
     // Vars for indicators
     readonly property var windows: {
         let arr = Array.from(KWinActiveWindowBridge.windowList || []);
+
+        if (typeof KWinWorkspaceState !== "undefined") {
+            const activeId = KWinWorkspaceState.activeId;
+            const activeIdx = activeId > 0 ? activeId - 1 : 0;
+            const activeUuid = KWinWorkspaceState.workspaces[activeIdx] ? KWinWorkspaceState.workspaces[activeIdx].id : "";
+
+            arr = arr.filter(w => {
+                if (!w.workspace) return true;
+
+                if (typeof w.workspace.id === "number") {
+                    if (w.workspace.id === -1) return true; // On all workspaces
+                    return w.workspace.id === activeIdx || w.workspace.id === activeId;
+                } else if (typeof w.workspace.id === "string") {
+                    if (w.workspace.id === "") return true;
+                    return w.workspace.id === activeUuid;
+                }
+
+                return true;
+            });
+        }
+
         return arr.sort((a, b) => {
             // Sort floating=true windows before others
             if (a.floating === b.floating) return 0;
@@ -127,6 +148,7 @@ PanelWindow {
             size: [window.width, window.height],
             class: window.class,
             title: window.title,
+            address: window.address || "",
         }
     })
 
@@ -172,6 +194,9 @@ PanelWindow {
     property real targetedRegionWidth: 0
 
     property real targetedRegionHeight: 0
+
+    // The address (uuid) of the window currently under the cursor in window-outline mode
+    property string targetedWindowAddress: ""
 
     function targetedRegionValid() {
         return (root.targetedRegionX >= 0 && root.targetedRegionY >= 0)
@@ -219,6 +244,7 @@ PanelWindow {
             root.targetedRegionY = clickedWindow.at[1];
             root.targetedRegionWidth = clickedWindow.size[0];
             root.targetedRegionHeight = clickedWindow.size[1];
+            root.targetedWindowAddress = clickedWindow.address || "";
             return;
         }
 
@@ -226,6 +252,7 @@ PanelWindow {
         root.targetedRegionY = -1;
         root.targetedRegionWidth = 0;
         root.targetedRegionHeight = 0;
+        root.targetedWindowAddress = "";
     }
 
     property real regionWidth: Math.abs(draggingX - dragStartX)
@@ -266,6 +293,8 @@ PanelWindow {
 
     property bool preparationDone: false
 
+    property bool regionConfirmPending: false
+
     property string frozenImageSource: ""
 
     onPreparationDoneChanged: {
@@ -288,9 +317,9 @@ PanelWindow {
     Process {
         id: imageDetectionProcess
 
-        command: ["bash", "-c", `${"~/.config/caelestia/scripts"}/images/find-regions-venv.sh ` 
-            + `--image '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' ` 
-            + `--max-width ${Math.round(root.screen.width * root.falsePositivePreventionRatio)} ` 
+        command: ["bash", "-c", `${"~/.config/caelestia/scripts"}/images/find-regions-venv.sh `
+            + `--image '${ScreenshotAction.escapeShellStr(root.screenshotPath)}' `
+            + `--max-width ${Math.round(root.screen.width * root.falsePositivePreventionRatio)} `
             + `--max-height ${Math.round(root.screen.height * root.falsePositivePreventionRatio)} `]
         stdout: StdioCollector {
             id: imageDimensionCollector
@@ -341,14 +370,14 @@ PanelWindow {
         if (root.action === RegionSelection.SnipAction.Copy || root.action === RegionSelection.SnipAction.Edit) {
             root.action = root.mouseButton === Qt.RightButton ? RegionSelection.SnipAction.Edit : RegionSelection.SnipAction.Copy;
         }
-        
+
         const screenshotDir = "" !== "" ? //
             "" : "";
         var screenshotAction = root.getScreenshotAction();
         const command = ScreenshotAction.getCommand(
             root.regionX * root.monitorScale, //
             root.regionY * root.monitorScale, //
-            root.regionWidth * root.monitorScale,// 
+            root.regionWidth * root.monitorScale,//
             root.regionHeight * root.monitorScale, //
             root.screenshotPath, //
             screenshotAction, //
@@ -361,6 +390,39 @@ PanelWindow {
         } else {
             root.dismiss();
         }
+    }
+
+    // Window screenshot via spectacle — focuses the target window then calls spectacle -b -a
+    function snipWindow(windowAddress) {
+        root.screenshotConsumed = true;
+
+        const saveDir = `${Paths.absolutePath("~/Pictures/Screenshots")}`;
+        const saveFile = `${saveDir}/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png`;
+
+        // Determine spectacle flags based on action
+        let spectacleFlags = "-b -a -n";
+        if (root.mouseButton === Qt.RightButton || root.action === RegionSelection.SnipAction.Edit) {
+            spectacleFlags = "-b -a -n -e"; // exclude decorations on right-click (edit)
+        }
+
+        const command = [
+            "bash", "-c",
+            `set -euo pipefail; ` +
+            `mkdir -p '${saveDir}'; ` +
+            `F="${saveDir}/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png"; ` +
+            `spectacle ${spectacleFlags} -o "$F" && ` +
+            `wl-copy -t image/png < "$F"; ` +
+            `ACTION=$(notify-send "Screenshot Captured" "Saved to $F" -i "$F" -a "Screenshot" --action="open=Open" --action="folder=Open Folder" || true); ` +
+            `if [ "$ACTION" = "open" ]; then xdg-open "$F"; elif [ "$ACTION" = "folder" ]; then xdg-open "${saveDir}"; fi`
+        ];
+
+        // Focus the window, dismiss overlay, then shoot after a short delay
+        if (windowAddress) {
+            KWinActiveWindowBridge.focusWindow(windowAddress);
+        }
+        root.dismiss();
+        // Small delay so the window has time to come to front before spectacle fires
+        Qt.callLater(() => { Quickshell.execDetached(command); });
     }
 
     // Only clickable in Selection phase
@@ -426,7 +488,14 @@ PanelWindow {
                 root.regionWidth = maxX - minX + padding * 2;
                 root.regionHeight = maxY - minY + padding * 2;
             }
-            root.snip();
+
+            // In window-outline mode: a simple click on a window uses spectacle for a clean shot
+            const isClick = root.draggingX === root.dragStartX && root.draggingY === root.dragStartY;
+            if (root.showWindowOutlines && isClick && root.targetedWindowAddress) {
+                root.snipWindow(root.targetedWindowAddress);
+            } else {
+                root.snip();
+            }
         }
         onPositionChanged: (mouse) => {
             root.updateTargetedRegion(mouse.x, mouse.y);
@@ -437,7 +506,7 @@ PanelWindow {
             root.dragDiffY = mouse.y - root.dragStartY;
             root.points.push({ x: mouse.x, y: mouse.y });
         }
-        
+
         Loader {
             z: 2
             anchors.fill: parent
@@ -493,6 +562,8 @@ PanelWindow {
                 required property var modelData
                 clientDimensions: modelData
                 showIcon: true
+                text: modelData.title || modelData["class"] || ""
+                iconName: modelData["class"] || ""
                 targeted: !root.draggedAway && //
                     (root.targetedRegionX === modelData.at[0]  //
                     && root.targetedRegionY === modelData.at[1] //
@@ -505,7 +576,6 @@ PanelWindow {
                 // which would animate RGB through black via TargetRegion's
                 // Behavior on color.
                 fillColor: targeted ? root.windowFillColor : Qt.alpha(root.windowFillColor, 0)
-                text: `${modelData.class}`
                 radius: 12
             }
         }
@@ -527,7 +597,7 @@ PanelWindow {
                 required property var modelData
                 clientDimensions: modelData
                 targeted: !root.draggedAway &&
-                    (root.targetedRegionX === modelData.at[0] 
+                    (root.targetedRegionX === modelData.at[0]
                     && root.targetedRegionY === modelData.at[1]
                     && root.targetedRegionWidth === modelData.size[0]
                     && root.targetedRegionHeight === modelData.size[1])
@@ -557,7 +627,7 @@ PanelWindow {
                 required property var modelData
                 clientDimensions: modelData
                 targeted: !root.draggedAway &&
-                    (root.targetedRegionX === modelData.at[0] 
+                    (root.targetedRegionX === modelData.at[0]
                     && root.targetedRegionY === modelData.at[1]
                     && root.targetedRegionWidth === modelData.size[0]
                     && root.targetedRegionHeight === modelData.size[1])
@@ -606,6 +676,9 @@ PanelWindow {
                 }
                 Synchronizer on selectionMode {
                     property alias source: root.selectionMode
+                }
+                Synchronizer on showWindowOutlines {
+                    property alias source: root.showWindowOutlines
                 }
 
                 onDismiss: root.dismiss();
@@ -658,6 +731,6 @@ PanelWindow {
                 }
             }
         }
-        
+
     }
 }
