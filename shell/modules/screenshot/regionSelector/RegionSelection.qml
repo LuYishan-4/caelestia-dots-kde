@@ -17,7 +17,10 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.namespace: "osd"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    
+
+
     exclusionMode: ExclusionMode.Ignore
     anchors {
         left: true
@@ -41,6 +44,13 @@ PanelWindow {
     property var phase: RegionSelection.Phase.Select
 
     signal dismiss()
+
+    // Reset per-session state when the overlay is closed
+    onDismiss: {
+        root.snapshotWorkspaceId = 0;
+        root.snapshotWorkspaceUuid = "";
+        root.lastHoverFocusedAddress = "";
+    }
 
     // Styles
     property string screenshotDir: `${Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"}/caelestia-screenshot`
@@ -72,20 +82,32 @@ PanelWindow {
     property bool contentRegionOpacity: false
 
     // Vars for indicators
+    // Snapshot of the active workspace when the overlay opened — used to filter
+    // windows so that hover-focus actions never cause workspace switching that
+    // would update this filter mid-session.
+    property int snapshotWorkspaceId: 0
+    property string snapshotWorkspaceUuid: ""
+
     readonly property var windows: {
         let arr = Array.from(KWinActiveWindowBridge.windowList || []);
 
-        if (typeof KWinWorkspaceState !== "undefined") {
-            const activeId = KWinWorkspaceState.activeId;
-            const activeIdx = activeId > 0 ? activeId - 1 : 0;
-            const activeUuid = KWinWorkspaceState.workspaces[activeIdx] ? KWinWorkspaceState.workspaces[activeIdx].id : "";
+        // Prefer the snapshotted workspace (set when overlay opens) so that
+        // focusWindow() calls during hover cannot cause the filter to shift.
+        const useSnapshot = root.snapshotWorkspaceId > 0 || root.snapshotWorkspaceUuid !== "";
+        const activeId = useSnapshot ? root.snapshotWorkspaceId
+            : (typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : 0);
+        const activeIdx = activeId > 0 ? activeId - 1 : 0;
+        const activeUuid = useSnapshot ? root.snapshotWorkspaceUuid
+            : (typeof KWinWorkspaceState !== "undefined" && KWinWorkspaceState.workspaces[activeIdx]
+                ? KWinWorkspaceState.workspaces[activeIdx].id : "");
 
+        if (activeId > 0 || activeUuid !== "") {
             arr = arr.filter(w => {
                 if (!w.workspace) return true;
 
                 if (typeof w.workspace.id === "number") {
                     if (w.workspace.id === -1) return true; // On all workspaces
-                    return w.workspace.id === activeIdx || w.workspace.id === activeId;
+                    return w.workspace.id === activeId;
                 } else if (typeof w.workspace.id === "string") {
                     if (w.workspace.id === "") return true;
                     return w.workspace.id === activeUuid;
@@ -198,6 +220,30 @@ PanelWindow {
     // The address (uuid) of the window currently under the cursor in window-outline mode
     property string targetedWindowAddress: ""
 
+    // Tracks the last window we focused on hover — avoids redundant focus calls
+    property string lastHoverFocusedAddress: ""
+
+    // Debounce timer: focus the hovered window shortly after the mouse enters it
+    Timer {
+        id: focusHoverTimer
+
+        interval: 120
+        repeat: false
+        onTriggered: {
+            if (root.showWindowOutlines && root.targetedWindowAddress
+                    && root.targetedWindowAddress !== root.lastHoverFocusedAddress) {
+                // Verify the window is still on the current workspace before focusing
+                const stillVisible = root.windowRegions.some(
+                    r => r.address === root.targetedWindowAddress
+                );
+                if (stillVisible) {
+                    KWinActiveWindowBridge.focusWindow(root.targetedWindowAddress);
+                    root.lastHoverFocusedAddress = root.targetedWindowAddress;
+                }
+            }
+        }
+    }
+
     function targetedRegionValid() {
         return (root.targetedRegionX >= 0 && root.targetedRegionY >= 0)
     }
@@ -235,16 +281,31 @@ PanelWindow {
             return;
         }
 
-        // Window regions
-        const clickedWindow = root.windowRegions.find(region => {
-            return region.at[0] <= x && x <= region.at[0] + region.size[0] && region.at[1] <= y && y <= region.at[1] + region.size[1];
-        });
+        // Window regions — pick the smallest (most specific) window containing the cursor
+        let clickedWindow = null;
+        let smallestArea = Infinity;
+        for (const region of root.windowRegions) {
+            if (region.at[0] <= x && x <= region.at[0] + region.size[0]
+                    && region.at[1] <= y && y <= region.at[1] + region.size[1]) {
+                const area = region.size[0] * region.size[1];
+                if (area < smallestArea) {
+                    smallestArea = area;
+                    clickedWindow = region;
+                }
+            }
+        }
         if (clickedWindow) {
             root.targetedRegionX = clickedWindow.at[0];
             root.targetedRegionY = clickedWindow.at[1];
             root.targetedRegionWidth = clickedWindow.size[0];
             root.targetedRegionHeight = clickedWindow.size[1];
-            root.targetedWindowAddress = clickedWindow.address || "";
+            const newAddr = clickedWindow.address || "";
+            if (root.showWindowOutlines && newAddr && newAddr !== root.targetedWindowAddress) {
+                root.targetedWindowAddress = newAddr;
+                focusHoverTimer.restart();
+            } else {
+                root.targetedWindowAddress = newAddr;
+            }
             return;
         }
 
@@ -305,7 +366,16 @@ PanelWindow {
             return;
         }
         root.frozenImageSource = "file://" + root.screenshotPath;
+        // Freeze the workspace context so hover-focus never shifts the filter
+        if (typeof KWinWorkspaceState !== "undefined") {
+            const snapId = KWinWorkspaceState.activeId;
+            root.snapshotWorkspaceId = snapId;
+            const snapIdx = snapId > 0 ? snapId - 1 : 0;
+            root.snapshotWorkspaceUuid = KWinWorkspaceState.workspaces[snapIdx]
+                ? KWinWorkspaceState.workspaces[snapIdx].id : "";
+        }
         root.visible = true;
+        mouseArea.forceActiveFocus();
     }
 
     Component.onDestruction: {
@@ -405,15 +475,16 @@ PanelWindow {
             spectacleFlags = "-b -a -n -e"; // exclude decorations on right-click (edit)
         }
 
+        const tmpFile = Paths.runtimeTemp(`snip-window-${Date.now()}.png`);
+        const actionCmdArray = ScreenshotAction.getCommand(
+            0, 0, 99999, 99999, tmpFile, root.getScreenshotAction(), saveDir
+        );
+        const actionScript = actionCmdArray[2];
+
         const command = [
             "bash", "-c",
             `set -euo pipefail; ` +
-            `mkdir -p '${saveDir}'; ` +
-            `F="${saveDir}/screenshot-$(date +%Y-%m-%d_%H.%M.%S).png"; ` +
-            `spectacle ${spectacleFlags} -o "$F" && ` +
-            `wl-copy -t image/png < "$F"; ` +
-            `ACTION=$(notify-send "Screenshot Captured" "Saved to $F" -i "$F" -a "Screenshot" --action="open=Open" --action="folder=Open Folder" || true); ` +
-            `if [ "$ACTION" = "open" ]; then xdg-open "$F"; elif [ "$ACTION" = "folder" ]; then xdg-open "${saveDir}"; fi`
+            `spectacle ${spectacleFlags} -o '${tmpFile}' && ${actionScript}`
         ];
 
         // Focus the window, dismiss overlay, then shoot after a short delay
@@ -439,35 +510,49 @@ PanelWindow {
         anchors.fill: parent
         source: root.frozenImageSource
         cache: false
-        visible: root.phase === RegionSelection.Phase.Select
+        // In window-outline mode hide the frozen frame so the live desktop shows through
+        visible: root.phase === RegionSelection.Phase.Select && !root.showWindowOutlines
+    }
 
-        focus: root.visible
-        Keys.onPressed: (event) => { // Esc to close
-            if (event.key === Qt.Key_Escape) {
-                root.dismiss();
-            }
-        }
+    GlobalShortcut {
+        name: "caelestia_screenshot_escape"
+        key: root.visible ? "Escape" : ""
+        onActivated: root.dismiss()
     }
 
     MouseArea {
         id: mouseArea
 
         anchors.fill: parent
-        cursorShape: root.draggedAway ? Qt.ArrowCursor : Qt.CrossCursor
+        focus: root.visible
+        cursorShape: root.showWindowOutlines
+            ? (root.targetedRegionValid() ? Qt.PointingHandCursor : Qt.ArrowCursor)
+            : (root.draggedAway ? Qt.ArrowCursor : Qt.CrossCursor)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
 
         // Controls
         onPressed: (mouse) => {
             mouse.accepted = true;
+            root.mouseButton = mouse.button;
+            if (root.showWindowOutlines) return;
             root.dragStartX = mouse.x;
             root.dragStartY = mouse.y;
             root.draggingX = mouse.x;
             root.draggingY = mouse.y;
             root.dragging = true;
-            root.mouseButton = mouse.button;
         }
         onReleased: (mouse) => {
+            if (root.showWindowOutlines) {
+                if (root.targetedWindowAddress) {
+                    root.snipWindow(root.targetedWindowAddress);
+                } else if (root.targetedRegionValid()) {
+                    root.setRegionToTargeted();
+                    root.snip();
+                }
+                return;
+            }
+
             root.dragging = false;
             // Detect if it was a click -> Try to select targeted region
             if (root.draggingX === root.dragStartX && root.draggingY === root.dragStartY) {
@@ -489,17 +574,11 @@ PanelWindow {
                 root.regionHeight = maxY - minY + padding * 2;
             }
 
-            // In window-outline mode: a simple click on a window uses spectacle for a clean shot
-            const isClick = root.draggingX === root.dragStartX && root.draggingY === root.dragStartY;
-            if (root.showWindowOutlines && isClick && root.targetedWindowAddress) {
-                root.snipWindow(root.targetedWindowAddress);
-            } else {
-                root.snip();
-            }
+            root.snip();
         }
         onPositionChanged: (mouse) => {
             root.updateTargetedRegion(mouse.x, mouse.y);
-            if (!root.dragging) return;
+            if (root.showWindowOutlines || !root.dragging) return;
             root.draggingX = mouse.x;
             root.draggingY = mouse.y;
             root.dragDiffX = mouse.x - root.dragStartX;
@@ -510,7 +589,7 @@ PanelWindow {
         Loader {
             z: 2
             anchors.fill: parent
-            active: root.selectionMode === RegionSelection.SelectionMode.RectCorners
+            active: !root.showWindowOutlines && root.selectionMode === RegionSelection.SelectionMode.RectCorners
             sourceComponent: RectCornersSelectionDetails {
                 regionX: root.regionX
                 regionY: root.regionY
@@ -527,7 +606,7 @@ PanelWindow {
         Loader {
             z: 2
             anchors.fill: parent
-            active: root.selectionMode === RegionSelection.SelectionMode.Circle
+            active: !root.showWindowOutlines && root.selectionMode === RegionSelection.SelectionMode.Circle
             sourceComponent: CircleSelectionDetails {
                 color: root.selectionBorderColor
                 overlayColor: root.overlayColor
@@ -538,7 +617,7 @@ PanelWindow {
         // The thing to the bottom-right with an icon
         CursorGuide {
             z: 9999
-            active: root.phase === RegionSelection.Phase.Select && root.visible
+            active: !root.showWindowOutlines && root.phase === RegionSelection.Phase.Select && root.visible
             x: mouseArea.mouseX
             y: mouseArea.mouseY
             action: root.action
@@ -557,7 +636,7 @@ PanelWindow {
                 }
             }
             delegate: TargetRegion {
-                z: 2
+                z: targeted ? 99 : 2
 
                 required property var modelData
                 clientDimensions: modelData
@@ -569,8 +648,7 @@ PanelWindow {
                     && root.targetedRegionY === modelData.at[1] //
                     && root.targetedRegionWidth === modelData.size[0] //
                     && root.targetedRegionHeight === modelData.size[1])
-
-                opacity: root.draggedAway ? 0 : root.targetRegionOpacity
+                opacity: root.draggedAway ? 0 : (root.targetedRegionValid() && !targeted ? 0 : root.targetRegionOpacity)
                 borderColor: root.windowBorderColor
                 // Fade alpha to 0 instead of the literal "transparent" string,
                 // which would animate RGB through black via TargetRegion's
@@ -592,7 +670,7 @@ PanelWindow {
                 }
             }
             delegate: TargetRegion {
-                z: 3
+                z: targeted ? 99 : 2
 
                 required property var modelData
                 clientDimensions: modelData
@@ -601,8 +679,7 @@ PanelWindow {
                     && root.targetedRegionY === modelData.at[1]
                     && root.targetedRegionWidth === modelData.size[0]
                     && root.targetedRegionHeight === modelData.size[1])
-
-                opacity: root.draggedAway ? 0 : root.targetRegionOpacity
+                opacity: root.draggedAway ? 0 : (root.targetedRegionValid() && !targeted ? 0 : root.targetRegionOpacity)
                 borderColor: root.windowBorderColor
                 fillColor: targeted ? root.windowFillColor : Qt.alpha(root.windowFillColor, 0)
                 text: `${modelData.namespace}`
