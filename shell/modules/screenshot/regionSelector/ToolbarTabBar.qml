@@ -55,7 +55,7 @@ Item {
                 implicitHeight: 36
                 leftPadding: 16
                 rightPadding: 16
-                
+
                 background: Rectangle {
                     // Fade alpha to 0 instead of the literal "transparent" string,
                     // which would animate RGB through black.
@@ -84,6 +84,10 @@ Item {
 
                 onClicked: {
                     root.setCurrentIndex(index);
+                }
+
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
                 }
             }
         }

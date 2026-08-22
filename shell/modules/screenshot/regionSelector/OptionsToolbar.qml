@@ -3,7 +3,6 @@ import "../../../components/controls"
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtCore
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Hyprland
@@ -24,12 +23,6 @@ Toolbar {
     // Signals
     signal dismiss()
 
-    Settings {
-        property alias showWindowOutlines: root.showWindowOutlines
-
-        category: "Screenshot"
-    }
-
     IconButton {
         Layout.alignment: Qt.AlignVCenter
         icon: "desktop_windows"
@@ -41,6 +34,11 @@ Toolbar {
         checked: root.showWindowOutlines
         onClicked: {
             root.showWindowOutlines = internalChecked;
+        }
+
+        Tooltip {
+            target: parent
+            text: qsTr("Window screenshot")
         }
     }
 

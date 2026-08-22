@@ -1,5 +1,6 @@
 import ".."
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -19,6 +20,15 @@ Scope {
     property var action: RegionSelection.SnipAction.Copy
 
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
+
+    // Persisted across screenshot sessions — written to disk via Settings below
+    property bool showWindowOutlines: false
+
+    Settings {
+        property alias showWindowOutlines: root.showWindowOutlines
+
+        category: "Screenshot"
+    }
     
     Variants {
         model: Quickshell.screens
@@ -34,6 +44,8 @@ Scope {
                 onDismiss: root.dismiss()
                 action: root.action
                 selectionMode: root.selectionMode
+                showWindowOutlines: root.showWindowOutlines
+                onShowWindowOutlinesChanged: root.showWindowOutlines = showWindowOutlines
             }
         }
     }
