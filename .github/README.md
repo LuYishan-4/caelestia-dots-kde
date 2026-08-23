@@ -123,12 +123,12 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | PRs |
 | --- | ---: |
-| [WinTone01](https://github.com/WinTone01) | 40 |
+| [WinTone01](https://github.com/WinTone01) | 46 |
 | [Vinax89](https://github.com/Vinax89) | 5 |
-| [caelestia-automation[bot]](https://github.com/caelestia-automation[bot]) | 2 |
 | [0x0nYx](https://github.com/0x0nYx) | 1 |
 | [tomjod](https://github.com/tomjod) | 1 |
 | [Peace-W](https://github.com/Peace-W) | 1 |
+| [jedrikjames](https://github.com/jedrikjames) | 1 |
 | [Klivan49](https://github.com/Klivan49) | 1 |
 | [gitxpresso](https://github.com/gitxpresso) | 1 |
 
@@ -141,7 +141,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | --- | ---: |
 | [0x0nYx](https://github.com/0x0nYx) | 106 |
 | [Kyedae](https://github.com/Kyedae) | 17 |
-| [bubbleo0](https://github.com/bubbleo0) | 11 |
+| [bubbleo0](https://github.com/bubbleo0) | 12 |
 | [RaceConditionWinner](https://github.com/RaceConditionWinner) | 10 |
 | [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
 | [arceus4526](https://github.com/arceus4526) | 6 |
