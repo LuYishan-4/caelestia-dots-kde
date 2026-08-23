@@ -8,6 +8,7 @@ STATE_DIR="${STATE_DIR:-$HOME/.local/state/caelestia/record}"
 PID_FILE="${STATE_DIR}/recorder.pid"
 LOCK_FILE="${STATE_DIR}/recorder.lock"
 CURRENT_FILE="${STATE_DIR}/current_recording_path"
+IPC_SOCK="${XDG_RUNTIME_DIR:-/tmp}/caelestia-gsr.sock"
 
 # Where finished recordings actually live - must match shell/utils/Paths.qml's
 # recsdir so the Recordings list in the shell can find them.
@@ -105,6 +106,7 @@ _stop_recording() {
         kill -INT "$pid" 2>/dev/null || true
     done < <(pgrep -u "$(id -u)" -x "$recorder_name" 2>/dev/null || true)
     rm -f "$LOCK_FILE" "$CURRENT_FILE"
+    rm -f "$IPC_SOCK"
 }
 
 _open_dir() {
@@ -114,10 +116,51 @@ _open_dir() {
 }
 
 # ---- command dispatch ---------------------------------------------------------
-ACTION="${1:-start}"
+ACTION="start"
+SOUND_OUTPUT=false
+SOUND_INPUT=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --pause|pause|-p)
+            ACTION="pause"
+            ;;
+        --stop|stop)
+            ACTION="stop"
+            ;;
+        --open|open)
+            ACTION="open"
+            ;;
+        start)
+            ACTION="start"
+            ;;
+        -s|--sound|--output)
+            SOUND_OUTPUT=true
+            ;;
+        -i|--input|--mic)
+            SOUND_INPUT=true
+            ;;
+        -h|--help)
+            echo "Usage: caelestia-record [start] [-s|--sound] [-i|--input] | --pause | --stop | --open" >&2
+            echo "Options:" >&2
+            echo "  start (default)   Start recording (no audio)" >&2
+            echo "  -s, --sound       Record system audio (default_output)" >&2
+            echo "  -i, --input       Record microphone audio (default_input)" >&2
+            echo "  -p, --pause       Toggle pause/resume" >&2
+            echo "  --stop            Stop recording" >&2
+            echo "  --open            Open recordings folder" >&2
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $arg" >&2
+            echo "Usage: caelestia-record [start] [-s|--sound] [-i|--input] | --pause | --stop | --open" >&2
+            exit 1
+            ;;
+    esac
+done
 
 case "$ACTION" in
-    start|-s|--sound)
+    start)
         # Already recording? Toggle stop.
         if _is_recording; then
             _stop_recording
@@ -147,11 +190,15 @@ case "$ACTION" in
         args=("$RECORDER")
         args+=("-w" "portal")
         args+=("-f" "$rr")
-        args+=("-a" "default_output")
-        if [[ "$ACTION" == "-s" ]] || [[ "$ACTION" == "--sound" ]]; then
+        if [[ "$SOUND_OUTPUT" == "true" ]] && [[ "$SOUND_INPUT" == "true" ]]; then
+            args+=("-a" "default_output|default_input")
+        elif [[ "$SOUND_OUTPUT" == "true" ]]; then
+            args+=("-a" "default_output")
+        elif [[ "$SOUND_INPUT" == "true" ]]; then
             args+=("-a" "default_input")
         fi
         args+=("-fallback-cpu-encoding" "yes")
+        args+=("-ipc" "$IPC_SOCK")
         args+=("-o" "$REC_PATH")
 
         # Launch in background via a subshell so we can capture the PID
@@ -163,11 +210,18 @@ case "$ACTION" in
         ) &
         disown
 
-        # Wait briefly for the recording file to appear (portal negotiation)
+        # Wait briefly for PID file to be populated
+        pid=""
         waited=0
-        while [[ ! -f "$REC_PATH" ]] && [[ $waited -lt 50 ]]; do
-            sleep 0.1
+        while [[ -z "$pid" ]] && [[ $waited -lt 20 ]]; do
+            [[ -f "$PID_FILE" ]] && pid=$(cat "$PID_FILE" 2>/dev/null || true)
+            sleep 0.05
             waited=$((waited + 1))
+        done
+
+        # Wait while the recorder process is alive and the recording file has not yet appeared (e.g. portal dialog is open)
+        while [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null && [[ ! -f "$REC_PATH" ]]; do
+            sleep 0.1
         done
 
         if [[ -f "$REC_PATH" ]]; then
@@ -179,35 +233,20 @@ case "$ACTION" in
         fi
         ;;
 
-    --pause|pause|-p)
-        if [[ -f "$PID_FILE" ]]; then
-            pid=$(cat "$PID_FILE" 2>/dev/null || true)
-            if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-                # Check current state: if stopped, continue; if running, stop
-                if ps -o state= -p "$pid" 2>/dev/null | grep -q 'T'; then
-                    kill -CONT "$pid" 2>/dev/null || true
-                    _notify low "Recording resumed" "Recording continued"
-                else
-                    kill -STOP "$pid" 2>/dev/null || true
-                    _notify low "Recording paused" "Recording paused"
-                fi
-            fi
+    pause)
+        if [[ -S "$IPC_SOCK" ]]; then
+            gsr-cli -ipc "$IPC_SOCK" toggle-pause 2>/dev/null || true
         fi
         ;;
 
-    --stop|stop)
+    stop)
         if _is_recording; then
             _stop_recording
             _notify normal "Recording stopped" "Recording saved to $RECS_DIR"
         fi
         ;;
 
-    --open|open)
+    open)
         _open_dir
-        ;;
-
-    *)
-        echo "Usage: caelestia-record [start|-s|--pause|--stop|--open]" >&2
-        exit 1
         ;;
 esac
