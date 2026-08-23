@@ -15,6 +15,49 @@
 
 set -eu
 
+{
+# When piped (e.g. `curl ... | sh` or `cat install.sh | sh`), stdin is
+# a pipe — not a TTY.  Re-open /dev/tty as stdin so that the interactive
+# TUI installer and `tmux attach-session` work correctly.
+# This mirrors the approach used by rustup, Homebrew, and similar installers.
+if [ ! -t 0 ]; then
+    # Tmux rejects attachment if `ttyname(0)` literally returns "/dev/tty".
+    # Find the real pseudo-terminal (e.g. /dev/pts/0).
+    REAL_TTY=""
+    if [ -t 1 ]; then
+        REAL_TTY=$(tty 0>&1 2>/dev/null || true)
+    elif [ -t 2 ]; then
+        REAL_TTY=$(tty 0>&2 2>/dev/null || true)
+    fi
+
+    # Fallback to ps if tty command didn't work (e.g. wrapper shell hiding fds)
+    if [ -z "$REAL_TTY" ] || [ "$REAL_TTY" = "not a tty" ]; then
+        _CTTY=$(ps -p $$ -o tty= 2>/dev/null | awk '{print $1}' || true)
+        if [ -n "$_CTTY" ] && [ "$_CTTY" != "?" ]; then
+            case "$_CTTY" in
+                /*) REAL_TTY="$_CTTY" ;;
+                *)  REAL_TTY="/dev/$_CTTY" ;;
+            esac
+        fi
+    fi
+
+    if [ -n "$REAL_TTY" ] && [ "$REAL_TTY" != "not a tty" ] && [ -c "$REAL_TTY" ]; then
+        # Re-open all standard file descriptors to the real terminal
+        # This completely restores the terminal state for tmux.
+        exec 0<>"$REAL_TTY" 1<>"$REAL_TTY" 2<>"$REAL_TTY"
+    elif [ -c /dev/tty ]; then
+        # If we couldn't resolve the true pseudo-terminal path, fallback to /dev/tty.
+        # Tmux strictly rejects `/dev/tty` via ttyname(0), so we must disable tmux.
+        # The C++ TUI will still run perfectly fine directly on /dev/tty.
+        exec 0<>/dev/tty
+        export CAELESTIA_USE_TMUX=0
+    else
+        echo "[Caelestia] ERROR: stdin is not a terminal and no TTY is available." >&2
+        echo "[Caelestia] Please run the installer directly: bash install.sh" >&2
+        exit 1
+    fi
+fi
+
 REPO="${CAELESTIA_REPO:-https://github.com/ladybug-me/caelestia-dots-kde.git}"
 BRANCH="${CAELESTIA_BRANCH:-main}"
 DEST="${CAELESTIA_DIR:-$HOME/caelestia-dots-kde}"
@@ -48,3 +91,4 @@ if [ ! -t 0 ] && [ -c /dev/tty ]; then
     exec bash "$DEST/scripts/setup.sh" </dev/tty
 fi
 exec bash "$DEST/scripts/setup.sh"
+}
