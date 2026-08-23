@@ -15,10 +15,6 @@
 
 set -eu
 
-if [ ! -t 0 ] && [ -c /dev/tty ]; then
-    exec < /dev/tty
-fi
-
 REPO="${CAELESTIA_REPO:-https://github.com/ladybug-me/caelestia-dots-kde.git}"
 BRANCH="${CAELESTIA_BRANCH:-main}"
 DEST="${CAELESTIA_DIR:-$HOME/caelestia-dots-kde}"
@@ -31,7 +27,9 @@ fi
 # If run from an existing checkout (e.g. `sh install.sh` inside the repo),
 # reuse it instead of cloning a fresh copy.
 if [ -f "./scripts/setup.sh" ]; then
-    echo "[Caelestia] Using existing checkout at $(pwd)"
+    if [ ! -t 0 ] && [ -c /dev/tty ]; then
+        exec bash "$(pwd)/scripts/setup.sh" </dev/tty
+    fi
     exec bash "$(pwd)/scripts/setup.sh"
 fi
 
@@ -46,4 +44,7 @@ else
     git clone -b "$BRANCH" --single-branch --depth 1 "$REPO" "$DEST"
 fi
 
+if [ ! -t 0 ] && [ -c /dev/tty ]; then
+    exec bash "$DEST/scripts/setup.sh" </dev/tty
+fi
 exec bash "$DEST/scripts/setup.sh"
