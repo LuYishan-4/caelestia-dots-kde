@@ -73,7 +73,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
 
           echo "LAST_TAG=$LAST_TAG" >> $GITHUB_ENV
 
