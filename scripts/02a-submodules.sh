@@ -7,7 +7,7 @@ set -euo pipefail
 if [[ -f "$BUNDLE_DIR/.gitmodules" ]]; then
     echo "[INFO]  Initializing submodules..."
     git submodule sync --recursive >/dev/null 2>&1 || true
-    git submodule update --init --recursive --force >/dev/null 2>&1 || echo "[FAIL]  Failed to initialize all submodules." >&2
+    git submodule update --init --recursive --depth 1 --jobs "$(nproc 2>/dev/null || echo 1)" >/dev/null 2>&1 || echo "[FAIL]  Failed to initialize all submodules." >&2
 
     # Pin plasma-wallpaper-application to the tagged release.
     WALLPAPER_DIR="$BUNDLE_DIR/src/plasma-wallpaper-application"

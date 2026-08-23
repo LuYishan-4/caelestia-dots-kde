@@ -10,6 +10,7 @@ import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
+import Caelestia.Services
 import qs.components
 import qs.components.containers
 import qs.services
@@ -44,7 +45,18 @@ StyledWindow {
     readonly property bool hasFullscreen: actualFullscreen && !hasOpenOverlay
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
-    property real dynamicBorderThickness: visibilities.overview ? Math.min(root.width, root.height) * 0.15 : Config.border.thickness
+    // Where dynamicBorderThickness lands once the overview is open. It is the
+    // target of a 300ms animation, and anything that lays content out inside the
+    // overview wants this rather than the animating value — laying out against a
+    // moving rect makes the result slide into place from wherever the first frame
+    // happened to put it.
+    readonly property real overviewBorderThickness: Math.min(root.width, root.height) * 0.15
+    property real dynamicBorderThickness: visibilities.overview ? overviewBorderThickness : Config.border.thickness
+    property real overviewVerticalOffset: {
+        if (!visibilities.overview) return 0;
+        const grid = panels && panels.overview ? panels.overview.windowGrid : null;
+        return grid ? grid.verticalOffset : 0;
+    }
     readonly property real borderThickness: dynamicBorderThickness * (1 - fsTransitionProg)
     readonly property real borderRounding: Config.border.rounding * (1 - fsTransitionProg)
     readonly property real shadowOpacity: 0.7 * (1 - fsTransitionProg)
@@ -61,6 +73,19 @@ StyledWindow {
                 thresholds.push(Config[panel].dragThreshold);
         return Math.max(...thresholds);
     }
+
+    // Whether anything on this surface needs the keyboard. Taking it makes the
+    // surface the active window; KWin does not give focus back to what had it
+    // when we stop asking, it just leaves nothing focused, so that has to be
+    // put right by hand below.
+    readonly property bool wantsKeyboard: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent
+
+    // Remembered on the way in, not read on the way out: as the application
+    // gives up focus KWin passes through a moment with no active window at all,
+    // and the bridge reports that as empty, so by the time the drawer closes
+    // there is often nothing left to read.
+    property string focusReturn: ""
+    property int workspaceReturn: -1
 
     onHasFullscreenChanged: {
         if (!hasFullscreen)
@@ -93,7 +118,18 @@ StyledWindow {
     // visibly wrong one for left/right, and a degenerate, invisible one for
     // top, since Bottom's math assumes the icon is below the window, the
     // opposite of where it actually is.
-    WlrLayershell.namespace: "panel"
+    //
+    // Reporting as Dock also keeps Alt+F4 off the shell. KWin gates its window
+    // actions behind USABLE_ACTIVE_WINDOW, which is
+    //   m_activeWindow && !(isDesktop() || isDock())
+    // so a dock is skipped before isCloseable() is ever consulted — that returns
+    // an unconditional true for every layer-shell surface, and window rules are
+    // never evaluated for them either, so this type is the only thing standing
+    // between "close window" and the shell losing a surface. The drawers take
+    // keyboard focus while open, which makes this surface the active window, so
+    // without it Alt+F4 over an open dashboard tears one screen's shell down and
+    // leaves the rest of the process running.
+    WlrLayershell.namespace: "dock"
     mask: {
         if (hasOpenOverlay) return fullRegion;
         if (hasFullscreen) return emptyRegion;
@@ -103,6 +139,47 @@ StyledWindow {
     anchors.bottom: true
     anchors.left: true
     anchors.right: true
+    WlrLayershell.exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.layer: hasOpenOverlay || (actualFullscreen && fsTransitionProg < 1) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.keyboardFocus: wantsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+    onWantsKeyboardChanged: {
+        if (typeof KWinActiveWindowBridge === "undefined")
+            return;
+
+        if (wantsKeyboard) {
+            // The bridge ignores the shell taking focus, so this is still the
+            // application that had it.
+            focusReturn = KWinActiveWindowBridge.activeWindow?.address ?? "";
+            workspaceReturn = typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : -1;
+            return;
+        }
+
+        // Whatever the user switched to while the drawer was open wins, so this
+        // only falls back to what was remembered.
+        const pending = KWinActiveWindowBridge.pendingFocusAddress ?? "";
+        const addr = (KWinActiveWindowBridge.activeWindow?.address ?? "") || focusReturn;
+        const oldWorkspace = workspaceReturn;
+        focusReturn = "";
+        workspaceReturn = -1;
+
+        if (pending) {
+            // A focus switch was explicitly requested by the shell (e.g., clicking
+            // a preview), let it happen.
+            return;
+        }
+
+        const currentWorkspace = typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : -1;
+        if (oldWorkspace !== -1 && currentWorkspace !== oldWorkspace) {
+            // User explicitly navigated to a different workspace while the drawer
+            // was open (e.g., clicking an empty workspace in the overview).
+            // Do not violently pull them back to the original application.
+            return;
+        }
+
+        if (addr)
+            KWinActiveWindowBridge.focusWindow(addr);
+    }
 
     Overview.Anim {
         id: animConfig
@@ -115,6 +192,7 @@ StyledWindow {
         category: "Blur"
     }
     Behavior on dynamicBorderThickness { NumberAnimation { duration: animConfig.blobDuration; easing.type: animConfig.easingType } }
+    Behavior on overviewVerticalOffset { NumberAnimation { duration: animConfig.blobDuration; easing.type: animConfig.easingType } }
     Behavior on fsTransitionProg {
         Anim {}
     }
@@ -191,7 +269,7 @@ StyledWindow {
             }
             onTriggered: {
                 let anyActive = root.active || root.activeFocusItem !== null;
-                
+
                 if (anyActive) {
                     parent._wasActive = true;
                 } else if (parent._wasActive && !anyActive) {
@@ -210,7 +288,13 @@ StyledWindow {
     Item {
         id: overviewWallpaperLayer
 
-        property bool active: visibilities.overview
+        property bool active: visibilities.overview || warming
+        // Paint this layer once, invisibly, shortly after startup. The first
+        // time the shell covers the whole screen the driver has to allocate for
+        // it, and that lands as ~80-100ms of blocked swap on whichever frame
+        // triggers it. Paying it here costs nothing anyone sees; leaving it to
+        // the user's first overview drops most of that transition's frames.
+        property bool warming: false
         property real _maxBorder: Math.max(1, Math.min(root.width, root.height) * 0.15)
         property real bgScale: 1.0 + (dynamicBorderThickness / _maxBorder) * 0.1
 
@@ -218,9 +302,20 @@ StyledWindow {
         visible: active || opacity > 0
         layer.enabled: true
         // Ensure fade-in starts only after the wallpaper has actually loaded
-        opacity: (visibilities.overview && wallpaperLoader.status === Loader.Ready) ? 1 : 0
+        opacity: warming ? 0.004 : ((visibilities.overview && wallpaperLoader.status === Loader.Ready) ? 1 : 0)
 
-        Behavior on opacity { NumberAnimation { duration: animConfig.wallpaperDuration; easing.type: animConfig.easingType } }
+        Behavior on opacity { NumberAnimation { duration: overviewWallpaperLayer.warming ? 0 : animConfig.wallpaperDuration; easing.type: animConfig.easingType } }
+        Timer {
+            running: true
+            interval: 2500
+            onTriggered: { overviewWallpaperLayer.warming = true; warmDone.start(); }
+        }
+        Timer {
+            id: warmDone
+
+            interval: 400
+            onTriggered: overviewWallpaperLayer.warming = false
+        }
         Item {
             id: scaledWallpaperContainer
 
@@ -254,8 +349,8 @@ StyledWindow {
                 radius: root.borderRounding
                 borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
                 borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-                borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-                borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
+                borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
+                borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) + root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
                 Config.screen: root.screen.name
             }
         }
@@ -307,8 +402,8 @@ StyledWindow {
             radius: root.borderRounding
             borderLeft: Math.max(Config.bar.position === "left" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
             borderRight: Math.max(Config.bar.position === "right" ? bar.implicitWidth : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-            borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
-            borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) - anchors.margins - root.sdfBorderOffset
+            borderTop: Math.max(Config.bar.position === "top" ? bar.implicitHeight : 0, root.borderThickness) - root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
+            borderBottom: Math.max(Config.bar.position === "bottom" ? bar.implicitHeight : 0, root.borderThickness) + root.overviewVerticalOffset - anchors.margins - root.sdfBorderOffset
             Config.screen: root.screen.name
         }
         BlobRect {
@@ -561,6 +656,7 @@ StyledWindow {
             visibilities: visibilities
             bar: bar
             borderThickness: root.borderThickness
+            overviewBorderThickness: root.overviewBorderThickness
             overviewAnimConfig: root.overviewAnimConfig
             utilities.horizontalStretch: (sidebarBg.rawDeformMatrix.m11 - 1) / 2 + 1
             utilities.deformMatrix: utilsBg.rawDeformMatrix
@@ -709,7 +805,7 @@ StyledWindow {
             rLeft: !GlobalConfig.appearance.islands ? root.borderRounding : 0
             rRight: !GlobalConfig.appearance.islands ? root.borderRounding : 0
         }
-        BlurMask { 
+        BlurMask {
             target: bar
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -719,7 +815,7 @@ StyledWindow {
             vAnchor: bar.vAnchor
             hAnchor: bar.hAnchor
         }
-        BlurMask { 
+        BlurMask {
             target: panels.sidebar
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -731,7 +827,7 @@ StyledWindow {
             offsetScale: panels.sidebar.offsetScale
             deformMatrix: sidebarBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.notifications
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -742,7 +838,7 @@ StyledWindow {
             hAnchor: panels.notifications.hAnchor
             deformMatrix: notifsBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.osdWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -754,7 +850,7 @@ StyledWindow {
             offsetScale: panels.osd.offsetScale
             deformMatrix: osdBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.sessionWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -766,7 +862,7 @@ StyledWindow {
             offsetScale: panels.session.offsetScale
             deformMatrix: sessionBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.launcher
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -778,7 +874,7 @@ StyledWindow {
             offsetScale: panels.launcher.offsetScale
             deformMatrix: launcherBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.dashboard
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -790,7 +886,7 @@ StyledWindow {
             offsetScale: panels.dashboard.offsetScale
             deformMatrix: dashBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.popoutsWrapper
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -802,7 +898,7 @@ StyledWindow {
             offsetScale: panels.popoutsWrapper.offsetScale
             deformMatrix: popoutBg.deformMatrix
         }
-        BlurMask { 
+        BlurMask {
             target: panels.utilities
             contentItem: root.contentItem
             blurOffsetTop: root.blurOffsetTop
@@ -837,9 +933,6 @@ StyledWindow {
             hAnchor: "both"
         }
     }
-    WlrLayershell.exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: (actualFullscreen && (hasOpenOverlay || fsTransitionProg < 1)) || (fsTransitionProg > 0 && Config.general.showOverFullscreen) || (((monitor?.lastIpcObject?.specialWorkspace?.name?.length ?? 0) > 0) && (monitor?.activeWorkspace?.toplevels?.values?.some(t => (t?.lastIpcObject?.fullscreen ?? 0) > 1) ?? false)) ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.dashboard || visibilities.sidebar || visibilities.overview || panels.popouts.hasCurrent ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     component PanelBg: BlobRect {
         required property Item panel

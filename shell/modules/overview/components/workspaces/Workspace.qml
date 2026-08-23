@@ -22,6 +22,7 @@ StyledRect {
     property real scaleFactor: 1.0
     property real swipeOffset: 0.0
     property bool isSwiping: false
+    property var closingWindows: []
     readonly property int baseIndicatorSize: 120
     readonly property int baseWidth: 200
     readonly property int indicatorSize: Math.floor(baseIndicatorSize * scaleFactor)
@@ -232,6 +233,7 @@ StyledRect {
                 id: iconDelegate
 
                 required property var modelData
+                required property int index
                 readonly property string clientAddress: modelData.address || ""
                 readonly property int wsId: root.ws
                 property real dragStartX: 0
@@ -239,11 +241,23 @@ StyledRect {
                 property real dragStartWidth: 0
                 property real dragStartHeight: 0
                 property Item topLevel: null
+                property bool closing: {
+                    if (!root.closingWindows) return false;
+                    for (let i = 0; i < root.closingWindows.length; i++) {
+                        if (root.closingWindows[i] === modelData.address) return true;
+                    }
+                    return false;
+                }
 
                 radius: Tokens.rounding.small
                 color: Colours.tPalette.m3surfaceContainerHigh
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                Layout.rowSpan: (repeater.count >= 3 && repeater.count % 2 !== 0 && index === 0) ? 2 : 1
+                scale: closing ? 0.0 : 1.0
+                opacity: closing ? 0.0 : 1.0
+                
+
                 Drag.active: dragHandler.active
                 Drag.source: iconDelegate
                 Drag.hotSpot.x: width / 2
@@ -267,6 +281,10 @@ StyledRect {
                         }
                     }
                 ]
+
+                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+
 
                 DragHandler {
                     id: dragHandler

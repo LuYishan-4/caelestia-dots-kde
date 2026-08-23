@@ -9,7 +9,8 @@ class SidebarConfig : public ConfigObject {
     QML_ANONYMOUS
 
     CONFIG_PROPERTY(bool, enabled, true)
-    CONFIG_PROPERTY(int, dragThreshold, 80)
+    CONFIG_PROPERTY(int, dragThreshold, 50)
+    CONFIG_PROPERTY(int, grabWidth, 12)
 
 public:
     explicit SidebarConfig(QObject* parent = nullptr)

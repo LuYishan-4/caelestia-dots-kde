@@ -23,12 +23,17 @@ done
 echo "  Disabling legacy quickshell-kde-bridge KWin script..."
 kwriteconfig6 --file kwinrc --group "Plugins" --key "quickshell-kde-bridgeEnabled" "false"
 
-echo "  Ensuring KWin has 5 virtual desktops..."
-kwriteconfig6 --file kwinrc --group "Desktops" --key "Number" "5"
-kwriteconfig6 --file kwinrc --group "Desktops" --key "Rows" "1"
-for i in $(seq 1 5); do
-    kwriteconfig6 --file kwinrc --group "Desktops" --key "Name_$i" "Desktop $i"
-done
+echo "  Setting default KWin virtual desktops to 5 (only if not already configured)..."
+EXISTING_DESKTOPS="$(kreadconfig6 --file kwinrc --group "Desktops" --key "Number" 2>/dev/null || true)"
+if [ -z "$EXISTING_DESKTOPS" ]; then
+    kwriteconfig6 --file kwinrc --group "Desktops" --key "Number" "5"
+    kwriteconfig6 --file kwinrc --group "Desktops" --key "Rows" "1"
+    for i in $(seq 1 5); do
+        kwriteconfig6 --file kwinrc --group "Desktops" --key "Name_$i" "Desktop $i"
+    done
+else
+    echo "  Existing virtual desktop configuration found - leaving it untouched."
+fi
 
 #  ydotoold (on-screen keyboard key injection)
 # ydotoold needs access to /dev/uinput. Add a udev rule to allow the 'input'

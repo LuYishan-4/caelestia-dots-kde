@@ -25,6 +25,7 @@
 
 #include <qqmlengine.h>
 #include <qstandardpaths.h>
+#include <QCoreApplication>
 
 namespace caelestia::config {
 
@@ -124,6 +125,10 @@ GlobalConfig* GlobalConfig::forScreen(const QString& screen) {
 }
 
 GlobalConfig* GlobalConfig::create(QQmlEngine*, QJSEngine*) {
+    if (QCoreApplication::instance()) {
+        QCoreApplication::setOrganizationName("Caelestia");
+        QCoreApplication::setOrganizationDomain("caelestia.org");
+    }
     QQmlEngine::setObjectOwnership(instance(), QQmlEngine::CppOwnership);
     return instance();
 }

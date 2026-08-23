@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Io
 import Caelestia
@@ -24,6 +25,20 @@ Searcher {
     property bool pendingPreviewClear
     property var videoThumbs: ({})
     property var videoThumbsPending: ({})
+
+    property string currentMediaFilter: "All"
+
+    property var filteredList: {
+        const res = wallpapers.entries || [];
+        if (currentMediaFilter === "Image") {
+            return res.filter(w => !Images.isVideo(w.relativePath) && !Images.isAnimated(w.relativePath));
+        } else if (currentMediaFilter === "Video") {
+            return res.filter(w => Images.isVideo(w.relativePath));
+        } else if (currentMediaFilter === "Animated") {
+            return res.filter(w => Images.isAnimated(w.relativePath));
+        }
+        return res;
+    }
 
     readonly property var categories: {
         let dummy = root.list;
@@ -221,7 +236,7 @@ Searcher {
             Colours.showPreview = false;
     }
 
-    list: wallpapers.entries
+    list: filteredList
     key: "relativePath"
     useFuzzy: GlobalConfig.launcher.useFuzzy.wallpapers
     extraOpts: useFuzzy ? ({}) : ({

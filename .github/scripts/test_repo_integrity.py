@@ -23,7 +23,7 @@ from typing import cast
 
 ROOT = Path(__file__).resolve().parents[2]
 INSTALLER_ENTRYPOINTS = [
-    Path("setup.sh"),
+    Path("scripts", "setup.sh"),
     Path("update.sh"),
     Path("uninstall.sh"),
 ]

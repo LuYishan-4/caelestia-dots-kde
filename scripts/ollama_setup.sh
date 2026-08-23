@@ -1,7 +1,13 @@
 #!/bin/bash
 
-# Exit on error
-set -e
+# Strict mode, as required of everything under scripts/.
+#
+# pipefail is the one that changes behaviour here: the Ollama installer is
+# fetched with `curl | sh`, and without it a failed download pipes nothing into
+# a shell that exits 0 quite happily. The script would then carry on to enable a
+# service for a package that was never installed, and die there instead, with an
+# error pointing at the wrong step.
+set -euo pipefail
 
 # Harmonious HSL colors for elegant premium styling output
 BLUE='\033[0;34m'

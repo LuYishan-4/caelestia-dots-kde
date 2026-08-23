@@ -1,8 +1,10 @@
 import ".."
 import QtQuick
+import QtCore
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import Caelestia.Services
 import qs.components.misc
 import qs.services
 
@@ -18,6 +20,15 @@ Scope {
     property var action: RegionSelection.SnipAction.Copy
 
     property var selectionMode: RegionSelection.SelectionMode.RectCorners
+
+    // Persisted across screenshot sessions — written to disk via Settings below
+    property bool showWindowOutlines: false
+
+    Settings {
+        property alias showWindowOutlines: root.showWindowOutlines
+
+        category: "Screenshot"
+    }
     
     Variants {
         model: Quickshell.screens
@@ -26,13 +37,15 @@ Scope {
 
             required property var modelData
 
-            active: root.screenshotActive && modelData.name === Hypr.focusedMonitor.name
+            active: root.screenshotActive && modelData.name === KWinActiveWindowBridge.cursorOutputName()
 
             sourceComponent: RegionSelection {
                 screen: regionSelectorLoader.modelData
                 onDismiss: root.dismiss()
                 action: root.action
                 selectionMode: root.selectionMode
+                showWindowOutlines: root.showWindowOutlines
+                onShowWindowOutlinesChanged: root.showWindowOutlines = showWindowOutlines
             }
         }
     }

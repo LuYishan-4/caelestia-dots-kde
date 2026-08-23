@@ -49,6 +49,10 @@ QString KWinWorkspaceState::uuidForIndex(int index) const {
     return QString();
 }
 
+uint KWinWorkspaceState::rows() const {
+    return m_rows;
+}
+
 double KWinWorkspaceState::swipeOffset() const {
     return m_swipeOffset;
 }
@@ -143,6 +147,18 @@ void KWinWorkspaceState::fetchInitialState() {
 
     if (currentReply.isValid()) {
         m_currentUuid = currentReply.value().variant().toString();
+    }
+
+    QDBusMessage rowsMsg = QDBusMessage::createMethodCall("org.kde.KWin", "/VirtualDesktopManager", "org.freedesktop.DBus.Properties", "Get");
+    rowsMsg << "org.kde.KWin.VirtualDesktopManager" << "rows";
+    QDBusReply<QDBusVariant> rowsReply = QDBusConnection::sessionBus().call(rowsMsg);
+
+    if (rowsReply.isValid()) {
+        const uint rows = rowsReply.value().variant().toUInt();
+        if (rows > 0 && rows != m_rows) {
+            m_rows = rows;
+            emit rowsChanged();
+        }
     }
 
     updateActiveId();
@@ -286,8 +302,10 @@ void KWinWorkspaceState::onCountChanged(uint count) {
 }
 
 void KWinWorkspaceState::onRowsChanged(uint rows) {
-    if (rows > 0)
+    if (rows > 0 && rows != m_rows) {
         m_rows = rows;
+        emit rowsChanged();
+    }
 }
 
 } // namespace caelestia::services

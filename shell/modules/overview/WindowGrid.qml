@@ -20,14 +20,58 @@ Item {
     property var cardItems: []
     property var activeInfoClient: null
     property var panels: null
+    property var closingWindows: []
+    property alias indicatorContainer: indicatorContainer
+    readonly property real overviewBorderThickness: Math.min(width, height) * 0.15
+    readonly property real indicatorSpace: indicatorContainer.height + Tokens.padding.large * 2
+    readonly property real verticalOffset: indicatorSpace - overviewBorderThickness
     readonly property int activeWsId: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.activeId : 1
     property bool ignoreNextSwitch: false
     property bool _initialized: false
     property bool isDragging: false
+    readonly property real hoverScale: 1.02
+    property int selectedIndex: -1
+    readonly property var currentWindows: {
+        if (typeof KWinWorkspaceState === "undefined" || listView.currentIndex < 0)
+            return [];
+        const wsList = KWinWorkspaceState.workspaces;
+        if (listView.currentIndex >= wsList.length)
+            return [];
+        const wsId = wsList[listView.currentIndex].index;
+        const all = typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge.windowList : null;
+        const out = [];
+        if (all)
+            for (let i = 0; i < all.length; ++i)
+                if (all[i].workspace && (all[i].workspace.id === wsId || all[i].workspace.index === wsId))
+                    out.push(all[i]);
+        return out;
+    }
 
     signal requestWindowInfo(var client)
     signal requestClose()
 
+    function cycleSelection(backwards: bool): void {
+        const n = root.currentWindows.length;
+        if (n === 0)
+            return;
+        if (backwards)
+            root.selectedIndex = root.selectedIndex <= 0 ? n - 1 : root.selectedIndex - 1;
+        else
+            root.selectedIndex = root.selectedIndex >= n - 1 ? 0 : root.selectedIndex + 1;
+    }
+    function activateSelected(): void {
+        const wins = root.currentWindows;
+        if (root.selectedIndex < 0 || root.selectedIndex >= wins.length)
+            return;
+        const addr = wins[root.selectedIndex].address;
+        if (!addr)
+            return;
+        if (typeof KWinActiveWindowBridge !== "undefined")
+            KWinActiveWindowBridge.focusWindow(addr);
+        if (typeof KWinWorkspaceState !== "undefined" && listView.currentIndex >= 0)
+            KWinWorkspaceState.switchTo(KWinWorkspaceState.workspaces[listView.currentIndex].index);
+        root.requestClose();
+    }
     function syncPage() {
         if (typeof KWinWorkspaceState === "undefined") return;
         for (let i = 0; i < KWinWorkspaceState.workspaces.length; ++i) {
@@ -45,6 +89,28 @@ Item {
         root._initialized = true;
     }
 
+    onOpacityChanged: {
+        if (opacity <= 0) {
+            selectedIndex = -1;
+        } else {
+            if (Visibilities.preOverviewActiveWindowAddress !== "") {
+                const targetAddress = Visibilities.preOverviewActiveWindowAddress;
+                let foundIndex = -1;
+                const wins = root.currentWindows;
+                if (wins) {
+                    for (let i = 0; i < wins.length; ++i) {
+                        if (wins[i].address === targetAddress) {
+                            foundIndex = i;
+                            break;
+                        }
+                    }
+                }
+                root.selectedIndex = foundIndex; // -1 if not found
+            } else {
+                root.selectedIndex = -1;
+            }
+        }
+    }
     onActiveWsIdChanged: Qt.callLater(syncPage)
     Component.onCompleted: {
         if (typeof KWinWorkspaceState !== "undefined") {
@@ -58,6 +124,41 @@ Item {
         Qt.callLater(syncPage);
     }
 
+    Connections {
+        function onCycleOverview(backwards) {
+            if (root.opacity > 0)
+                root.cycleSelection(backwards);
+        }
+
+        target: Visibilities
+    }
+    Shortcut {
+        sequences: ["Return", "Enter"]
+        enabled: root.opacity > 0
+        onActivated: root.activateSelected()
+    }
+    Shortcut {
+        sequences: {
+            const s = ["Tab", "Right", "Down"];
+            if (GlobalConfig.launcher.vimKeybinds) {
+                s.push("Ctrl+J", "Ctrl+N");
+            }
+            return s;
+        }
+        enabled: root.opacity > 0
+        onActivated: root.cycleSelection(false)
+    }
+    Shortcut {
+        sequences: {
+            const s = ["Shift+Tab", "Backtab", "Left", "Up"];
+            if (GlobalConfig.launcher.vimKeybinds) {
+                s.push("Ctrl+K", "Ctrl+P");
+            }
+            return s;
+        }
+        enabled: root.opacity > 0
+        onActivated: root.cycleSelection(true)
+    }
     ListModel {
         id: workspaceModel
     }
@@ -77,30 +178,41 @@ Item {
     ListView {
         id: listView
 
+        property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+
+        property real targetContentX: (currentIndex + rawSwipeOffset) * width
+
         anchors.fill: parent
+        anchors.topMargin: -verticalOffset
+        anchors.bottomMargin: verticalOffset
         orientation: ListView.Horizontal
-        snapMode: ListView.SnapOneItem
-        highlightRangeMode: ListView.StrictlyEnforceRange
+        highlightRangeMode: ListView.NoHighlightRange
         cacheBuffer: 100000 // Keep all pages instantiated to prevent drag-and-drop interruption
-        interactive: !root.isDragging // Prevent ListView from stealing grab during drag
-        preferredHighlightBegin: 0
-        preferredHighlightEnd: 0
-        highlightMoveDuration: root._initialized ? 250 : 0
         boundsBehavior: Flickable.StopAtBounds
+        interactive: false // Disable native scroll to prevent fighting KWin swipe tracking
+        contentX: root._initialized ? targetContentX : currentIndex * width
+        model: workspaceModel
+
         onCountChanged: Qt.callLater(root.syncPage)
         onCurrentIndexChanged: {
             if (root.ignoreNextSwitch) return;
             switchTimer.restart();
         }
-        model: workspaceModel
+
         delegate: Item {
             id: page
 
             required property int index
-            readonly property int wsId: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.workspaces[index].index : index + 1
-            readonly property string wsName: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.workspaces[index].name : wsId.toString()
-            readonly property var wsWindows: {
+            readonly property int wsId: (typeof KWinWorkspaceState !== "undefined" && KWinWorkspaceState.workspaces && index < KWinWorkspaceState.workspaces.length) ? KWinWorkspaceState.workspaces[index].index : index + 1
+            readonly property string wsName: (typeof KWinWorkspaceState !== "undefined" && KWinWorkspaceState.workspaces && index < KWinWorkspaceState.workspaces.length) ? KWinWorkspaceState.workspaces[index].name : wsId.toString()
+            property var wsWindows: []
+            readonly property var _winTrigger: typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge.windowList : null
+            readonly property var _hyprTrigger: (typeof Hypr !== "undefined" && Hypr.toplevels) ? Hypr.toplevels.values : null
+
+            function _updateWsWindows() {
                 const kwinList = typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge.windowList : null;
+                const hyprList = (typeof Hypr !== "undefined" && Hypr.toplevels) ? Hypr.toplevels.values : null;
+
                 let arr = [];
                 if (kwinList) {
                     for (let i = 0; i < kwinList.length; ++i) {
@@ -109,13 +221,38 @@ Item {
                             arr.push(w);
                         }
                     }
+                } else if (hyprList) {
+                    for (let i = 0; i < hyprList.length; ++i) {
+                        const w = hyprList[i];
+                        if (w.workspace && w.workspace.id === wsId) {
+                            arr.push(w);
+                        }
+                    }
                 }
-                return arr;
+
+                let changed = arr.length !== wsWindows.length;
+                if (!changed) {
+                    for (let i = 0; i < arr.length; ++i) {
+                        if (arr[i].address !== wsWindows[i].address) {
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (changed) {
+                    wsWindows = arr;
+                }
             }
+            
+            on_WinTriggerChanged: _updateWsWindows()
+            on_HyprTriggerChanged: _updateWsWindows()
+            onWsIdChanged: _updateWsWindows()
 
             width: listView.width
             height: listView.height
             Component.onCompleted: {
+                _updateWsWindows();
                 //console.log("WindowGrid Page initialized. wsId:", wsId, "windows found:", wsWindows.length, "Total windows globally:", typeof KWinActiveWindowBridge !== "undefined" ? KWinActiveWindowBridge.windowList.length : -1);
             }
             onWsWindowsChanged: {
@@ -132,11 +269,15 @@ Item {
                     if (sourceItem && sourceItem.clientAddress) {
                         if (sourceItem.wsId !== undefined && sourceItem.wsId !== page.wsId) {
                             sourceItem.visible = false;
-                            if (typeof KWinActiveWindowBridge !== "undefined") {
-                                KWinActiveWindowBridge.setWindowDesktop(sourceItem.clientAddress, page.wsId);
-                            } else {
-                                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.movetoworkspace({ workspace = "${page.wsId}", window = "address:0x${sourceItem.clientAddress}" })` : `movetoworkspace ${page.wsId},address:0x${sourceItem.clientAddress}`);
-                            }
+                            const addr = sourceItem.clientAddress;
+                            const targetId = page.wsId;
+                            Qt.callLater(() => {
+                                if (typeof KWinActiveWindowBridge !== "undefined") {
+                                    KWinActiveWindowBridge.setWindowDesktop(addr, targetId);
+                                } else {
+                                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.movetoworkspace({ workspace = "${targetId}", window = "address:0x${addr}" })` : `movetoworkspace ${targetId},address:0x${addr}`);
+                                }
+                            });
                         }
                         drop.accept();
                     }
@@ -145,11 +286,11 @@ Item {
             Item {
                 id: gridItem
 
+                readonly property real hoverHeadroom: Math.ceil(Math.max(parent.width, parent.height) * (root.hoverScale - 1) / 2)
                 property var windowLayout: Config.overview.layoutType === 0 ? LayoutKde.calculateLayout(page.wsWindows, width, height, Tokens.spacing.large, Tokens.spacing.large) : LayoutGnome.calculateLayout(page.wsWindows, width, height, Tokens.spacing.large, Tokens.spacing.large)
 
                 anchors.fill: parent
-                anchors.bottomMargin: workspaceIndicator.implicitHeight * 2
-                // Behaviors for smooth resizing of the whole container if needed (though it fills parent)
+                anchors.margins: (root.panels ? root.panels.overviewBorderThickness : Tokens.padding.extraLarge) + hoverHeadroom
 
                 Repeater {
                     model: page.wsWindows
@@ -157,23 +298,32 @@ Item {
                         id: activeWin
 
                         required property var modelData
+                        required property int index
                         readonly property string clientAddress: modelData.address
                         readonly property int wsId: page.wsId
                             readonly property var layoutProps: gridItem.windowLayout && gridItem.windowLayout[modelData.address] ? gridItem.windowLayout[modelData.address] : { x: 0, y: 0, width: 200, height: 150 }
-                            readonly property int cardWidth: layoutProps.width
-                            readonly property int thumbHeight: layoutProps.height
                             readonly property real windowAspect: {
                                 const w = modelData.width;
                                 const h = modelData.height;
                                 return (w > 0 && h > 0) ? (w / h) : (16.0 / 10.0);
                             }
+                            readonly property bool isSelected: page.index === listView.currentIndex && activeWin.index === root.selectedIndex && !root.activeInfoClient
+                            readonly property bool showCaption: height > 96 && (hover.hovered || isSelected)
+
+                            property bool closing: false
+                            property url infoScreenshot: ""
 
                             x: dragHandler.active ? x : layoutProps.x
                             y: dragHandler.active ? y : layoutProps.y
-                            implicitWidth: cardLayout.implicitWidth + Tokens.padding.medium * 2
-                            implicitHeight: cardLayout.implicitHeight + Tokens.padding.medium * 2
-                            color: "transparent"
+                            width: layoutProps.width
+                            height: layoutProps.height
+                            color: Colours.palette.m3surfaceContainer
                             radius: Tokens.rounding.large
+                            scale: closing ? 0 : (activeWin.isSelected && !dragHandler.active ? root.hoverScale : 1)
+                            opacity: closing ? 0 : 1
+                            border.width: activeWin.isSelected ? 2 : 0
+                            border.color: Colours.palette.m3primary
+
                             Component.onCompleted: {
                                 root.cardItems = [...root.cardItems, activeWin];
                             }
@@ -205,42 +355,62 @@ Item {
                                         if (dropAction !== Qt.IgnoreAction) {
                                             return; // Handled by DropArea
                                         }
-                                        
+
                                         if (typeof KWinWorkspaceState === "undefined" || typeof KWinActiveWindowBridge === "undefined") return;
                                         const targetWsId = KWinWorkspaceState.workspaces[listView.currentIndex].index;
                                         if (targetWsId !== page.wsId) {
                                             activeWin.visible = false;
-                                            KWinActiveWindowBridge.setWindowDesktop(clientAddress, targetWsId);
+                                            const addr = clientAddress;
+                                            Qt.callLater(() => {
+                                                KWinActiveWindowBridge.setWindowDesktop(addr, targetWsId);
+                                            });
                                         }
                                     }
                                 }
+                            }
+                            Behavior on scale { Anim {} }
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    id: opacityAnim
+
+                                    duration: 250
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                            Connections {
+                                function onRunningChanged() {
+                                    if (!opacityAnim.running && activeWin.closing) {
+                                        if (typeof KWinActiveWindowBridge !== "undefined") {
+                                            KWinActiveWindowBridge.closeWindow(modelData.address);
+                                        } else {
+                                            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.close({ window = "address:0x${modelData.address}" })` : `closewindow address:0x${modelData.address}`);
+                                        }
+                                    }
+                                }
+
+                                target: opacityAnim
                             }
                             Behavior on x { enabled: !dragHandler.active && root.opacity > 0.5; NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
                             Behavior on y { enabled: !dragHandler.active && root.opacity > 0.5; NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
-                            HoverHandler { id: hover }
-                            StateLayer {
-                                anchors.fill: parent
-                                radius: Tokens.rounding.large
-                                onClicked: {
-                                    if (modelData.address) {
-                                        if (typeof KWinActiveWindowBridge !== "undefined") {
-                                            KWinActiveWindowBridge.focusWindow(modelData.address);
-                                        } else {
-                                            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${modelData.address}" })` : `focuswindow address:0x${modelData.address}`);
-                                        }
-                                        if (typeof KWinWorkspaceState !== "undefined") {
-                                            KWinWorkspaceState.switchTo(page.wsId);
+                            HoverHandler {
+                                id: hover
+
+                                onHoveredChanged: {
+                                    if (page.index === listView.currentIndex) {
+                                        if (hovered) {
+                                            root.selectedIndex = activeWin.index;
+                                        } else if (root.selectedIndex === activeWin.index) {
+                                            root.selectedIndex = -1;
                                         }
                                     }
-                                    const v = typeof Visibilities !== "undefined" ? Visibilities.getForActive() : null;
-                                    if (v) v.overview = false;
                                 }
                             }
-                            ColumnLayout {
+
+                            Item {
                                 id: cardLayout
 
-                                anchors.centerIn: parent
-                                spacing: Tokens.spacing.small
+                                anchors.fill: parent
+                                anchors.margins: Tokens.padding.small
 
                                 StyledClippingRect {
                                     id: thumb
@@ -250,7 +420,11 @@ Item {
 
                                     function updateStream() {
                                         const isStolen = root.activeInfoClient && root.activeInfoClient.address === modelData.address;
-                                        if (root.opacity > 0 && modelData.address && !isStolen) {
+                                        // Only the page in view and its immediate
+                                        // neighbours, so a workspace three swipes
+                                        // away is not being captured for nothing.
+                                        const nearView = Math.abs(page.index - listView.currentIndex) <= 1;
+                                        if (root.opacity > 0 && nearView && modelData.address && !isStolen) {
                                             if (!streamRequest) {
                                                 streamRequest = ScreencastManager.requestStream(modelData.address);
                                             }
@@ -262,9 +436,14 @@ Item {
                                         }
                                     }
 
+                                    anchors.top: parent.top
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    height: parent.height - (caption.opacity * (caption.implicitHeight + Tokens.padding.extraSmall * 2))
                                     color: Colours.tPalette.m3surfaceContainerHighest
-                                    radius: Tokens.rounding.large
-                                    Component.onCompleted: updateStream()
+                                    radius: Tokens.rounding.medium
+                                    // Deferred out of incubation: see ScreencastManager.
+                                    Component.onCompleted: Qt.callLater(updateStream)
                                     Component.onDestruction: {
                                         if (streamRequest && modelData.address) {
                                             ScreencastManager.releaseStream(modelData.address);
@@ -281,6 +460,13 @@ Item {
 
                                         target: root
                                     }
+                                    Connections {
+                                        function onCurrentIndexChanged() {
+                                            thumb.updateStream();
+                                        }
+
+                                        target: listView
+                                    }
                                     IconImage {
                                         anchors.centerIn: parent
                                         implicitSize: thumb.height * 0.5
@@ -292,12 +478,12 @@ Item {
                                         width: {
                                             const wAspect = activeWin.windowAspect;
                                             const containerAspect = thumb.width / Math.max(1, thumb.height);
-                                            return (wAspect > containerAspect) ? thumb.width : thumb.height * wAspect;
+                                            return (wAspect > containerAspect) ? thumb.height * wAspect : thumb.width;
                                         }
                                         height: {
                                             const wAspect = activeWin.windowAspect;
                                             const containerAspect = thumb.width / Math.max(1, thumb.height);
-                                            return (wAspect > containerAspect) ? thumb.width / wAspect : thumb.height;
+                                            return (wAspect > containerAspect) ? thumb.height : thumb.width / wAspect;
                                         }
                                         anchors.centerIn: parent
                                         visible: thumb.screencastSerial !== 0
@@ -309,78 +495,130 @@ Item {
                                         }
                                     }
                                     }
-                                    RowLayout {
-                                        anchors.top: parent.top
-                                        anchors.right: parent.right
-                                        anchors.margins: Tokens.padding.small
-                                        spacing: Tokens.spacing.small
-                                        opacity: hover.hovered ? 1 : 0
-                                        visible: opacity > 0.01
 
-                                        Behavior on opacity { Anim {} }
-                                        StyledRect {
-                                            implicitWidth: infoIcon.implicitHeight + Tokens.padding.small * 2
-                                            implicitHeight: infoIcon.implicitHeight + Tokens.padding.small * 2
-                                            radius: Tokens.rounding.small
-                                            color: Colours.palette.m3secondaryContainer
+                                    Image {
+                                        anchors.fill: parent
+                                        source: activeWin.infoScreenshot
+                                        visible: root.activeInfoClient && root.activeInfoClient.address === modelData.address && activeWin.infoScreenshot !== ""
+                                        fillMode: Image.PreserveAspectCrop
+                                    }
+                                }
+                                RowLayout {
+                                    id: caption
 
-                                            StateLayer {
-                                                anchors.fill: parent
-                                                radius: Tokens.rounding.small
-                                                onClicked: root.requestWindowInfo(modelData)
-                                            }
-                                            MaterialIcon {
-                                                id: infoIcon
+                                    spacing: Tokens.spacing.small
+                                    opacity: activeWin.showCaption ? 1 : 0
+                                    visible: opacity > 0.01
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.bottom: parent.bottom
+                                    anchors.leftMargin: Tokens.padding.extraSmall
+                                    anchors.rightMargin: Tokens.padding.extraSmall
+                                    anchors.bottomMargin: Tokens.padding.extraSmall
 
-                                                anchors.centerIn: parent
-                                                text: "chevron_right"
-                                                color: Colours.palette.m3onSecondaryContainer
-                                                fontStyle.pointSize: Tokens.font.body.medium.pointSize
-                                            }
+                                    Behavior on opacity { Anim {} }
+
+                                    IconImage {
+                                        implicitSize: Math.round(titleText.implicitHeight * 1.1)
+                                        asynchronous: true
+                                        source: modelData.class ? Icons.getAppIcon(modelData.class, "image-missing") : ""
+                                    }
+                                    StyledText {
+                                        id: titleText
+
+                                        text: modelData.title || modelData.class || ""
+                                        color: Colours.palette.m3primary
+                                        font: Tokens.font.body.small
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
+                                    Behavior on opacity { Anim {} }
+                                }
+                            }
+
+                            StateLayer {
+                                anchors.fill: parent
+                                radius: Tokens.rounding.large
+                                stateOpacity: containsMouse || manualHoverOverride ? 0.02 : 0
+                                onClicked: {
+                                    if (modelData.address) {
+                                        if (typeof KWinActiveWindowBridge !== "undefined") {
+                                            KWinActiveWindowBridge.focusWindow(modelData.address);
+                                        } else {
+                                            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${modelData.address}" })` : `focuswindow address:0x${modelData.address}`);
                                         }
-                                        StyledRect {
-                                            implicitWidth: closeIcon.implicitHeight + Tokens.padding.small * 2
-                                            implicitHeight: closeIcon.implicitHeight + Tokens.padding.small * 2
-                                            radius: Tokens.rounding.small
-                                            color: Colours.palette.m3errorContainer
+                                        if (typeof KWinWorkspaceState !== "undefined") {
+                                            KWinWorkspaceState.switchTo(page.wsId);
+                                        }
+                                    }
+                                    const v = typeof Visibilities !== "undefined" ? Visibilities.getForActive() : null;
+                                    if (v) v.overview = false;
+                                }
+                            }
 
-                                            StateLayer {
-                                                anchors.fill: parent
-                                                radius: Tokens.rounding.small
-                                                onClicked: {
-                                                    if (modelData.address) {
-                                                        if (typeof KWinActiveWindowBridge !== "undefined") {
-                                                            KWinActiveWindowBridge.closeWindow(modelData.address);
-                                                        } else {
-                                                            Hypr.dispatch(Hypr.usingLua ? `hl.dsp.window.close({ window = "address:0x${modelData.address}" })` : `closewindow address:0x${modelData.address}`);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            MaterialIcon {
-                                                id: closeIcon
+                            RowLayout {
+                                anchors.top: cardLayout.top
+                                anchors.right: cardLayout.right
+                                anchors.margins: Tokens.padding.small
+                                spacing: Tokens.spacing.small
+                                opacity: hover.hovered ? 1 : 0
+                                visible: opacity > 0.01
 
-                                                anchors.centerIn: parent
-                                                text: "close"
-                                                color: Colours.palette.m3onErrorContainer
-                                                fontStyle.pointSize: Tokens.font.body.medium.pointSize
+                                Behavior on opacity { Anim {} }
+                                StyledRect {
+                                    implicitWidth: infoIcon.implicitHeight + Tokens.padding.small * 2
+                                    implicitHeight: infoIcon.implicitHeight + Tokens.padding.small * 2
+                                    radius: Tokens.rounding.small
+                                    color: Colours.palette.m3secondaryContainer
+
+                                    StateLayer {
+                                        anchors.fill: parent
+                                        radius: Tokens.rounding.small
+
+                                        onClicked: {
+                                            thumb.grabToImage(function(result) {
+                                                activeWin.infoScreenshot = result.url;
+                                                root.requestWindowInfo(modelData);
+                                            });
+                                        }
+                                    }
+                                    MaterialIcon {
+                                        id: infoIcon
+
+                                        anchors.centerIn: parent
+                                        text: "chevron_right"
+                                        color: Colours.palette.m3onSecondaryContainer
+                                        fontStyle.pointSize: Tokens.font.body.medium.pointSize
+                                    }
+                                }
+                                StyledRect {
+                                    implicitWidth: closeIcon.implicitHeight + Tokens.padding.small * 2
+                                    implicitHeight: closeIcon.implicitHeight + Tokens.padding.small * 2
+                                    radius: Tokens.rounding.small
+                                    color: Colours.palette.m3errorContainer
+
+                                    StateLayer {
+                                        anchors.fill: parent
+                                        radius: Tokens.rounding.small
+                                        onClicked: {
+                                            if (modelData.address) {
+                                                activeWin.closing = true;
+                                                root.closingWindows = root.closingWindows.concat([modelData.address]);
                                             }
                                         }
                                     }
-                                    Layout.preferredWidth: activeWin.cardWidth
-                                    Layout.preferredHeight: activeWin.thumbHeight
-                                }
-                                StyledText {
-                                    id: titleText
+                                    MaterialIcon {
+                                        id: closeIcon
 
-                                    text: modelData.title || ""
-                                    color: Colours.palette.m3onSurfaceVariant
-                                    font: Tokens.font.body.small
-                                    elide: Text.ElideRight
-                                    horizontalAlignment: Text.AlignHCenter
-                                    Layout.preferredWidth: activeWin.cardWidth
+                                        anchors.centerIn: parent
+                                        text: "close"
+                                        color: Colours.palette.m3onErrorContainer
+                                        fontStyle.pointSize: Tokens.font.body.medium.pointSize
+                                    }
                                 }
                             }
+
                             Drag.active: dragHandler.active
                             Drag.source: activeWin
                             Drag.hotSpot: dragHandler.centroid.position
@@ -388,6 +626,7 @@ Item {
                     }
                 }
             }
+
         Timer {
             id: switchTimer
 
@@ -406,7 +645,7 @@ Item {
             acceptedButtons: Qt.NoButton
             onWheel: event => {
                 if (!Config.bar.scrollActions.workspaces) return;
-                
+
                 if (event.angleDelta.y > 0 || event.angleDelta.x > 0) {
                     if (listView.currentIndex > 0) {
                         listView.currentIndex -= 1;
@@ -418,7 +657,16 @@ Item {
                 }
             }
         }
+
+        Behavior on contentX {
+            enabled: root._initialized
+
+            NumberAnimation {
+                duration: rawSwipeOffset === 0.0 ? 300 : 0
+                easing.type: rawSwipeOffset === 0.0 ? Easing.OutCubic : Easing.Linear
+            }
         }
+    }
     StyledRect {
         id: indicatorContainer
 
@@ -437,6 +685,7 @@ Item {
             maxWidth: Math.max(200, root.width - 100)
             count: listView.count
             currentIndex: listView.currentIndex
+            closingWindows: root.closingWindows
             onWorkspaceSelected: index => {
                 root.ignoreNextSwitch = false;
                 listView.currentIndex = index;

@@ -20,4 +20,9 @@ Singleton {
     function isVideo(name: string): bool {
         return isValidVideoByName(name);
     }
+
+    function isAnimated(name: string): bool {
+        if (!name) return false;
+        return name.endsWith(".gif");
+    }
 }

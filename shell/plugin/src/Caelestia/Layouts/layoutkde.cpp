@@ -1,4 +1,6 @@
 #include "layoutkde.hpp"
+
+#include "layoututils.hpp"
 #include <deque>
 #include <algorithm>
 #include <cmath>
@@ -221,7 +223,7 @@ QVariantMap LayoutKde::calculateLayout(const QVariantList& windows, double areaW
     QList<QString> addresses;
     QList<QRectF> windowSizes;
     QList<QPointF> centers;
-    
+
     QMarginsF margins(columnSpacing / 2.0, rowSpacing / 2.0, columnSpacing / 2.0, rowSpacing / 2.0);
 
     for (const QVariant& wVar : windows) {
@@ -231,9 +233,9 @@ QVariantMap LayoutKde::calculateLayout(const QVariantList& windows, double areaW
         qreal wy = w.value("y").toDouble();
         qreal ww = w.value("width", 800).toDouble();
         qreal wh = w.value("height", 600).toDouble();
-        
+
         addresses.append(addr);
-        
+
         // Apply margins directly to the logical size of the window as KDE does
         QRectF rect(0, 0, ww, wh);
         rect = rect.marginsAdded(margins);
@@ -242,7 +244,7 @@ QVariantMap LayoutKde::calculateLayout(const QVariantList& windows, double areaW
     }
 
     QRectF area(0, 0, areaWidth, areaHeight);
-    
+
     // Hardcoded KDE Expo defaults
     qreal idealWidthRatio = 0.5;
     qreal tol = 0.05;
@@ -260,6 +262,8 @@ QVariantMap LayoutKde::calculateLayout(const QVariantList& windows, double areaW
         props["height"] = layouts[i].height();
         result[addresses[i]] = props;
     }
+
+    centreLayout(result, areaWidth, areaHeight);
 
     return result;
 }

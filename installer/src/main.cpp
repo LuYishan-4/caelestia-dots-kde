@@ -138,10 +138,6 @@ int main(int argc, char** argv) {
     // Secure cleanup of sudo credentials
     system("rm -rf /tmp/caelestia_pass.txt /tmp/caelestia_askpass.sh /tmp/caelestia_bin");
 
-    // Cleanup cmake build cache as it contains absolute paths
-    string cmake_cleanup = "rm -rf " + g_bundle_dir + "/shell/build " + g_bundle_dir + "/shell/plugin/build";
-    system(cmake_cleanup.c_str());
-
     if (g_logout) {
         cout << "\n\n\nLogging out...\n";
         system("qdbus6 org.kde.Shutdown /Shutdown org.kde.Shutdown.logout 2>/dev/null");

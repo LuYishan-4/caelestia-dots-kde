@@ -29,6 +29,15 @@ Singleton {
     property bool loaded: false
     property bool checkingUpdates: false
 
+    // Periodic auto-check heartbeat (drives the tray indicator popout's
+    // "last check X ago / next check in Y" readout, CachyOS-updater style).
+    // A single-shot timer is restarted every time a check completes so the
+    // next auto-check always lands one interval after the most recent one,
+    // manual or otherwise.
+    property double lastCheckMs: 0
+
+    property int checkIntervalMs: 1800000 // 30 minutes
+
     // Dev-branch commit pagination: the update checker only fetches the
     // first page (devCommitLimit commits) and exposes a "load more" affordance
     // for the rest, so we never pull the whole dev history up front.
@@ -99,6 +108,10 @@ else
     git -C "$REPO" fetch --force origin "$CURRENT_BRANCH:$CURRENT_BRANCH" >/dev/null 2>&1
 fi
 
+normalize_version() {
+    printf '%s' "\${1#v}"
+}
+
 resolve_version() {
     local ref="$1"
     local ver
@@ -121,33 +134,47 @@ if [ "$CURRENT_BRANCH" = "main" ]; then
     git -C "$REPO" fetch --tags origin >/dev/null 2>&1 || true
 
     CURRENT_VERSION_FILE="$HOME/.config/quickshell/caelestia/.current_version"
+    FROM_VERSION=""
     if [ -f "$CURRENT_VERSION_FILE" ]; then
         FROM_VERSION="$(sed -nE 's/^VERSION[[:space:]]*=[[:space:]]*([A-Za-z0-9._-]+).*/\\1/p' "$CURRENT_VERSION_FILE" | head -n 1)"
-    elif [ -n "$LOCAL_COMMIT" ]; then
+    fi
+    # Fall through instead of elif-chaining: an existing but empty/unparseable
+    # .current_version file (e.g. truncated by a failed git show) must not
+    # block the commit- and version.env-based fallbacks below.
+    if [ -z "$FROM_VERSION" ] && [ -n "$LOCAL_COMMIT" ]; then
         FROM_VERSION="$(resolve_version "$LOCAL_COMMIT")"
-    elif [ -f "$HOME/.config/quickshell/caelestia/.github/version.env" ]; then
+    fi
+    if [ -z "$FROM_VERSION" ] && [ -f "$HOME/.config/quickshell/caelestia/.github/version.env" ]; then
         FROM_VERSION="$(sed -nE 's/^VERSION[[:space:]]*=[[:space:]]*([A-Za-z0-9._-]+).*/\\1/p' "$HOME/.config/quickshell/caelestia/.github/version.env" | head -n 1)"
-    else
-        FROM_VERSION="unknown"
     fi
     [ -n "$FROM_VERSION" ] || FROM_VERSION="unknown"
+    FROM_VERSION="$(normalize_version "$FROM_VERSION")"
 
     TAG_LINES="$(git -C "$REPO" for-each-ref --sort=-creatordate --format='%(refname:short)|%(creatordate:iso8601-strict)' refs/tags 2>/dev/null || true)"
     LATEST_VERSION="$(printf '%s\n' "$TAG_LINES" | sed -n '1s/|.*//p')"
     PREVIOUS_VERSION="$(printf '%s\n' "$TAG_LINES" | sed -n '2s/|.*//p')"
     [ -n "$LATEST_VERSION" ] || LATEST_VERSION="$FROM_VERSION"
     [ -n "$PREVIOUS_VERSION" ] || PREVIOUS_VERSION="$LATEST_VERSION"
+    LATEST_VERSION="$(normalize_version "$LATEST_VERSION")"
+    PREVIOUS_VERSION="$(normalize_version "$PREVIOUS_VERSION")"
     echo "META|$FROM_VERSION|$LATEST_VERSION|$PREVIOUS_VERSION"
 
-    if [ "$FROM_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
+    if [ "$FROM_VERSION" != "$LATEST_VERSION" ] && [ "$FROM_VERSION" != "unknown" ] && [ -n "$LATEST_VERSION" ]; then
+        # Announce an update only when the installed version is a known
+        # release strictly behind the newest tag. Unresolvable local commits
+        # resolve to "unknown", and version.env can be bumped ahead of the
+        # newest tag — neither may count as "update available", otherwise a
+        # user already at (or ahead of) the latest main is offered a downgrade.
         DISTANCE="$(printf '%s\n' "$TAG_LINES" | cut -d'|' -f1 | nl -v0 | awk -v local="$FROM_VERSION" '
             $2 == local { print $1; found=1; exit }
-            END { if (!found) print 1 }
+            END { if (!found) print -1 }
         ')"
         if ! [[ "$DISTANCE" =~ ^[0-9]+$ ]] || [ "$DISTANCE" -lt 1 ]; then
-            DISTANCE=1
+            DISTANCE=0
         fi
-        echo "VERSION|$FROM_VERSION|$LATEST_VERSION|$DISTANCE"
+        if [ "$DISTANCE" -ge 1 ]; then
+            echo "VERSION|$FROM_VERSION|$LATEST_VERSION|$DISTANCE"
+        fi
     fi
 
     printf '%s\n' "$TAG_LINES" | while IFS='|' read -r tag created; do
@@ -167,13 +194,13 @@ import sys
 import urllib.request
 
 def parse_whats_changed(text: str) -> str:
-    txt = (text or "").replace("\r", "")
+    txt = (text or "").replace("\\r", "")
 
     # Keep only the "What's Changed" section when present.
-    m = re.search(r"^#{2,3}\s*What's Changed\s*$", txt, flags=re.IGNORECASE | re.MULTILINE)
+    m = re.search(r"^#{2,3}\\s*What's Changed\\s*$", txt, flags=re.IGNORECASE | re.MULTILINE)
     if m:
         rest = txt[m.end():]
-        next_header = re.search(r"^#{2,3}\s+", rest, flags=re.MULTILINE)
+        next_header = re.search(r"^#{2,3}\\s+", rest, flags=re.MULTILINE)
         if next_header:
             txt = rest[:next_header.start()]
         else:
@@ -183,8 +210,8 @@ def parse_whats_changed(text: str) -> str:
 
     # Normalize spacing and keep it compact for list rows.
     txt = txt.strip()
-    txt = re.sub(r"\n{3,}", "\n\n", txt)
-    txt = re.sub(r"[ \t]+\n", "\n", txt)
+    txt = re.sub(r"\\n{3,}", "\\n\\n", txt)
+    txt = re.sub(r"[ \\t]+\\n", "\\n", txt)
     return txt[:1600]
 
 def run_git(*args: str) -> str:
@@ -234,14 +261,24 @@ from_version = (os.getenv("FROM_VERSION") or "unknown").strip()
 latest = tags[0]["tag"]
 previous = tags[1]["tag"] if len(tags) > 1 else latest
 
+# Strip a leading "v" so "v2.3.1" and "2.3.1" compare equal.
+def norm(v):
+    return (v or "").lstrip("vV")
+
+from_version = norm(from_version)
+latest = norm(latest)
+previous = norm(previous)
+
 print(f"META|{from_version}|{latest}|{previous}")
 
-if from_version != latest:
-    distance = 1
-    tag_names = [t["tag"] for t in tags]
-    if from_version in tag_names:
-        distance = tag_names.index(from_version)
-    print(f"VERSION|{from_version}|{latest}|{max(1, distance)}")
+# Mirror the bash logic above: only a known release strictly behind the
+# newest tag is an available update. "unknown" or a version bumped ahead
+# of the newest tag must not trigger the shell's update offer.
+tag_names = [norm(t["tag"]) for t in tags]
+if from_version != latest and from_version != "unknown" and from_version in tag_names:
+    distance = tag_names.index(from_version)
+    if distance > 0:
+        print(f"VERSION|{from_version}|{latest}|{distance}")
 
 for t in tags:
     tag = t["tag"]
@@ -264,7 +301,10 @@ else
         NR > lim { more = 1 }
         END { if (more) print "MORE|1"; else print "MORE|0" }
     '
-    if [ -n "$LOCAL_COMMIT" ]; then
+    # Count commits only when the installed commit is a true ancestor of the
+    # branch — a diverged or unknown commit must not make every branch commit
+    # look "new", otherwise a build from a local branch is told it is behind.
+    if [ -n "$LOCAL_COMMIT" ] && git -C "$REPO" merge-base --is-ancestor "$LOCAL_COMMIT" "$CURRENT_BRANCH" 2>/dev/null; then
         AHEAD_COUNT="$(git -C "$REPO" rev-list --count "$LOCAL_COMMIT..$CURRENT_BRANCH" 2>/dev/null || echo 0)"
     else
         AHEAD_COUNT=0
@@ -407,6 +447,9 @@ git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --ski
         command: []
         onExited: _code => { // qmllint disable signal-handler-parameters
             root.checkingUpdates = false;
+            root.lastCheckMs = Date.now();
+            if (autoCheckTimer.running)
+                autoCheckTimer.restart();
         }
         stdout: StdioCollector {
             onStreamFinished: {
@@ -576,25 +619,17 @@ git -C "$REPO" log --format="COMMIT%x1f%H%x1f%h%x1f%s%x1f%an%x1f%cI%x1f%P" --ski
                         if (!root.availableVersions.includes(root.targetVersion)) {
                             root.targetVersion = root.availableVersions.length > 0 ? root.availableVersions[0] : "";
                         }
-                        if (root.currentVersion === "unknown" && root.availableVersions.length > 0) {
-                            root.currentVersion = root.availableVersions[0];
-                        }
+                        // Leave currentVersion as "unknown" when the installed
+                        // version could not be resolved — pretending the newest
+                        // release is installed hides the real state and invites
+                        // wrong upgrade/downgrade offers.
                         if (root.previousVersion === "unknown" && root.availableVersions.length > 1) {
                             root.previousVersion = root.availableVersions[1];
                         }
                     }
-                    const prevCount = root.pendingCount;
                     root.pendingCount = parsedPendingCount;
                     root.hasUpdate = parsedHasUpdate;
                     root.versionSummaryMode = parsedVersionSummaryMode;
-                    
-                    if (root.hasUpdate && prevCount === 0 && root.loaded) {
-                        const summaryText = root.currentBranch === "main"
-                            ? qsTr("Main branch version update available")
-                            : qsTr("%1 new commits on %2 branch").arg(root.pendingCount).arg(root.currentBranch);
-                        if (GlobalConfig.utilities.toasts.updateAvailable)
-                            Toaster.toast(qsTr("System Update Available"), summaryText, "update");
-                    }
                 } catch(e) {
                     console.log("UpdateChecker git parse error:", e);
                 }
@@ -737,6 +772,18 @@ echo "$INSTALLED|$LATEST"
                 root.stallNoticeShown = true;
                 root.updateLogs += "[WARN] No updater output for 120s. If this persists, stop and retry.\n";
             }
+        }
+    }
+
+    Timer {
+        id: autoCheckTimer
+
+        interval: root.checkIntervalMs
+        repeat: false
+        running: GlobalConfig.general.checkUpdates && root.loaded
+        onTriggered: {
+            if (!root.checkingUpdates && !root.updateRunning)
+                root.checkUpdates();
         }
     }
 

@@ -116,6 +116,16 @@ PageBase {
         }
 
         StepperRow {
+            label: qsTr("Max popup notifications")
+            subtext: qsTr("Only the newest popups are shown; the rest stay in the sidebar")
+            value: GlobalConfig.notifs.maxPopups
+            from: 0
+            to: 30
+            stepSize: 1
+            onMoved: value => GlobalConfig.notifs.maxPopups = Math.round(value)
+        }
+
+        StepperRow {
             last: true
             label: qsTr("Max stored notifications")
             subtext: qsTr("Older notifications are dropped when the limit is reached")

@@ -4,7 +4,7 @@
 
 1. Open `installer/theme.json`
 2. Modify the JSON values to your liking
-3. Run `bash setup.sh` to see the changes instantly—automated C++ recompilation.
+3. Run `bash scripts/setup.sh` to see the changes instantly—automated C++ recompilation.
 
 **Minimal config structure:**
 ```json
@@ -262,4 +262,4 @@ In addition to dynamic variables generated from `menu.json` selections, the C++ 
 | `SRCDEST` | The destination for downloaded source code files. |
 | `SRCPKGDEST` | The destination for source packages. |
 | `BASE_DISTRO` | The detected or chosen base Linux distribution (e.g., `arch`, `fedora`). |
-| `BUNDLE_DIR` | The absolute path to the root directory where `setup.sh` is located. |
+| `BUNDLE_DIR` | The absolute path to the repository root (the parent directory of `scripts/setup.sh`). |

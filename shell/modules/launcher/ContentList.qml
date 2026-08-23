@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
+import QtCore
 import Caelestia
 import Caelestia.Config
 import qs.components
@@ -20,29 +21,13 @@ Item {
     required property int padding
     required property int rounding
 
-    readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
-
-    onShowWallpapersChanged: {
-        if (showWallpapers) {
-            for (let category of Wallpapers.categories) {
-                let walls = Wallpapers.grouped[category] || [];
-                if (walls.some(w => w.path === Wallpapers.actualCurrent)) {
-                    currentWallpaperTab = category;
-                    break;
-                }
-            }
-        }
-    }
-
-    readonly property bool showWindowSwitcher: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}windows `)
-
-    readonly property bool showKeybinds: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}keybinds `)
-
-    readonly property bool showAnimations: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}animations `)
-
-    readonly property var currentList: showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : appList.item)))
-
     property string currentWallpaperTab: "Main"
+
+    readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
+    readonly property bool showWindowSwitcher: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}windows `)
+    readonly property bool showKeybinds: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}keybinds `)
+    readonly property bool showAnimations: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}animations `)
+    readonly property var currentList: showWallpapers ? wallpaperList.item : (showWindowSwitcher ? windowSwitcherList.item : (showAnimations ? animationsList.item : (showKeybinds ? keybindsList.item : appList.item)))
 
     readonly property var wallpaperTabs: {
         const res = [];
@@ -60,6 +45,74 @@ Item {
 
     clip: true
     state: showAnimations ? "animations" : (showWindowSwitcher ? "windowSwitcher" : (showKeybinds ? "keybinds" : (showWallpapers ? "wallpapers" : "apps")))
+
+    states: [
+        State {
+            name: "apps"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                implicitHeight: Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
+            }
+        },
+        State {
+            name: "wallpapers"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
+                implicitHeight: filtersRow.implicitHeight + Tokens.spacing.medium + root.Tokens.sizes.launcher.wallpaperHeight + wallpaperTabsWrapper.implicitHeight + 24
+            }
+        },
+        State {
+            name: "windowSwitcher"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, windowSwitcherList.implicitWidth)
+                implicitHeight: root.Tokens.sizes.launcher.windowSwitcherHeight
+            }
+        },
+        State {
+            name: "keybinds"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                implicitHeight: Math.min(root.maxHeight, root.Tokens.sizes.launcher.itemHeight * 7)
+            }
+        },
+        State {
+            name: "animations"
+
+            PropertyChanges {
+                target: root
+                implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                implicitHeight: Math.min(root.maxHeight, root.Tokens.sizes.launcher.itemHeight * 7)
+            }
+        }
+    ]
+
+    Component.onCompleted: {
+        Wallpapers.currentMediaFilter = wallpaperSettings.mediaFilter;
+    }
+
+    onActiveFocusChanged: {
+        wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+    }
+
+    onShowWallpapersChanged: {
+        if (showWallpapers) {
+            for (let category of Wallpapers.categories) {
+                let walls = Wallpapers.grouped[category] || [];
+                if (walls.some(w => w.path === Wallpapers.actualCurrent)) {
+                    currentWallpaperTab = category;
+                    break;
+                }
+            }
+        }
+    }
 
     Behavior on state {
         enabled: !root.visibilities.skipLauncherAnim
@@ -83,56 +136,13 @@ Item {
         }
     }
 
-    states: [
-        State {
-            name: "apps"
+    Settings {
+        id: wallpaperSettings
 
-            PropertyChanges {
-                target: root
-                implicitWidth: root.Tokens.sizes.launcher.itemWidth
-                implicitHeight: Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
-            }
+        property string mediaFilter: "All"
 
-        },
-        State {
-            name: "wallpapers"
-
-            PropertyChanges {
-                target: root
-                implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, wallpaperList.implicitWidth)
-                implicitHeight: root.Tokens.sizes.launcher.wallpaperHeight + 56 // Extra space for color buttons
-            }
-        },
-        State {
-            name: "windowSwitcher"
-
-            PropertyChanges {
-                target: root
-                implicitWidth: Math.max(root.Tokens.sizes.launcher.itemWidth * 1.2, windowSwitcherList.implicitWidth)
-                implicitHeight: root.Tokens.sizes.launcher.windowSwitcherHeight
-            }
-        },
-        State {
-            name: "keybinds"
-
-            PropertyChanges {
-                target: root
-                implicitWidth: root.Tokens.sizes.launcher.itemWidth
-                implicitHeight: Math.min(root.maxHeight, root.Tokens.sizes.launcher.itemHeight * 7)
-            }
-
-        },
-        State {
-            name: "animations"
-
-            PropertyChanges {
-                target: root
-                implicitWidth: root.Tokens.sizes.launcher.itemWidth
-                implicitHeight: Math.min(root.maxHeight, root.Tokens.sizes.launcher.itemHeight * 7)
-            }
-
-        }
-    ]
+        category: "Wallpapers"
+    }
 
     Timer {
         id: keybindsTimer
@@ -166,13 +176,52 @@ Item {
         }
     }
 
+    Row {
+        id: filtersRow
+
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Tokens.spacing.small
+
+        visible: root.state === "wallpapers"
+
+        IconTextButton {
+            text: qsTr("Images")
+            icon: "image"
+            type: Wallpapers.currentMediaFilter === "Image" ? TextButton.Filled : TextButton.Tonal
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Image" ? "All" : "Image";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
+        }
+        IconTextButton {
+            text: qsTr("Animated")
+            icon: "animation"
+            type: Wallpapers.currentMediaFilter === "Animated" ? TextButton.Filled : TextButton.Tonal
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Animated" ? "All" : "Animated";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
+        }
+        IconTextButton {
+            text: qsTr("Videos")
+            icon: "videocam"
+            type: Wallpapers.currentMediaFilter === "Video" ? TextButton.Filled : TextButton.Tonal
+            onClicked: {
+                Wallpapers.currentMediaFilter = Wallpapers.currentMediaFilter === "Video" ? "All" : "Video";
+                wallpaperSettings.mediaFilter = Wallpapers.currentMediaFilter;
+            }
+        }
+    }
+
     Loader {
         id: wallpaperList
 
         asynchronous: true
         active: root.state === "wallpapers"
 
-        anchors.top: parent.top
+        anchors.top: filtersRow.bottom
+        anchors.topMargin: Tokens.spacing.medium
         anchors.horizontalCenter: parent.horizontalCenter
         height: root.Tokens.sizes.launcher.wallpaperHeight
 
@@ -199,16 +248,16 @@ Item {
         Flickable {
             id: tabsFlickable
 
-            anchors.fill: parent
-            contentWidth: tabsRow.implicitWidth
-            contentHeight: parent.height
-            flickableDirection: Flickable.HorizontalFlick
-            clip: true
-            
-            ScrollBar.horizontal: StyledScrollBar {
-                flickable: tabsFlickable
-                active: tabsFlickable.moving || tabsFlickable.dragging
-            }
+                anchors.fill: parent
+                contentWidth: tabsRow.implicitWidth
+                contentHeight: parent.height
+                flickableDirection: Flickable.HorizontalFlick
+                clip: true
+
+                ScrollBar.horizontal: StyledScrollBar {
+                    flickable: tabsFlickable
+                    active: tabsFlickable.moving || tabsFlickable.dragging
+                }
 
             Row {
                 id: tabsRow
@@ -232,19 +281,19 @@ Item {
                         implicitHeight: label.implicitHeight + Tokens.padding.small * 2
 
                         CustomMouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-
                             function onWheel(event: WheelEvent): void {
                                 let idx = root.wallpaperTabs.findIndex(t => t.id === root.currentWallpaperTab);
                                 if (event.angleDelta.y < 0 || event.angleDelta.x < 0)
                                     idx = Math.min(idx + 1, root.wallpaperTabs.length - 1);
                                 else if (event.angleDelta.y > 0 || event.angleDelta.x > 0)
                                     idx = Math.max(idx - 1, 0);
-                                
+
                                 root.currentWallpaperTab = root.wallpaperTabs[idx].id;
                             }
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
 
                             StateLayer {
                                 anchors.fill: parent
@@ -269,16 +318,16 @@ Item {
             Item {
                 id: indicator
 
+                property int currentIndex: Math.max(0, root.wallpaperTabs.findIndex(t => t.id === root.currentWallpaperTab))
+                property Item currentTab: tabsRepeater.itemAt(currentIndex)
+
                 anchors.top: tabsRow.bottom
                 anchors.topMargin: 5
-
-                property int currentIndex: Math.max(0, root.wallpaperTabs.findIndex(t => t.id === root.currentWallpaperTab))
-
-                property Item currentTab: tabsRepeater.itemAt(currentIndex)
 
                 implicitWidth: currentTab ? currentTab.implicitWidth : 0
                 implicitHeight: 3
                 x: currentTab ? tabsRow.x + currentTab.x : 0
+                clip: true
 
                 onCurrentIndexChanged: {
                     if (currentTab) {
@@ -290,8 +339,6 @@ Item {
                             tabsFlickable.contentX = targetX + targetWidth - tabsFlickable.width;
                     }
                 }
-
-                clip: true
 
                 StyledRect {
                     anchors.top: parent.top

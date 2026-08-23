@@ -82,7 +82,7 @@ StyledRect {
                 menuItems: [
                     MenuItem {
                         icon: "fullscreen"
-                        text: qsTr("Start Recording")
+                        text: qsTr("Record")
                         activeText: qsTr("Start")
                         onClicked: {
                             root.visibilities.utilities = false;
@@ -90,12 +90,30 @@ StyledRect {
                         }
                     },
                     MenuItem {
-                        icon: "select_to_speak"
-                        text: qsTr("Start Recording with sound")
+                        icon: "volume_up"
+                        text: qsTr("Record with Sound")
                         activeText: qsTr("Start")
                         onClicked: {
                             root.visibilities.utilities = false;
                             Recorder.start(["-s"]);
+                        }
+                    },
+                    MenuItem {
+                        icon: "mic"
+                        text: qsTr("Record with Microphone")
+                        activeText: qsTr("Start")
+                        onClicked: {
+                            root.visibilities.utilities = false;
+                            Recorder.start(["-i"]);
+                        }
+                    },
+                    MenuItem {
+                        icon: "select_to_speak"
+                        text: qsTr("Both Sound & Microphone")
+                        activeText: qsTr("Start")
+                        onClicked: {
+                            root.visibilities.utilities = false;
+                            Recorder.start(["-s","-i"]);
                         }
                     },
                     MenuItem {
@@ -238,7 +256,7 @@ StyledRect {
                     else
                         time = `${mins}:${secs}`;
 
-                    return qsTr("Recording for %1").arg(time);
+                    return qsTr("Recording %1").arg(time);
                 }
                 font: Tokens.font.body.medium
                 elide: Text.ElideMiddle

@@ -1,0 +1,102 @@
+name: Prebuilt Artifacts
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+# Both jobs upload to this fixed release tag, which is what setup.sh and
+# installDP.sh hardcode as their download location:
+#   https://github.com/<repo>/releases/download/caelestia-bin-repo/...
+env:
+  REPO_TAG: caelestia-bin-repo
+
+jobs:
+  # ═══════════════════════════════════════════════════════════
+  # Prebuilt installer TUI binaries (x86_64 + aarch64) so setup.sh can
+  # download instead of compiling the TUI on the user's machine.
+  # ═══════════════════════════════════════════════════════════
+  installer-bin:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake g++ make
+
+      - name: Build installer TUI
+        run: |
+          cmake -B installer/build -DCMAKE_BUILD_TYPE=Release installer
+          cmake --build installer/build -- -j"$(nproc)"
+
+      - name: Upload prebuilt installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp installer/build/caelestia-install "caelestia-install-${{ matrix.arch }}"
+          gh release create "$REPO_TAG" --latest=false --prerelease \
+            --title "Prebuilt artifacts" \
+            --notes "Prebuilt installer binaries and the binary package repo consumed by setup.sh and installDP.sh." >/dev/null 2>&1 || true
+          gh release upload "$REPO_TAG" "caelestia-install-${{ matrix.arch }}" --clobber
+
+  # ═══════════════════════════════════════════════════════════
+  # Binary pacman repo with the last source-built AUR packages (libcava,
+  # darkly) so the installer can pull them prebuilt from pacman instead of
+  # compiling them with makepkg on the user's machine.
+  # ═══════════════════════════════════════════════════════════
+  pacman-repo:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install build prerequisites
+        run: |
+          pacman -Syu --noconfirm --needed git sudo github-cli
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+      - name: Build AUR packages
+        run: |
+          install -d -o builder -g builder /tmp/pkgs
+          cat > /tmp/build-aur.sh <<'EOF'
+          #!/bin/bash
+          set -euo pipefail
+          for pkg in libcava darkly; do
+              rm -rf "/tmp/$pkg"
+              git clone --depth 1 "https://aur.archlinux.org/$pkg.git" "/tmp/$pkg"
+              cd "/tmp/$pkg"
+              PKGDEST=/tmp/pkgs makepkg -s --noconfirm
+          done
+          EOF
+          chmod +x /tmp/build-aur.sh
+          su builder -c /tmp/build-aur.sh
+
+      - name: Build repo database
+        run: |
+          cd /tmp/pkgs
+          repo-add caelestia-bin.db.tar.gz ./*.pkg.tar.zst
+          mv caelestia-bin.db.tar.gz caelestia-bin.db
+          mv caelestia-bin.files.tar.gz caelestia-bin.files
+
+      - name: Upload repo to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd /tmp/pkgs
+          gh release create "$REPO_TAG" --latest=false --prerelease \
+            --title "Prebuilt artifacts" \
+            --notes "Prebuilt installer binaries and the binary package repo consumed by setup.sh and installDP.sh." >/dev/null 2>&1 || true
+          gh release upload "$REPO_TAG" caelestia-bin.db caelestia-bin.files ./*.pkg.tar.zst --clobber

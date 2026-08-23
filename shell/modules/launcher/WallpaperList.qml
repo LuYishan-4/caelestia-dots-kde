@@ -98,22 +98,24 @@ PathView {
         readonly property string search: root.search.text.split(" ").slice(1).join(" ")
 
         values: {
+            let res = [];
             if (search) {
                 const allWalls = Wallpapers.query(search);
                 const targetCategory = contentList.currentWallpaperTab;
                 const baseDir = Paths.wallsdir;
                 if (targetCategory === "Main") {
-                    return allWalls.filter(w => w.parentDir === baseDir);
+                    res = allWalls.filter(w => w.parentDir === baseDir);
                 } else {
-                    return allWalls.filter(w => {
+                    res = allWalls.filter(w => {
                         let cat = w.parentDir.slice(baseDir.length + 1);
                         if (cat.includes("/")) cat = cat.slice(0, cat.indexOf("/"));
                         return cat === targetCategory;
                     });
                 }
             } else {
-                return Wallpapers.grouped[contentList.currentWallpaperTab] || [];
+                res = Wallpapers.grouped[contentList.currentWallpaperTab] || [];
             }
+            return res;
         }
         onValuesChanged: {
             let idx = search ? 0 : values.findIndex(w => w.path === Wallpapers.actualCurrent);

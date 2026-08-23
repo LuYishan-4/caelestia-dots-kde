@@ -146,10 +146,10 @@ MouseArea {
             // would animate RGB through black via StyledRect's inherited
             // Behavior on color.
             color: root.transparentBackground
-                ? Qt.alpha(Colours.palette.m3surfaceContainerLow, 0)
-                : (GlobalConfig.appearance.transparency.enabled && GlobalConfig.appearance.blur)
-                    ? Qt.alpha(Colours.palette.m3surfaceContainerLow, GlobalConfig.appearance.transparency.base)
-                    : Colours.palette.m3surfaceContainerLow
+                ? Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0)
+                : (GlobalConfig.appearance.pitchBlack
+                    ? "#000000"
+                    : Colours.palette.m3surfaceContainerHigh)
 
             Flickable {
                 id: flickable

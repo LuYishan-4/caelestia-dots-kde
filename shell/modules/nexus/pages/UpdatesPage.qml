@@ -130,11 +130,15 @@ PageBase {
             // Version mode: full timeline with available + current + past
             const versions = UpdateChecker.availableVersions;
             const current = UpdateChecker.currentVersion;
-            const currentIdx = versions.indexOf(current);
+            const currentIdx = current === "unknown" ? -2 : versions.indexOf(current);
             const result = [];
             for (let i = 0; i < versions.length; i++) {
                 let state;
-                if (currentIdx === -1) {
+                if (currentIdx === -2) {
+                    // Unknown install: no release may be presented as the
+                    // installed one, and none counts as an available update.
+                    state = "past";
+                } else if (currentIdx === -1) {
                     state = i === 0 ? "current" : "past";
                 } else if (i < currentIdx) {
                     state = "available";
@@ -220,6 +224,7 @@ PageBase {
                         if (root.updateProgress === 1.0) return "done_all";
                         if (root.updateRunning) return "sync";
                         if (root.selectionIsRevert) return "history";
+                        if (UpdateChecker.currentVersion === "unknown" && !UpdateChecker.hasUpdate) return "help";
                         return UpdateChecker.hasUpdate ? "update" : "check_circle";
                     }
                     color: (UpdateChecker.hasUpdate || root.updateRunning || root.updateProgress === 1.0)
@@ -239,7 +244,7 @@ PageBase {
                     maximumLineCount: 2
                     elide: Text.ElideRight
                     text: {
-                        if (root.updateProgress === 1.0) return qsTr("Update complete — log out to apply");
+                        if (root.updateProgress === 1.0) return qsTr("Update complete - log out to apply");
                         if (root.updateRunning) return root.updateStatus || qsTr("Updating…");
                         if (root.selectionIsRevert) return qsTr("Restore to %1?").arg(root.selectedVersionId);
                         if (root.selectionIsFuture && root.selectedVersionId !== "")
@@ -249,6 +254,8 @@ PageBase {
                                 ? qsTr("New version available on %1").arg(UpdateChecker.currentBranch)
                                 : qsTr("%1 new commits on %2").arg(UpdateChecker.pendingCount).arg(UpdateChecker.currentBranch);
                         }
+                        if (UpdateChecker.currentVersion === "unknown")
+                            return qsTr("Installed version unknown");
                         return qsTr("You're up to date");
                     }
                 }
@@ -369,11 +376,10 @@ PageBase {
         }
 
         // 2 ── CHANNEL SELECTOR ────────────────────────────────────────────
-        SectionHeader { text: qsTr("Channel") }
+        SectionHeader { text: qsTr("General") }
 
         SelectRow {
             first: true
-            last: true
             enabled: !root.branchDataLoading
             label: qsTr("Update channel")
             subtext: UpdateChecker.currentBranch === "main"
@@ -388,6 +394,115 @@ PageBase {
                 root.pendingBranch = item.text !== UpdateChecker.currentBranch ? item.text : "";
                 UpdateChecker.checkUpdates(item.text);
             }
+        }
+
+        ToggleRow {
+            visible: !root.branchDataLoading
+            text: qsTr("Show Update Indicator")
+            subtext: qsTr("Show a notification icon in the taskbar when updates are available")
+            checked: {
+                const entries = GlobalConfig.bar.entries;
+                for (let i = 0; i < entries.length; i++) {
+                    if (entries[i].id === "updateIndicator") return entries[i].enabled;
+                }
+                return false;
+            }
+            onToggled: {
+                let entries = GlobalConfig.bar.entries;
+                let found = false;
+                for (let i = 0; i < entries.length; i++) {
+                    if (entries[i].id === "updateIndicator") {
+                        let entry = Object.assign({}, entries[i]);
+                        entry.enabled = checked;
+                        entries[i] = entry;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found && checked) {
+                    let insertIdx = entries.length;
+                    for (let i = 0; i < entries.length; i++) {
+                        if (entries[i].id === "github" || entries[i].id === "clock") {
+                            insertIdx = i;
+                            break;
+                        } else if (entries[i].id === "tray") {
+                            insertIdx = i + 1;
+                        }
+                    }
+                    entries.splice(insertIdx, 0, { id: "updateIndicator", enabled: true, zone: "right" });
+                }
+                GlobalConfig.bar.entries = entries;
+            }
+        }
+
+        // 4 ── INSTALLATION SETTINGS ───────────────────────────────────────
+        // Collapsed by default and tucked below the timeline so these
+        // rarely-changed options don't compete with the commit/version
+        // history for space or attention.
+        ConnectedRect {
+            visible: !root.branchDataLoading
+            last: !root.installOptionsExpanded
+            Layout.fillWidth: true
+            implicitHeight: installHeaderRow.implicitHeight + Tokens.padding.medium * 2
+
+            StateLayer {
+                onClicked: root.installOptionsExpanded = !root.installOptionsExpanded
+            }
+
+            RowLayout {
+                id: installHeaderRow
+
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.medium
+                anchors.leftMargin: Tokens.padding.largeIncreased
+                anchors.rightMargin: Tokens.padding.largeIncreased
+                spacing: Tokens.spacing.medium
+
+                MaterialIcon {
+                    text: "tune"
+                    color: Colours.palette.m3onSurfaceVariant
+                    fontStyle: Tokens.font.icon.medium
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: qsTr("Customize Installation")
+                    font: Tokens.font.body.small
+                }
+
+                MaterialIcon {
+                    text: root.installOptionsExpanded ? "expand_less" : "expand_more"
+                    color: Colours.palette.m3onSurfaceVariant
+                    fontStyle: Tokens.font.icon.medium
+                }
+            }
+        }
+
+        NavRow {
+            visible: !root.branchDataLoading && root.installOptionsExpanded
+            icon: "folder"
+            label: qsTr("Open Backup Folder")
+            status: qsTr("View your previously backed-up configuration files")
+            onClicked: {
+                backupFolderProcess.running = true;
+            }
+        }
+
+        ToggleRow {
+            visible: !root.branchDataLoading && root.installOptionsExpanded
+            text: qsTr("Deploy Configurations")
+            subtext: qsTr("Update your custom dotfiles in ~/.config")
+            checked: UpdateChecker.deployConfigs
+            onToggled: UpdateChecker.deployConfigs = checked
+        }
+
+        ToggleRow {
+            visible: !root.branchDataLoading && root.installOptionsExpanded
+            last: true
+            text: qsTr("Build Shell UI")
+            subtext: qsTr("Compile and install Quickshell UI updates")
+            checked: UpdateChecker.buildShell
+            onToggled: UpdateChecker.buildShell = checked
         }
 
         ConnectedRect {
@@ -495,77 +610,6 @@ PageBase {
             verticalPadding: Tokens.padding.medium
             disabled: UpdateChecker.loadingMoreCommits
             onClicked: UpdateChecker.loadMoreCommits()
-        }
-
-        // 4 ── INSTALLATION SETTINGS ───────────────────────────────────────
-        // Collapsed by default and tucked below the timeline so these
-        // rarely-changed options don't compete with the commit/version
-        // history for space or attention.
-        ConnectedRect {
-            visible: !root.branchDataLoading
-            first: true
-            last: !root.installOptionsExpanded
-            Layout.fillWidth: true
-            implicitHeight: installHeaderRow.implicitHeight + Tokens.padding.medium * 2
-
-            StateLayer {
-                onClicked: root.installOptionsExpanded = !root.installOptionsExpanded
-            }
-
-            RowLayout {
-                id: installHeaderRow
-
-                anchors.fill: parent
-                anchors.margins: Tokens.padding.medium
-                anchors.leftMargin: Tokens.padding.largeIncreased
-                anchors.rightMargin: Tokens.padding.largeIncreased
-                spacing: Tokens.spacing.medium
-
-                MaterialIcon {
-                    text: "tune"
-                    color: Colours.palette.m3onSurfaceVariant
-                    fontStyle: Tokens.font.icon.medium
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: qsTr("Customize Installation")
-                    font: Tokens.font.body.small
-                }
-
-                MaterialIcon {
-                    text: root.installOptionsExpanded ? "expand_less" : "expand_more"
-                    color: Colours.palette.m3onSurfaceVariant
-                    fontStyle: Tokens.font.icon.medium
-                }
-            }
-        }
-
-        NavRow {
-            visible: !root.branchDataLoading && root.installOptionsExpanded
-            icon: "folder"
-            label: qsTr("Open Backup Folder")
-            status: qsTr("View your previously backed-up configuration files")
-            onClicked: {
-                backupFolderProcess.running = true;
-            }
-        }
-
-        ToggleRow {
-            visible: !root.branchDataLoading && root.installOptionsExpanded
-            text: qsTr("Deploy Configurations")
-            subtext: qsTr("Update your custom dotfiles in ~/.config")
-            checked: UpdateChecker.deployConfigs
-            onToggled: UpdateChecker.deployConfigs = checked
-        }
-
-        ToggleRow {
-            visible: !root.branchDataLoading && root.installOptionsExpanded
-            last: true
-            text: qsTr("Build Shell UI")
-            subtext: qsTr("Compile and install Quickshell UI updates")
-            checked: UpdateChecker.buildShell
-            onToggled: UpdateChecker.buildShell = checked
         }
 
         // 5 ── UPDATE LOG (appears after update runs) ──────────────────────

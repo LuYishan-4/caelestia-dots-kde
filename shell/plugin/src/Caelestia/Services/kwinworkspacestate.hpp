@@ -24,6 +24,7 @@ class KWinWorkspaceState : public QObject
     Q_OBJECT
     Q_PROPERTY(int activeId READ activeId NOTIFY activeIdChanged)
     Q_PROPERTY(QVariantList workspaces READ workspaces NOTIFY workspacesChanged)
+    Q_PROPERTY(uint rows READ rows NOTIFY rowsChanged)
     Q_PROPERTY(double swipeOffset READ swipeOffset NOTIFY swipeOffsetChanged)
     QML_ELEMENT
     QML_SINGLETON
@@ -38,6 +39,7 @@ public:
 
     int activeId() const;
     QVariantList workspaces() const;
+    uint rows() const;
     double swipeOffset() const;
 
     Q_INVOKABLE void switchTo(const QString& id);
@@ -51,6 +53,7 @@ public:
 signals:
     void activeIdChanged();
     void workspacesChanged();
+    void rowsChanged();
     void swipeOffsetChanged();
 
 private slots:

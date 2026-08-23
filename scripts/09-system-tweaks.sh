@@ -103,7 +103,7 @@ tweak_reload_kde() {
 tweak_default_scheme() {
     info "Setting default Caelestia color scheme..."
     if command -v caelestia >/dev/null 2>&1; then
-        caelestia scheme set -n dynamic >/dev/null 2>&1 || true
+        timeout 10s caelestia scheme set -n dynamic >/dev/null 2>&1 || true
     fi
     ok "Default Caelestia color scheme set."
 }
@@ -221,6 +221,7 @@ if [[ "${1:-}" == "--list" ]]; then
 fi
 
 tweak_disable_kde_osd
+tweak_five_desktops
 tweak_default_shell
 tweak_default_scheme
 tweak_patch_caelestia_cli

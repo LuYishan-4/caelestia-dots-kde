@@ -41,6 +41,15 @@ QVariantList KWinActiveWindowBridge::windowList() const {
     return m_windowList;
 }
 
+QString KWinActiveWindowBridge::pendingFocusAddress() const {
+    return m_pendingFocusAddress;
+}
+
+QString KWinActiveWindowBridge::cursorOutputName() const {
+    const auto message = QDBusMessage::createMethodCall("org.kde.KWin", "/KWin", "org.kde.KWin", "activeOutputName");
+    return QDBusConnection::sessionBus().call(message).arguments().value(0).toString();
+}
+
 void KWinActiveWindowBridge::onWindowAdded(const QString& uuid) {
     if (auto* handle = PlasmaWindows::instance()->handleFor(uuid)) {
         connect(handle, &PlasmaWindowHandle::titleChanged, this, &KWinActiveWindowBridge::scheduleWindowListUpdate);
@@ -146,6 +155,11 @@ void KWinActiveWindowBridge::buildWindowList() {
     if (activeWindowFound && m_activeWindow != newActiveWindow) {
         m_activeWindow = newActiveWindow;
         emit activeWindowChanged();
+        
+        if (m_activeWindow.value("address").toString() == m_pendingFocusAddress) {
+            m_pendingFocusAddress.clear();
+            emit pendingFocusAddressChanged();
+        }
     } else if (!activeWindowFound && !m_activeWindow.isEmpty()) {
         m_activeWindow.clear();
         emit activeWindowChanged();
@@ -154,6 +168,9 @@ void KWinActiveWindowBridge::buildWindowList() {
 
 void KWinActiveWindowBridge::focusWindow(const QString &address) {
     if (auto* handle = PlasmaWindows::instance()->handleFor(address)) {
+        m_pendingFocusAddress = address;
+        emit pendingFocusAddressChanged();
+        
         // To focus a window, we set the active state
         handle->set_state(QtWayland::org_kde_plasma_window_management::state_active, QtWayland::org_kde_plasma_window_management::state_active);
     }

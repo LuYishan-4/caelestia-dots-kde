@@ -204,21 +204,26 @@ Singleton {
         reloadableId: "gameMode"
     }
 
-    // If gamemode-state already exists when the shell starts, a previous game
-    // mode session never got to turn itself off — a crash, or an exit that
-    // skipped the normal disable path. KDE's blur/animations are still sitting
-    // disabled from that session, but props.enabled does not survive whatever
-    // caused this (that's the whole reason applyKwin() guards on the file
-    // rather than on persisted QML state), so it quietly comes back false and
-    // nothing would call applyKwin(false) to put the real settings back. Sync
-    // enabled to match reality — off Hyprland this re-enters applyKwin(true),
-    // which is a no-op past the disable step since the file is already there.
+    // If `gamemode-state` exists, recover by **restoring**, not re-enabling.
+    // KDE: call `applyKwin(false)` to restore settings and remove the stale file.
+    // Don’t set `props.enabled = true`; it would re-enter game mode.
+    // Hyprland: no recovery needed; just remove the stale file.
+
     FileView {
         path: `${Paths.cache}/gamemode-state`
         printErrors: false
         onLoaded: {
-            if (!props.enabled)
-                props.enabled = true;
+            if (props.enabled)
+                return; // already active, nothing to recover
+            if (root.onHyprland) {
+                // Hyprland resets compositor state on shell exit; the file is
+                // leftover bookkeeping. Remove it so the next session starts clean.
+                Quickshell.execDetached(["rm", "-f", `${Paths.cache}/gamemode-state`]);
+            } else {
+                // KDE: restore blur/animations from the saved state and delete
+                // the stale file. Do not re-enable game mode.
+                root.applyKwin(false);
+            }
         }
     }
 

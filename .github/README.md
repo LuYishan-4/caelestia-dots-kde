@@ -26,9 +26,7 @@ A community port of the [Caelestia Hyprland dotfiles](https://github.com/caelest
 **Requirements:** Arch-based distro, Fedora, or Debian · KDE Plasma 6.0+
 
 ```bash
-git clone -b main --single-branch --depth 1 https://github.com/ladybug-me/caelestia-dots-kde ~/caelestia-dots-kde
-cd ~/caelestia-dots-kde
-bash ./setup.sh
+curl -fsSL https://raw.githubusercontent.com/ladybug-me/caelestia-dots-kde/main/install.sh | sh
 ```
 
 ### Updating
@@ -62,8 +60,9 @@ https://github.com/user-attachments/assets/4c3e20c9-5050-4cc8-8e9c-32fd0594ac8b
 | `Super + Space` | App launcher |
 | `Super + B` | Notification sidebar |
 | `Super + V` | Clipboard history |
-| `Super + Shift + A` | Google Lens |
 | `Super + Shift + S` | Screenshot |
+| `Super + Shift + A` | Google Lens |
+| `Super + Shift + D` | Text recognition |
 | `Super + Ctrl + S` | Screen recorder |
 | `Super + Shift + C` | Color picker |
 | `Super + Shift + V` | Emoji selector |
@@ -109,7 +108,7 @@ Replace `morning.gif`, `afternoon.gif`, `evening.gif`, and `night.gif` in `shell
 | --- | --- |
 | Widgets not appearing | Log out and back in, or run `caelestia shell -d` |
 | Colors not applying | Run `systemctl status --user kde-material-you-colors.service`; re-run installer if needed |
-| Install failed mid-way | Re-run `bash ./setup.sh` |
+| Install failed mid-way | Re-run `bash ./scripts/setup.sh` |
 | Full reset needed | See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
 
 For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then run `caelestia shell -l`.
@@ -165,7 +164,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 ## License
 
-[GPLv3](LICENSE)
+[GPLv3](../LICENSE)
 
 ---
 

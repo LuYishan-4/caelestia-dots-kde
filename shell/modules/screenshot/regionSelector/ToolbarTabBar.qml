@@ -53,8 +53,9 @@ Item {
                 property bool current: index === tabBar.currentIndex
 
                 implicitHeight: 36
-                implicitWidth: contentLayout.implicitWidth + 24
-                
+                leftPadding: 16
+                rightPadding: 16
+
                 background: Rectangle {
                     // Fade alpha to 0 instead of the literal "transparent" string,
                     // which would animate RGB through black.
@@ -64,28 +65,29 @@ Item {
                     Behavior on color { ColorAnimation { duration: 150 } }
                 }
 
-                contentItem: Row {
-                    id: contentLayout
-
+                contentItem: RowLayout {
                     spacing: 8
-                    anchors.centerIn: parent
                     
                     MaterialIcon {
                         text: modelData.icon
                         color: tabBtn.current ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-                        anchors.verticalCenter: parent.verticalCenter
+                        Layout.alignment: Qt.AlignVCenter
                     }
 
                     StyledText {
                         text: modelData.name
                         color: tabBtn.current ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                         font: Tokens.font.body.small
-                        anchors.verticalCenter: parent.verticalCenter
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
 
                 onClicked: {
                     root.setCurrentIndex(index);
+                }
+
+                HoverHandler {
+                    cursorShape: Qt.PointingHandCursor
                 }
             }
         }

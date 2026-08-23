@@ -2,7 +2,9 @@ import ".."
 import QtQuick
 import Quickshell
 import Quickshell.Widgets
+import Caelestia.Config
 import qs.components
+import qs.services
 
 Rectangle {
     id: root
@@ -17,6 +19,7 @@ Rectangle {
     property color borderColor
     property color fillColor: "transparent"
     property string text: ""
+    property string iconName: ""
     property real textPadding: 10
 
     z: 2
@@ -58,7 +61,7 @@ Rectangle {
             radius: 10
             color: root.colBackground
             border.width: 1
-            border.color: Colours.palette.m3outlineVariant
+            border.color: Colours.palette.m3outlineVariant  // Caelestia.Config
             implicitWidth: regionInfoRow.implicitWidth + horizontalPadding * 2
             implicitHeight: regionInfoRow.implicitHeight + verticalPadding * 2
 
@@ -75,7 +78,7 @@ Rectangle {
                     visible: active
                     sourceComponent: IconImage {
                         implicitSize: 18
-                        source: Quickshell.iconPath(AppSearch.guessIcon(root.text), "image-missing")
+                        source: Quickshell.iconPath(root.iconName.toLowerCase(), "image-missing")
                     }
                 }
 

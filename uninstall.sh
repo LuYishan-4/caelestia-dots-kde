@@ -610,7 +610,7 @@ if [[ "$REMOVE_PACKAGES" == "true" ]]; then
     section "Step 9 - Remove Packages (Optional)"
 
     ARCH_PACKAGES=(
-        caelestia-cli quickshell-git
+        caelestia-cli quickshell
         cmake ninja
         wl-clipboard cliphist inotify-tools app2unit wireplumber trash-cli
         jq aubio lm_sensors libcava libqalculate

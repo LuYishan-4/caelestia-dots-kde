@@ -12,4 +12,11 @@ AnimatedImage {
     playing: true
 
     onSourceChanged: playing = true
+
+    onStatusChanged: {
+        if (status === Image.Ready) {
+            playing = false;
+            playing = true;
+        }
+    }
 }
