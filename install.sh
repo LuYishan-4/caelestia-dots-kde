@@ -78,13 +78,13 @@ fi
 
 if [ -d "$DEST/.git" ]; then
     echo "[Caelestia] Updating existing checkout at $DEST"
-    git -C "$DEST" pull --ff-only
+    git -C "$DEST" pull --ff-only --recurse-submodules
 elif [ -e "$DEST" ]; then
     echo "[Caelestia] $DEST already exists and is not a git checkout; aborting." >&2
     exit 1
 else
     echo "[Caelestia] Cloning $REPO ($BRANCH) into $DEST"
-    git clone -b "$BRANCH" --single-branch --depth 1 "$REPO" "$DEST"
+    git clone -b "$BRANCH" --single-branch --depth 1 --recurse-submodules "$REPO" "$DEST"
 fi
 
 if [ ! -t 0 ] && [ -c /dev/tty ]; then
