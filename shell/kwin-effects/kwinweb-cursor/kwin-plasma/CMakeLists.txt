@@ -27,11 +27,10 @@ target_sources(ultralightwebcursor PRIVATE
 target_include_directories(ultralightwebcursor
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    #${CMAKE_SOURCE_DIR}/dep/glad/include
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/config
-    ${CMAKE_SOURCE_DIR}/src/header
-    ${CMAKE_SOURCE_DIR}/src/lib
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/config
+    ${CMAKE_SOURCE_DIR}/header
+    ${CMAKE_SOURCE_DIR}/lib
     /usr/include/kwin
     /usr/include/kwin/core
 )

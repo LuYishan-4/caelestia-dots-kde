@@ -49,7 +49,7 @@ void UserConfig::ensureInitialized() {
   schema_ = {
       {"configver", "1.0.0",
        [this](const std::string &v) { values.configver = v; }},
-      {"html", (g_htmlInitialPath / "variant1-neon" / "index.html").string(),
+      {"html", (g_htmlInitialPath / "variant4-ciallo" / "index.html").string(),
        [this](const std::string &v) { values.html = v; }},
       {"sdk", g_sdkInitialPath.string(),
        [this](const std::string &v) { values.sdk = v; }},

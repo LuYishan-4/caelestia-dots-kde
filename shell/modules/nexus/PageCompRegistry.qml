@@ -75,6 +75,9 @@ QtObject {
                 Component {
                     KrohnkitePage {}
                 }
+                Component {
+                    WebCursorPage {}
+                }
             }
         },
         Component {

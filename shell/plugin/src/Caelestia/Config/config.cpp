@@ -1,7 +1,7 @@
 #include "config.hpp"
-#include "audioconfig.hpp"
 #include "aiconfig.hpp"
 #include "appearanceconfig.hpp"
+#include "audioconfig.hpp"
 #include "backgroundconfig.hpp"
 #include "barconfig.hpp"
 #include "borderconfig.hpp"
@@ -21,6 +21,7 @@
 #include "tokens.hpp"
 #include "userpaths.hpp"
 #include "utilitiesconfig.hpp"
+#include "webcursorconfig.hpp"
 #include "winfoconfig.hpp"
 
 #include <qqmlengine.h>
@@ -59,7 +60,8 @@ GlobalConfig::GlobalConfig(QObject* parent)
     , m_winfo(new WInfoConfig(this))
     , m_paths(new UserPaths(this))
     , m_audio(new AudioConfig(this))
-    , m_ai(new AiConfig(this)) {
+    , m_ai(new AiConfig(this))
+    , m_webCursor(new WebCursorConfig(this)) {
     setupFileBackend(configDir() + QStringLiteral("shell.json"));
 }
 
@@ -85,7 +87,8 @@ GlobalConfig::GlobalConfig(GlobalConfig* fallback, const QString& filePath, cons
     , m_winfo(new WInfoConfig(this))
     , m_paths(new UserPaths(this))
     , m_audio(new AudioConfig(this))
-    , m_ai(new AiConfig(this)) {
+    , m_ai(new AiConfig(this))
+    , m_webCursor(new WebCursorConfig(this)) {
     if (!filePath.isEmpty())
         setupFileBackend(filePath, screen);
     if (fallback)

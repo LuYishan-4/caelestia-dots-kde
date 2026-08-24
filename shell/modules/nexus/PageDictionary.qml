@@ -30,6 +30,7 @@ QtObject {
                 { label: qsTr("Right Click Menu"), pagePath: "wallandstyle/ContextMenuPage.qml", subPageIdx: 2 },
                 { label: qsTr("Desktop Addons"), pagePath: "wallandstyle/DesktopAddonsPage.qml", subPageIdx: 1 },
                 { label: qsTr("Window Tiling"), pagePath: "desktop/KrohnkitePage.qml", keywords: ["krohnkite", "tiling", "layouts"], subPageIdx: 3 },
+                { label: qsTr("Web Cursor"), pagePath: "desktop/WebCursorPage.qml", keywords: ["cursor", "animated", "html", "webcursor"], subPageIdx: 4 },
                 { label: qsTr("Virtual Workspaces"), keywords: ["desktops", "virtual", "switcher"] }
             ]
         },

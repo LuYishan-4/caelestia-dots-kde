@@ -27,6 +27,7 @@ class SidebarConfig;
 class UserPaths;
 class UtilitiesConfig;
 class WInfoConfig;
+class WebCursorConfig;
 
 class GlobalConfig : public RootConfig {
     Q_OBJECT
@@ -53,6 +54,7 @@ class GlobalConfig : public RootConfig {
     Q_MOC_INCLUDE("userpaths.hpp")
     Q_MOC_INCLUDE("utilitiesconfig.hpp")
     Q_MOC_INCLUDE("winfoconfig.hpp")
+    Q_MOC_INCLUDE("webcursorconfig.hpp")
 
     CONFIG_PROPERTY(bool, enabled, true)
     CONFIG_SUBOBJECT(AppearanceConfig, appearance)
@@ -76,6 +78,7 @@ class GlobalConfig : public RootConfig {
     CONFIG_SUBOBJECT(UserPaths, paths)
     CONFIG_SUBOBJECT(AudioConfig, audio)
     CONFIG_SUBOBJECT(AiConfig, ai)
+    CONFIG_SUBOBJECT(WebCursorConfig, webCursor)
 
 public:
     static GlobalConfig* instance();

@@ -128,6 +128,13 @@ PageBase {
         }
 
         NavRow {
+            icon: "mouse"
+            label: qsTr("Web Cursor")
+            status: qsTr("Experimental animated KWin cursor")
+            onClicked: root.nState.openSubPage(4)
+        }
+
+        NavRow {
             last: true
             icon: "menu_open"
             label: qsTr("Right Click Menu")
