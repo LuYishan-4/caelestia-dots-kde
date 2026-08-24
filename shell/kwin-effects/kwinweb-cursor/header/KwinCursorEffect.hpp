@@ -5,50 +5,41 @@
 #include <array>
 #include <core/output.h>
 #include <kwin/effect/effect.h>
+
 namespace KWin {
 
 class LogicalOutput;
 class GLTexture;
 class EffectWindow;
 
-class KwinCursorEffect : public Effect,
-                         public UltralightWebCursorM::MainCursorStaff {
-  Q_OBJECT
-  Q_DISABLE_COPY(KwinCursorEffect)
+class KwinCursorEffect : public Effect, public UltralightWebCursorM::MainCursorStaff {
+    Q_OBJECT
+    Q_DISABLE_COPY(KwinCursorEffect)
 
 public:
-  KwinCursorEffect();
-  ~KwinCursorEffect() override;
+    KwinCursorEffect();
+    ~KwinCursorEffect() override;
 
-  void paintScreen(const RenderTarget &renderTarget,
-                   const RenderViewport &viewport, int mask,
-                   const Region &region, LogicalOutput *screen) override;
+    void paintScreen(const RenderTarget& renderTarget, const RenderViewport& viewport, int mask, const Region& region,
+        LogicalOutput* screen) override;
 
-  bool isActive() const override;
+    bool isActive() const override;
 
-  int requestedEffectChainPosition() const override { return 99; }
+    int requestedEffectChainPosition() const override { return 99; }
 
-  static bool supported();
+    static bool supported();
 public Q_SLOTS:
-  void enable() override;
-  void disable() override;
-  void reloadHtml() override;
+    void enable() override;
+    void disable() override;
+    void reloadHtml() override;
 
 private:
-  unsigned int m_lastGpuTexId = 0;
-  bool checkFullScreen() const override;
-  bool isBlacklisted() const;
-  GLTexture *ensureCursorTexture();
-  void slotWindowStateChanged(EffectWindow *w);
-  void ensureDebugQuadResources();
-  void renderGpuTextureDirect(unsigned int gpuTexId, const QMatrix4x4 &mvp,
-                              float width, float height,
-                              bool debugSolidColor = false);
-  // QTimer* m_renderTimer = nullptr;
-  std::unique_ptr<GLTexture> m_cursorTexture;
-  unsigned int m_debugQuadProgram = 0;
-  unsigned int m_debugQuadVao = 0;
-  unsigned int m_debugQuadVbo = 0;
+    unsigned int m_lastGpuTexId = 0;
+    bool checkFullScreen() const override;
+    bool isBlacklisted() const;
+    GLTexture* ensureCursorTexture();
+    void slotWindowStateChanged(EffectWindow* w);
+    std::unique_ptr<GLTexture> m_cursorTexture;
 };
 
 } // namespace KWin

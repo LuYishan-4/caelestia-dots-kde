@@ -3,91 +3,90 @@
 #include "../config/CursorJSON.hpp"
 #include "../config/UserConfig.hpp"
 #include "../lib/WebCall/WebCall.hpp"
-#include "../lib/gl/GPUContextGL.h"
 #include <AppCore/AppCore.h>
 #include <Ultralight/Ultralight.h>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
+
 namespace UltralightWebCursorM {
 
 class UltralightHtmlEffect {
 
 public:
-  UltralightHtmlEffect();
+    UltralightHtmlEffect();
 
-  ~UltralightHtmlEffect();
+    ~UltralightHtmlEffect();
 
-  bool initialize(const ConfigValues &uconfig, const JSONConf &data);
+    bool initialize(const ConfigValues& uconfig, const JSONConf& data);
 
-  bool load(const std::string &path);
+    bool load(const std::string& path);
 
-  void update();
-  bool ensureInitialized();
+    void update();
+    bool ensureInitialized();
 
-  void move(int x, int y, bool pressed);
+    void move(int x, int y, bool pressed);
 
-  ultralight::View *view() const;
-  void reload(const ConfigValues &uconfig, const JSONConf &data);
+    ultralight::View* view() const;
+    void reload(const ConfigValues& uconfig, const JSONConf& data);
 
-  bool resize(const int &width, const int &height);
+    bool resize(const int& width, const int& height);
 
-  const uint8_t *pixels() const;
-  unsigned int textureId() const;
+    const uint8_t* pixels() const;
+    unsigned int textureId() const;
 
-  int width() const { return html_value_.width_; }
+    int width() const { return html_value_.width_; }
 
-  int height() const { return html_value_.height_; }
+    int height() const { return html_value_.height_; }
 
-  int stride() const { return html_value_.stride_; }
+    int stride() const { return html_value_.stride_; }
 
-  int hotspotX() const { return html_value_.hotspot_x_; }
-  int hotspotY() const { return html_value_.hotspot_y_; }
+    int hotspotX() const { return html_value_.hotspot_x_; }
 
-  void setEnabled(bool enabled);
+    int hotspotY() const { return html_value_.hotspot_y_; }
 
-  bool isEnabled() const;
+    void setEnabled(bool enabled);
 
-  bool hasNewFrame() const;
+    bool isEnabled() const;
 
-  void clearNewFrame();
+    bool hasNewFrame() const;
+
+    void clearNewFrame();
 
 private:
-  struct Html_Value {
-    int width_ = 128;
-    int height_ = 128;
-    int stride_ = 0;
-    int minwidth = 128;
-    int minheight = 128;
-    int hotspot_x_ = 64;
-    int hotspot_y_ = 64;
-    std::string m_permanentSdkPath;
-    std::filesystem::path html_path_;
-    bool use_gpu_ = true;
-  };
-  Html_Value html_value_;
+    struct Html_Value {
+        int width_ = 128;
+        int height_ = 128;
+        int stride_ = 0;
+        int minwidth = 128;
+        int minheight = 128;
+        int hotspot_x_ = 64;
+        int hotspot_y_ = 64;
+        std::string m_permanentSdkPath;
+        std::filesystem::path html_path_;
+    };
 
-  std::unique_ptr<ultralight::GPUContextGL> context_;
-  ultralight::RefPtr<ultralight::Renderer> renderer_;
-  std::shared_ptr<WebCall> webcall;
+    Html_Value html_value_;
 
-  ultralight::RefPtr<ultralight::View> view_;
+    ultralight::RefPtr<ultralight::Renderer> renderer_;
+    std::shared_ptr<WebCall> webcall;
 
-  std::unique_ptr<ultralight::LoadListener> listener_;
+    ultralight::RefPtr<ultralight::View> view_;
 
-  bool is_loaded_ = false;
-  bool pending_gpu_init_ = false;
+    std::unique_ptr<ultralight::LoadListener> listener_;
 
-  bool enabled_ = true;
+    bool is_loaded_ = false;
 
-  bool new_frame_ = false;
+    bool enabled_ = true;
 
-  bool platform_initialized_ = false;
+    bool new_frame_ = false;
 
-  std::vector<uint8_t> pixel_buffer_;
+    bool platform_initialized_ = false;
 
-  std::filesystem::file_time_type html_time_;
+    std::vector<uint8_t> pixel_buffer_;
+
+    std::filesystem::file_time_type html_time_;
 };
 
 } // namespace UltralightWebCursorM

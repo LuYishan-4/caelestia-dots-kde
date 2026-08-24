@@ -1,285 +1,154 @@
 #include "UserConfig.hpp"
+
 #include "../lib/Quick/PluginPath/PluginPath.hpp"
-#include "GlobalConstas.hpp"
-#include <QDBusConnection>
-#include <QDebug>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <sstream>
+
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QStandardPaths>
+
+#include <algorithm>
+
 namespace fs = std::filesystem;
+
 namespace UltralightWebCursorM {
+
 fs::path g_sdkInitialPath;
 fs::path g_htmlInitialPath;
 
-static std::vector<std::string> parseCsv(const std::string &str) {
-  std::vector<std::string> res;
-  std::stringstream ss(str);
-  std::string item;
-  while (std::getline(ss, item, ',')) {
-    if (!item.empty()) {
-      res.push_back(item);
-    }
-  }
-  return res;
-}
-
-UserConfig *UserConfig::instance() {
-  static UserConfig inst;
-  return &inst;
+UserConfig* UserConfig::instance() {
+    static UserConfig inst;
+    return &inst;
 }
 
 UserConfig::UserConfig() {
-  qDebug() << "[UltralightCursorEffect] linuxe";
-  const char *home = std::getenv("HOME");
-  if (home)
-    configPath_ = std::string(home) + "/.config/ultralightwebcursor/config.ini";
+    configPath_ = (QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                   QStringLiteral("/caelestia/shell.json"))
+                      .toStdString();
 }
 
 void UserConfig::ensureInitialized() {
-  qDebug() << "[UltralightCursorEffect] e";
-  if (!schema_.empty()) {
-    return;
-  }
-  auto base = UltralightWebCursorM::PluginPath::dataDir();
-  g_sdkInitialPath = base;
-  g_htmlInitialPath = g_sdkInitialPath;
-  qDebug() << "[UltralightCursorEffect] " << base.string();
-  schema_ = {
-      {"configver", "1.0.0",
-       [this](const std::string &v) { values.configver = v; }},
-      {"html", (g_htmlInitialPath / "variant4-ciallo" / "index.html").string(),
-       [this](const std::string &v) { values.html = v; }},
-      {"sdk", g_sdkInitialPath.string(),
-       [this](const std::string &v) { values.sdk = v; }},
-      {"blacklist", "",
-       [this](const std::string &v) { values.blacklist = parseCsv(v); }},
-      {"width", "128",
-       [this](const std::string &v) {
-         values.width = v.empty() ? 128 : std::stoi(v);
-       }},
-      {"height", "128",
-       [this](const std::string &v) {
-         values.height = v.empty() ? 128 : std::stoi(v);
-       }},
-      {"enabled", "true",
-       [this](const std::string &v) { values.enabled = (v == "true"); }},
-      {"EnableGPU", "true",
-       [this](const std::string &v) { values.EnableGPU = (v == "true"); }},
-  };
+    if (!schema_.empty())
+        return;
+    const auto bundled = PluginPath::dataDir();
+    g_sdkInitialPath = bundled;
+    g_htmlInitialPath = bundled;
+    schema_ = {
+        { "width", "128",
+            [this](const std::string& value) {
+                values.width = std::max(1, std::stoi(value));
+            } },
+        { "height", "128",
+            [this](const std::string& value) {
+                values.height = std::max(1, std::stoi(value));
+            } },
+        { "enabled", "false",
+            [this](const std::string& value) {
+                values.enabled = value == "true";
+            } },
+        { "blacklist", "",
+            [this](const std::string&) {
+            } },
+        { "selectTheme", "variant4-ciallo",
+            [this](const std::string&) {
+            } },
+        { "themesDir", "",
+            [this](const std::string&) {
+            } },
+    };
 }
+
 bool UserConfig::load() {
-  ensureInitialized();
-  qDebug() << "[UltralightCursorEffect] loaddone";
-  data_.clear();
-  if (configPath_.empty())
-    return false;
-  qDebug() << "[UltralightCursorEffect] lmhe";
-  std::ifstream file(configPath_);
-  if (!file.is_open()) {
-    for (const auto &item : schema_) {
-      data_[item.key] = item.defaultValue;
-      item.updater(item.defaultValue);
-    }
-    return save();
-  }
-  std::string line;
-  while (std::getline(file, line)) {
-    auto pos = line.find('=');
-    if (pos == std::string::npos)
-      continue;
-    data_[line.substr(0, pos)] = line.substr(pos + 1);
-  }
-  bool needReSave = false;
-  if (data_["configver"] != GloablContast::Version) {
-    data_["configver"] = GloablContast::Version;
-    needReSave = true;
-  }
+    ensureInitialized();
+    data_.clear();
+    values.blacklist.clear();
+    values.configver = "caelestia";
+    for (const auto& item : schema_)
+        data_[item.key] = item.defaultValue;
 
-  for (const auto &item : schema_) {
-    if (data_.find(item.key) == data_.end()) {
-      data_[item.key] = item.defaultValue;
-      needReSave = true;
+    QFile file(QString::fromStdString(configPath_));
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto root = QJsonDocument::fromJson(file.readAll()).object();
+        const auto cursor =
+            root.value(QStringLiteral("webCursor")).toObject().value(QStringLiteral("cursor")).toObject();
+        if (!cursor.isEmpty()) {
+            data_["enabled"] = cursor.value(QStringLiteral("enabled")).toBool(false) ? "true" : "false";
+            data_["width"] = std::to_string(cursor.value(QStringLiteral("width")).toInt(128));
+            data_["height"] = std::to_string(cursor.value(QStringLiteral("height")).toInt(128));
+            data_["selectTheme"] =
+                cursor.value(QStringLiteral("selectTheme")).toString(QStringLiteral("variant4-ciallo")).toStdString();
+            data_["themesDir"] = cursor.value(QStringLiteral("themesDir")).toString().toStdString();
+            for (const auto& item : cursor.value(QStringLiteral("blacklist")).toArray())
+                if (!item.toString().isEmpty())
+                    values.blacklist.push_back(item.toString().toStdString());
+        }
     }
-    item.updater(data_[item.key]);
-  }
 
-  if (needReSave)
-    save();
-  return true;
+    for (const auto& item : schema_) {
+        try {
+            item.updater(data_[item.key]);
+        } catch (...) {
+            data_[item.key] = item.defaultValue;
+            item.updater(item.defaultValue);
+        }
+    }
+
+    const auto requestedTheme = QString::fromStdString(data_["selectTheme"]);
+    const auto customRoot = data_["themesDir"].empty()
+                                ? QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) +
+                                      QStringLiteral("/caelestia/webcursor")
+                                : QString::fromStdString(data_["themesDir"]);
+    const auto customTheme = QDir(customRoot).filePath(requestedTheme);
+    const auto bundledTheme =
+        QString::fromStdString(PluginPath::dataDir().string()) + QLatin1Char('/') + requestedTheme;
+    const auto themeDir =
+        QFileInfo::exists(QDir(customTheme).filePath(QStringLiteral("index.html"))) ? customTheme : bundledTheme;
+    values.html = QDir(themeDir).filePath(QStringLiteral("index.html")).toStdString();
+    // Resources remain installed alongside the bundled effect; custom themes only
+    // replace the HTML directory, never the Ultralight runtime resources.
+    values.sdk = PluginPath::dataDir().string();
+    g_htmlInitialPath = fs::path(themeDir.toStdString());
+    return QFileInfo::exists(QString::fromStdString(values.html));
 }
 
+// The KWin plugin is deliberately read-only. Nexus owns shell.json persistence
+// through WebCursorConfig, so no secondary UserConfig file can be created.
 bool UserConfig::save() {
-  if (configPath_.empty())
     return false;
-  qDebug() << "[UltralightCursorEffect] save";
-  fs::create_directories(fs::path(configPath_).parent_path());
-  std::ofstream file(configPath_);
-  if (!file.is_open())
-    return false;
-  for (const auto &[k, v] : data_) {
-    file << k << "=" << v << "\n";
-  }
-  return true;
 }
 
-void UserConfig::setKeyValue(const std::string &key, const std::string &path) {
-  qDebug() << "[UltralightCursorEffect]se e";
-  data_[key] = path;
-  for (const auto &item : schema_) {
-    if (item.key == key) {
-      item.updater(path);
-      break;
-    }
-  }
+void UserConfig::setKeyValue(const std::string& key, const std::string& value) {
+    data_[key] = value;
 }
 
-std::string UserConfig::readKeyValue(const std::string &key) const {
-  auto it = data_.find(key);
-  if (it == data_.end()) {
-    std::cerr << "[UserConfig] key not found: " << key << "\n";
-    return "";
-  }
-  return it->second;
+std::string UserConfig::readKeyValue(const std::string& key) const {
+    const auto it = data_.find(key);
+    return it == data_.end() ? std::string{} : it->second;
 }
 
 std::vector<std::string> UserConfig::getBlacklist() const {
-  std::vector<std::string> result;
-  auto it = data_.find("blacklist");
-  if (it == data_.end() || it->second.empty())
-    return result;
-  std::stringstream ss(it->second);
-  std::string item;
-  while (std::getline(ss, item, ',')) {
-    if (!item.empty())
-      result.push_back(item);
-  }
-  return result;
+    return values.blacklist;
 }
 
-void UserConfig::appendBlacklist(const std::string &app) {
-  if (app.empty())
-    return;
-  std::string current_list = data_["blacklist"];
-  if (current_list.empty()) {
-    setKeyValue("blacklist", app);
-    save();
-    return;
-  }
-  size_t pos = current_list.find(app);
-  while (pos != std::string::npos) {
-    bool match_start = (pos == 0 || current_list[pos - 1] == ',');
-    bool match_end = (pos + app.length() == current_list.length() ||
-                      current_list[pos + app.length()] == ',');
-    if (match_start && match_end)
-      return;
+void UserConfig::appendBlacklist(const std::string&) {}
 
-    pos = current_list.find(app, pos + 1);
-  }
-  current_list += "," + app;
-  setKeyValue("blacklist", current_list);
-  save();
+void UserConfig::removeBlacklist(const std::string&) {}
+
+bool UserConfig::uploadTheme(const std::string&, const std::string&) {
+    return false;
 }
 
-void UserConfig::removeBlacklist(const std::string &app) {
-  std::string current_list = data_["blacklist"];
-  if (current_list.empty())
-    return;
-  std::string new_value;
-  std::string token;
-  std::stringstream ss(current_list);
-  while (std::getline(ss, token, ',')) {
-    if (token == app)
-      continue;
-    if (!new_value.empty())
-      new_value += ",";
-    new_value += token;
-  }
-  setKeyValue("blacklist", new_value);
-  save();
+bool UserConfig::removeTheme(const std::string&) {
+    return false;
 }
 
-bool UserConfig::uploadTheme(const std::string &path,
-                             const std::string &themeName) {
-  std::error_code ec;
-  fs::path src(path);
-  if (!fs::exists(src, ec) || ec) {
-    return false;
-  }
-  if (!fs::is_directory(src, ec) || ec) {
-    return false;
-  }
-  fs::path dst = g_sdkInitialPath / themeName;
-  fs::remove_all(dst, ec);
-  // bullshit
-  if (ec) {
-    return false;
-  }
-  fs::create_directories(dst, ec);
-  if (ec) {
-    return false;
-  }
-  qDebug() << "dst exists =" << fs::exists(dst);
-  fs::directory_iterator it(src, ec);
-  if (ec) {
-    return false;
-  }
-  for (; it != fs::directory_iterator(); it.increment(ec)) {
-    if (ec) {
-      return false;
-    }
-    fs::path sourceFile = it->path();
-    fs::path targetFile = dst / sourceFile.filename();
-    qDebug() << "copy:" << sourceFile.string().c_str() << "->"
-             << targetFile.string().c_str();
-    fs::copy(sourceFile, targetFile,
-             fs::copy_options::recursive | fs::copy_options::overwrite_existing,
-             ec);
-    if (ec) {
-      qDebug() << "copy failed:" << ec.message().c_str();
-      return false;
-    }
-  }
-  return true;
-}
-
-void UserConfig::setTheme(const std::string &themeName) {
-  std::string htmlPath =
-      (g_htmlInitialPath / themeName / "index.html").string();
-  setKeyValue("html", htmlPath);
-  save();
-}
-bool UserConfig::removeTheme(const std::string &themeName) {
-  if (themeName.empty()) {
-    return false;
-  }
-
-  std::error_code ec;
-  fs::path dst = g_sdkInitialPath / themeName;
-
-  if (!fs::exists(dst, ec) || ec) {
-    return false;
-  }
-
-  fs::remove_all(dst, ec);
-  if (ec) {
-    return false;
-  }
-  return true;
-}
+void UserConfig::setTheme(const std::string&) {}
 
 std::string UserConfig::currentTheme() const {
-  auto it = data_.find("html");
-  if (it == data_.end() || it->second.empty()) {
-    return "default";
-  }
-  std::filesystem::path htmlPath = it->second;
-  auto themePath = htmlPath.parent_path();
-  if (themePath.filename().empty()) {
-    return "default";
-  }
-  return themePath.filename().string();
+    return readKeyValue("selectTheme");
 }
 
 } // namespace UltralightWebCursorM

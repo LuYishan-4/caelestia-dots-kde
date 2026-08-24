@@ -75,6 +75,8 @@ qml_module(caelestia-services
         plasmawindowicon.hpp
         screenedges.cpp
         screenedges.hpp
+        webcursormanager.cpp
+        webcursormanager.hpp
         NmQt.cpp
         NmQt.hpp
     LIBRARIES
