@@ -235,10 +235,11 @@ if [[ $WS_INSTALLED -eq 1 ]]; then
     ok "Installed workspace-tracker to KDE."
 fi
 
-info "Building and installing kwin-web-cursor KWin Effect..."
+
+info "Building and installing web-cursor KWin Effect..."
 prepare_build_dir kwin-effects/kwinweb-cursor/build
-WEB_CURSOR_INSTALLED=0
-if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/build -S kwin-effects -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_INSTALL_PREFIX=/usr >/dev/null; then
+WebCursor_INSTALLED=0
+if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/kwinweb-cursor/build -S kwin-effects/kwinweb-cursor -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr >/dev/null; then
     WC_BUILD_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/caelestia-kde/web-cursor-build.log"
     if ! cmake --build kwin-effects/kwinweb-cursor/build -j"$(nproc)" >"$WC_BUILD_LOG" 2>&1; then
         warn "Web-cursor build failed. Full log: $WC_BUILD_LOG"
@@ -246,15 +247,18 @@ if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/build -S kwin-effects -DCMAKE_BUI
     elif ! sudo cmake --install "$PWD/kwin-effects/kwinweb-cursor/build" >/dev/null; then
         warn "Web-cursor system installation failed."
     else
-        WEB_CURSOR_INSTALLED=1
+        WebCursor_INSTALLED=1
     fi
 else
-    warn "Web-cursor configuration failed; skipping KWin effect build."
+    warn "Workspace tracker configuration failed; skipping KWin effect build."
 fi
 
-if [[ $WEB_CURSOR_INSTALLED -eq 1 ]]; then
+if [[ $WS_INSTALLED -eq 1 ]]; then
+    if command -v kwriteconfig6 >/dev/null 2>&1; then
+        kwriteconfig6 --file kwinrc --group Plugins --key kwin_workspace_trackerEnabled true
+    fi
     qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
-    ok "Installed kwin-web-cursor to KDE."
+    ok "Installed workspace-tracker to KDE."
 fi
 
 # Validate every generated QML module before declaring success. Checking only

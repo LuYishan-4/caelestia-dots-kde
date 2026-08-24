@@ -6,12 +6,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_AUTOMOC ON)
+add_compile_options(-fexceptions)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLFW REQUIRED glfw3)
 pkg_check_modules(EPOXY REQUIRED IMPORTED_TARGET epoxy)
 
-set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/sdk/ultralight-free-sdk-1.4.0-linux-x64"
+set(ULTRALIGHT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty"
     CACHE PATH "Path to an extracted Ultralight SDK")
 set(ULTRALIGHT_BIN "${ULTRALIGHT_ROOT}/bin")
 
@@ -53,7 +56,7 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(KF6 REQUIRED COMPONENTS CoreAddons Config)
 find_package(KWin REQUIRED)
-find_package(OpenGL REQUIRED COMPONENTS EGL)
+
 
 add_library(webkde_core OBJECT
     config/CursorJSON.cpp
@@ -67,9 +70,8 @@ target_include_directories(webkde_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/header
     ${CMAKE_CURRENT_SOURCE_DIR}/lib
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/Quick/PluginPath
-    ${GLFW_INCLUDE_DIRS}
 )
-target_link_libraries(webkde_core PUBLIC Qt6::Core Qt6::DBus ${GLFW_LIBRARIES})
+target_link_libraries(webkde_core PUBLIC Qt6::Core Qt6::DBus )
 
 add_subdirectory(kwin-plasma)
 

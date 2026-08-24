@@ -3,10 +3,7 @@ kcoreaddons_add_plugin(
     INSTALL_NAMESPACE "kwin/effects/plugins"
 )
 
-file(GLOB_RECURSE GL_SOURCES "../lib/gl/*.cpp" "../lib/gl/*.h")
 
-
-target_compile_definitions(ultralightwebcursor PRIVATE USE_GLES=1)
 target_sources(ultralightwebcursor PRIVATE
     main.cpp
     ../lib/UltralightHtmlEffect.cpp
@@ -18,7 +15,6 @@ target_sources(ultralightwebcursor PRIVATE
     ../lib/BlackList/BlacklistManager.hpp
     ../lib/CrashReport/CrashReport.hpp
     #../../dep/glad/src/glad.c
-    ${GL_SOURCES}
     ../lib/UltralightPl/WebListener.hpp
     ../lib/WebCall/WebCall.hpp
     ../header/MainCursorStaff.hpp
@@ -36,9 +32,6 @@ target_include_directories(ultralightwebcursor
 )
 
 
-
-find_package(OpenGL REQUIRED COMPONENTS EGL)
-
 target_link_libraries(ultralightwebcursor
     PRIVATE
     Qt6::Core
@@ -49,9 +42,7 @@ target_link_libraries(ultralightwebcursor
     KF6::ConfigCore
     KWin::kwin
     Ultralight::SDK
-    OpenGL::EGL
     PkgConfig::EPOXY
-     ${GLFW_LIBRARIES}
 )
 
 

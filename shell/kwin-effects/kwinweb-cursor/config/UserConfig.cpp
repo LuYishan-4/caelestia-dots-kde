@@ -25,8 +25,8 @@ UserConfig* UserConfig::instance() {
 }
 
 UserConfig::UserConfig() {
-    configPath_ = (QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
-                   QStringLiteral("/caelestia/shell.json"))
+    configPath_ = QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                          QStringLiteral("/caelestia/shell.json"))
                       .toStdString();
 }
 
