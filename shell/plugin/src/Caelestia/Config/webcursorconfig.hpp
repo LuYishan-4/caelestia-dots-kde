@@ -12,36 +12,21 @@ class WebCursorMain : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
-    CONFIG_GLOBAL_PROPERTY(bool, enabled)
-    CONFIG_GLOBAL_PROPERTY(int, width)
-    CONFIG_GLOBAL_PROPERTY(int, height)
-    CONFIG_GLOBAL_PROPERTY(QString, selectTheme)
+    CONFIG_GLOBAL_PROPERTY(bool, enabled, true)
+    CONFIG_GLOBAL_PROPERTY(int, width, 128)
+    CONFIG_GLOBAL_PROPERTY(int, height, 128)
+    CONFIG_GLOBAL_PROPERTY(QString, selectTheme, QStringLiteral("variant4-ciallo"))
     CONFIG_GLOBAL_PROPERTY(QStringList, blacklist)
     // User-installed themes are deliberately kept outside the system KWin data
     // directory, which may be read-only.
-    CONFIG_GLOBAL_PROPERTY(QString, themesDir)
-    CONFIG_GLOBAL_PROPERTY(QString, configPath)
+    CONFIG_GLOBAL_PROPERTY(QString, themesDir, QStringLiteral("/usr/share/caelestia/webcursor"))
+    CONFIG_GLOBAL_PROPERTY(QString, configPath,
+        QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                QStringLiteral("/caelestia/shell.json")))
 
 public:
     explicit WebCursorMain(QObject* parent = nullptr)
-        : ConfigObject(parent) {
-        // Set defaults through the normal setters. This makes a first save write
-        // the complete webCursor section, including the custom-theme directory.
-        set_enabled(false);
-        set_width(128);
-        set_height(128);
-        set_selectTheme(QStringLiteral("variant4-ciallo"));
-        set_themesDir(QStringLiteral("/usr/share/caelestia/webcursor"));
-        set_configPath(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
-                               QStringLiteral("/caelestia/shell.json")));
-
-        markPropertyLoaded(QStringLiteral("enabled"));
-        markPropertyLoaded(QStringLiteral("width"));
-        markPropertyLoaded(QStringLiteral("height"));
-        markPropertyLoaded(QStringLiteral("selectTheme"));
-        markPropertyLoaded(QStringLiteral("themesDir"));
-        markPropertyLoaded(QStringLiteral("configPath"));
-    }
+        : ConfigObject(parent) {}
 };
 
 class WebCursorConfig : public ConfigObject {
