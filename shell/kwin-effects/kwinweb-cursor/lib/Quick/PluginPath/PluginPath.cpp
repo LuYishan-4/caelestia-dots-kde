@@ -6,23 +6,8 @@
 namespace UltralightWebCursorM {
 
 std::filesystem::path PluginPath::dataDir() {
-  QString path;
-  path =
-      QStandardPaths::locate(QStandardPaths::GenericDataLocation,
-                             QStringLiteral("kwin/effects/ultralightwebcursor"),
-                             QStandardPaths::LocateDirectory);
-  if (path.isEmpty()) {
-    path = QStandardPaths::locate(QStandardPaths::GenericDataLocation,
-                                  QStringLiteral("ultralightwebcursor"),
-                                  QStandardPaths::LocateDirectory);
-    if (path.isEmpty()) {
-      path = QStandardPaths::writableLocation(
-                 QStandardPaths::GenericDataLocation) +
-             QStringLiteral("/ultralightwebcursor");
-    }
-  }
-
-  return std::filesystem::path(path.toStdString());
+    QString path = QStringLiteral("/usr/share/caelestia/webcursor");
+    return std::filesystem::path(path.toStdString());
 }
 
 } // namespace UltralightWebCursorM

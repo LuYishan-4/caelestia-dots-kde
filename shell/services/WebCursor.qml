@@ -12,7 +12,7 @@ Singleton {
     signal themeRemoveFinished(bool success, string error)
 
     function ensureInitialized(): void {
-        Quickshell.execDetached(["mkdir", "-p", GlobalConfig.webCursor.sdkThemesDir, GlobalConfig.webCursor.htmlThemesDir]);
+        Quickshell.execDetached(["mkdir", "-p", GlobalConfig.webCursor.cursor.themesDir]);
     }
     function uploadTheme(srcPath: string, themeName: string): void {
         const src = String(srcPath || "").replace(/^file:\/\//, "");
@@ -21,7 +21,7 @@ Singleton {
             return;
         }
 
-        const dst = `${GlobalConfig.webCursor.sdkThemesDir}/${themeName}`;
+        const dst = `${GlobalConfig.webCursor.cursor.themesDir}/${themeName}`;
         const script =
             'src="$1"; dst="$2"; ' +
             '[ -d "$src" ] || { echo "source is not a directory" >&2; exit 1; }; ' +
@@ -48,15 +48,14 @@ Singleton {
         }
     }
     function setTheme(themeName: string): void {
-        GlobalConfig.webCursor.currentTheme = themeName;
-        GlobalConfig.webCursor.html = `${GlobalConfig.webCursor.htmlThemesDir}/${themeName}/index.html`;
+        GlobalConfig.webCursor.cursor.selectTheme = themeName;
     }
     function removeTheme(themeName: string): void {
         if (!themeName) {
             root.themeRemoveFinished(false, qsTr("Empty theme name"));
             return;
         }
-        const dst = `${GlobalConfig.webCursor.sdkThemesDir}/${themeName}`;
+        const dst = `${GlobalConfig.webCursor.cursor.themesDir}/${themeName}`;
         const script = '[ -e "$1" ] || exit 1; rm -rf -- "$1"';
         removeProc.command = ["sh", "-c", script, "--", dst];
         removeProc._themeName = themeName;
@@ -68,8 +67,8 @@ Singleton {
         property string _themeName: ""
         onExited: code => {
             if (code === 0) {
-                if (GlobalConfig.webCursor.selectTheme === removeProc._themeName)
-                    GlobalConfig.webCursor.selectTheme = "";
+                if (GlobalConfig.webCursor.cursor.selectTheme === removeProc._themeName)
+                    GlobalConfig.webCursor.cursor.selectTheme = "";
                 root.themeRemoveFinished(true, "");
             } else {
                 root.themeRemoveFinished(false, qsTr("Theme not found"));

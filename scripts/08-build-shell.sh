@@ -250,15 +250,15 @@ if cmake -G "$CMAKE_GENERATOR" -B kwin-effects/kwinweb-cursor/build -S kwin-effe
         WebCursor_INSTALLED=1
     fi
 else
-    warn "Workspace tracker configuration failed; skipping KWin effect build."
+    warn "WebCursor configuration failed; skipping KWin effect build."
 fi
 
-if [[ $WS_INSTALLED -eq 1 ]]; then
+if [[ $WebCursor_INSTALLED -eq 1 ]]; then
     if command -v kwriteconfig6 >/dev/null 2>&1; then
         kwriteconfig6 --file kwinrc --group Plugins --key kwin_workspace_trackerEnabled true
     fi
     qdbus6 org.kde.KWin /KWin reconfigure 2>/dev/null || true
-    ok "Installed workspace-tracker to KDE."
+    ok "Installed web-cursor to KDE."
 fi
 
 # Validate every generated QML module before declaring success. Checking only

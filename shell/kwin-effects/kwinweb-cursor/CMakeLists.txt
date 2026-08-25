@@ -60,8 +60,11 @@ find_package(KWin REQUIRED)
 
 add_library(webkde_core OBJECT
     config/CursorJSON.cpp
+    config/CursorJSON.hpp
     config/UserConfig.cpp
+    config/UserConfig.hpp
     lib/Quick/PluginPath/PluginPath.cpp
+    lib/Quick/PluginPath/PluginPath.hpp
 )
 set_target_properties(webkde_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(webkde_core PUBLIC
@@ -70,15 +73,16 @@ target_include_directories(webkde_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/header
     ${CMAKE_CURRENT_SOURCE_DIR}/lib
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/Quick/PluginPath
+
 )
 target_link_libraries(webkde_core PUBLIC Qt6::Core Qt6::DBus )
 
 add_subdirectory(kwin-plasma)
 
 install(DIRECTORY WebCursor/
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/kwin/effects/ultralightwebcursor")
+DESTINATION "${CMAKE_INSTALL_DATADIR}/caelestia/webcursor")
 install(DIRECTORY "${ULTRALIGHT_BIN}/"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/webkde_core"
     FILES_MATCHING PATTERN "*.so*")
 install(DIRECTORY "${ULTRALIGHT_ROOT}/resources"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/kwin/effects/ultralightwebcursor")
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/caelestia/webcursor")

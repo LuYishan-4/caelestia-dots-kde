@@ -1,6 +1,8 @@
 #pragma once
 
+#include "config.hpp"
 #include "configobject.hpp"
+#include <qhashfunctions.h>
 #include <qstandardpaths.h>
 
 namespace caelestia::config {
@@ -19,6 +21,7 @@ class WebCursorMain : public ConfigObject {
     // User-installed themes are deliberately kept outside the system KWin data
     // directory, which may be read-only.
     CONFIG_GLOBAL_PROPERTY(QString, themesDir)
+    CONFIG_GLOBAL_PROPERTY(QString, configPath)
 
 public:
     explicit WebCursorMain(QObject* parent = nullptr)
@@ -29,8 +32,9 @@ public:
         set_width(128);
         set_height(128);
         set_selectTheme(QStringLiteral("variant4-ciallo"));
-        set_themesDir(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
-            + QStringLiteral("/caelestia/webcursor"));
+        set_themesDir(QStringLiteral("/usr/share/caelestia/webcursor"));
+        set_configPath(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                               QStringLiteral("/caelestia/shell.json")));
     }
 };
 

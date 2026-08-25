@@ -47,7 +47,6 @@ signals:
 
 private:
     QString themePath(const QString& name) const;
-    QString bundledThemesDir() const;
     void loadThemes();
     void setStatusMessage(const QString& message);
 

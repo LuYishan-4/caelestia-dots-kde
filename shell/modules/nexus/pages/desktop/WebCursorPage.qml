@@ -102,13 +102,21 @@ PageBase {
                 Layout.fillWidth: true; first: true
                 label: qsTr("Cursor width"); subtext: qsTr("Render width in pixels")
                 from: 1; to: 1920; value: Config.webCursor.cursor.width
-                onMoved: value => { GlobalConfig.webCursor.cursor.width = value; WebCursorManager.save(); }
+                onMoved: value => { 
+                    Config.webCursor.cursor.width = value;
+                    GlobalConfig.webCursor.cursor.width = value; 
+                    WebCursorManager.save(); 
+                }
             }
             StepperRow {
                 Layout.fillWidth: true; last: true
                 label: qsTr("Cursor height"); subtext: qsTr("Render height in pixels")
                 from: 1; to: 1080; value: Config.webCursor.cursor.height
-                onMoved: value => { GlobalConfig.webCursor.cursor.height = value; WebCursorManager.save(); }
+                onMoved: value => { 
+                    Config.webCursor.cursor.height = value;
+                    GlobalConfig.webCursor.cursor.height = value; 
+                    WebCursorManager.save(); 
+                }
             }
 
             SectionHeader { Layout.topMargin: Tokens.spacing.medium; Layout.fillWidth: true; text: qsTr("Ignored Applications") }
