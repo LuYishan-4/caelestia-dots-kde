@@ -1,6 +1,5 @@
 #pragma once
 
-#include "config.hpp"
 #include "configobject.hpp"
 #include <qhashfunctions.h>
 #include <qstandardpaths.h>
@@ -35,6 +34,13 @@ public:
         set_themesDir(QStringLiteral("/usr/share/caelestia/webcursor"));
         set_configPath(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
                                QStringLiteral("/caelestia/shell.json")));
+
+        markPropertyLoaded(QStringLiteral("enabled"));
+        markPropertyLoaded(QStringLiteral("width"));
+        markPropertyLoaded(QStringLiteral("height"));
+        markPropertyLoaded(QStringLiteral("selectTheme"));
+        markPropertyLoaded(QStringLiteral("themesDir"));
+        markPropertyLoaded(QStringLiteral("configPath"));
     }
 };
 

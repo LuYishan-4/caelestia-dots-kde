@@ -31,6 +31,7 @@ class Config : public QQuickAttachedPropertyPropagator, public QQmlParserStatus 
     Q_MOC_INCLUDE("userpaths.hpp")
     Q_MOC_INCLUDE("utilitiesconfig.hpp")
     Q_MOC_INCLUDE("winfoconfig.hpp")
+    Q_MOC_INCLUDE("webcursorconfig.hpp")
 
     Q_PROPERTY(QString screen READ screen WRITE inheritScreen NOTIFY sourceChanged)
     Q_PROPERTY(const caelestia::config::AppearanceConfig* appearance READ appearance NOTIFY sourceChanged)
@@ -52,6 +53,7 @@ class Config : public QQuickAttachedPropertyPropagator, public QQmlParserStatus 
     Q_PROPERTY(const caelestia::config::UtilitiesConfig* utilities READ utilities NOTIFY sourceChanged)
     Q_PROPERTY(const caelestia::config::WInfoConfig* winfo READ winfo NOTIFY sourceChanged)
     Q_PROPERTY(const caelestia::config::UserPaths* paths READ paths NOTIFY sourceChanged)
+    Q_PROPERTY(const caelestia::config::WebCursorConfig* webCursor READ webCursor NOTIFY sourceChanged)
 
 public:
     explicit Config(QObject* parent = nullptr);
@@ -78,6 +80,7 @@ public:
     [[nodiscard]] const UtilitiesConfig* utilities() const;
     [[nodiscard]] const WInfoConfig* winfo() const;
     [[nodiscard]] const UserPaths* paths() const;
+    [[nodiscard]] const WebCursorConfig* webCursor() const;
 
     [[nodiscard]] Q_INVOKABLE static GlobalConfig* forScreen(const QString& screen);
 

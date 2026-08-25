@@ -15,11 +15,13 @@ PageBase {
     title: qsTr("Web Cursor")
     isSubPage: true
 
-    FolderDialog {
-        id: themeUploadDialog
-        title: qsTr("Choose a cursor theme folder")
-        onAccepted: WebCursorManager.uploadTheme(selectedFolder.toLocalFile())
-    }
+    Item {
+          FolderDialog {
+              id: themeUploadDialog
+              title: qsTr("Choose a cursor theme folder")
+              onAccepted: WebCursorManager.uploadTheme(selectedFolder.toLocalFile())
+          }
+      }
 
     ScrollView {
         anchors.fill: parent
@@ -102,20 +104,20 @@ PageBase {
                 Layout.fillWidth: true; first: true
                 label: qsTr("Cursor width"); subtext: qsTr("Render width in pixels")
                 from: 1; to: 1920; value: Config.webCursor.cursor.width
-                onMoved: value => { 
+                onMoved: value => {
                     Config.webCursor.cursor.width = value;
-                    GlobalConfig.webCursor.cursor.width = value; 
-                    WebCursorManager.save(); 
+                    GlobalConfig.webCursor.cursor.width = value;
+                    WebCursorManager.save();
                 }
             }
             StepperRow {
                 Layout.fillWidth: true; last: true
                 label: qsTr("Cursor height"); subtext: qsTr("Render height in pixels")
                 from: 1; to: 1080; value: Config.webCursor.cursor.height
-                onMoved: value => { 
+                onMoved: value => {
                     Config.webCursor.cursor.height = value;
-                    GlobalConfig.webCursor.cursor.height = value; 
-                    WebCursorManager.save(); 
+                    GlobalConfig.webCursor.cursor.height = value;
+                    WebCursorManager.save();
                 }
             }
 

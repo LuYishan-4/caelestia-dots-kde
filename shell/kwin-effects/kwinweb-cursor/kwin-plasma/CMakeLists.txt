@@ -44,12 +44,3 @@ target_link_libraries(ultralightwebcursor
     Ultralight::SDK
     PkgConfig::EPOXY
 )
-
-
-
-set_target_properties(ultralightwebcursor PROPERTIES PREFIX "")
-
-install(
-    FILES metadata.json
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/kwin/effects/ultralightwebcursor"
-)

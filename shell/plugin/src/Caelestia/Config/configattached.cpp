@@ -79,7 +79,7 @@ CONFIG_ATTACHED_GETTER(SidebarConfig, sidebar)
 CONFIG_ATTACHED_GETTER(UtilitiesConfig, utilities)
 CONFIG_ATTACHED_GETTER(WInfoConfig, winfo)
 CONFIG_ATTACHED_GETTER(UserPaths, paths)
-
+CONFIG_ATTACHED_GETTER(WebCursorConfig, webCursor)
 #undef CONFIG_ATTACHED_GETTER
 
 GlobalConfig* Config::forScreen(const QString& screen) {

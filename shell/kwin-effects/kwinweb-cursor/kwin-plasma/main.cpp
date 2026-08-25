@@ -12,7 +12,8 @@ namespace KWin {
 
 extern EffectsHandler* effects;
 
-KWIN_EFFECT_FACTORY_SUPPORTED(KWin::KwinCursorEffect, "metadata.json", return KWin::KwinCursorEffect::supported();)
+KWIN_EFFECT_FACTORY_SUPPORTED(
+    KWin::KwinCursorEffect, "ultralightwebcursor.json", return KWin::KwinCursorEffect::supported();)
 
 KwinCursorEffect::KwinCursorEffect() {
     if (!initializeCore<KwinMouseProvider>())
