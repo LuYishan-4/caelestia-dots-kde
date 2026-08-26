@@ -45,17 +45,20 @@ void UserConfig::ensureInitialized() {
             [this](const std::string& value) {
                 values.height = std::max(1, std::stoi(value));
             } },
-        { "enabled", "false",
+        { "enabled", "true",
             [this](const std::string& value) {
                 values.enabled = value == "true";
             } },
+        // Placeholder entry: kept for schema completeness / documentation of the
+        // "blacklist" config key. The actual blacklist values are parsed directly
+        // from the JSON array into values.blacklist below; this updater is a no-op.
         { "blacklist", "",
             [this](const std::string&) {
             } },
         { "selectTheme", "variant4-ciallo",
             [this](const std::string&) {
             } },
-        { "themesDir", "",
+        { "themesDir", "/usr/share/caelestia/webcursor",
             [this](const std::string&) {
             } },
     };
@@ -75,12 +78,20 @@ bool UserConfig::load() {
         const auto cursor =
             root.value(QStringLiteral("webCursor")).toObject().value(QStringLiteral("cursor")).toObject();
         if (!cursor.isEmpty()) {
-            data_["enabled"] = cursor.value(QStringLiteral("enabled")).toBool(false) ? "true" : "false";
+            // Default to schema's "true" when the key is missing, so a cursor
+            // object with a missing "enabled" field behaves the same as no
+            // cursor object at all.
+            data_["enabled"] = cursor.value(QStringLiteral("enabled")).toBool(true) ? "true" : "false";
             data_["width"] = std::to_string(cursor.value(QStringLiteral("width")).toInt(128));
             data_["height"] = std::to_string(cursor.value(QStringLiteral("height")).toInt(128));
             data_["selectTheme"] =
                 cursor.value(QStringLiteral("selectTheme")).toString(QStringLiteral("variant4-ciallo")).toStdString();
-            data_["themesDir"] = cursor.value(QStringLiteral("themesDir")).toString().toStdString();
+            // Default to schema's system themes dir when the key is missing,
+            // so we don't fall through to the GenericDataLocation fallback below
+            // just because the field was omitted from the JSON.
+            data_["themesDir"] = cursor.value(QStringLiteral("themesDir"))
+                                     .toString(QStringLiteral("/usr/share/caelestia/webcursor"))
+                                     .toStdString();
             for (const auto& item : cursor.value(QStringLiteral("blacklist")).toArray())
                 if (!item.toString().isEmpty())
                     values.blacklist.push_back(item.toString().toStdString());
@@ -102,14 +113,14 @@ bool UserConfig::load() {
                                       QStringLiteral("/caelestia/webcursor")
                                 : QString::fromStdString(data_["themesDir"]);
     const auto customTheme = QDir(customRoot).filePath(requestedTheme);
-    const auto bundledTheme =
-        QString::fromStdString(PluginPath::dataDir().string()) + QLatin1Char('/') + requestedTheme;
+    const auto bundledDir = PluginPath::dataDir();
+    const auto bundledTheme = QString::fromStdString(bundledDir.string()) + QLatin1Char('/') + requestedTheme;
     const auto themeDir =
         QFileInfo::exists(QDir(customTheme).filePath(QStringLiteral("index.html"))) ? customTheme : bundledTheme;
     values.html = QDir(themeDir).filePath(QStringLiteral("index.html")).toStdString();
     // Resources remain installed alongside the bundled effect; custom themes only
     // replace the HTML directory, never the Ultralight runtime resources.
-    values.sdk = PluginPath::dataDir().string();
+    values.sdk = bundledDir.string();
     g_htmlInitialPath = fs::path(themeDir.toStdString());
     return QFileInfo::exists(QString::fromStdString(values.html));
 }

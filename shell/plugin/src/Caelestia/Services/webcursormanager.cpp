@@ -27,6 +27,40 @@ bool isThemeDirectory(const QString& path) {
     return dir.exists(QStringLiteral("CursorData.json")) && dir.exists(QStringLiteral("index.html"));
 }
 
+QString systemThemesDir() {
+    return QStringLiteral("/usr/share/caelestia/webcursor/themes");
+}
+
+QString userThemesDir() {
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QStringLiteral("/webcursor/themes");
+}
+
+void ensureLinkedThemesDir() {
+    const QString userDir = userThemesDir();
+    const QString sysDir = systemThemesDir();
+
+    QDir().mkpath(userDir);
+
+    const QDir sys(sysDir);
+    if (!sys.exists())
+        return;
+
+    const auto entries = sys.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& name : entries) {
+        const QString sysThemePath = sys.filePath(name);
+        if (!isThemeDirectory(sysThemePath))
+            continue;
+
+        const QString linkPath = QDir(userDir).filePath(name);
+        const QFileInfo linkInfo(linkPath);
+
+        if (linkInfo.exists() || linkInfo.isSymLink())
+            continue;
+
+        QFile::link(sysThemePath, linkPath);
+    }
+}
+
 bool copyDirectory(const QString& source, const QString& destination) {
     QDir().mkpath(destination);
     QDirIterator it(source, QDir::NoDotAndDotDot | QDir::AllEntries, QDirIterator::Subdirectories);
@@ -52,6 +86,7 @@ bool copyDirectory(const QString& source, const QString& destination) {
 
 WebCursorManager::WebCursorManager(QObject* parent)
     : QObject(parent) {
+    ensureLinkedThemesDir();
     loadThemes();
 }
 
@@ -77,19 +112,17 @@ void WebCursorManager::setStatusMessage(const QString& message) {
 QString WebCursorManager::themePath(const QString& name) const {
     if (name.isEmpty() || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\')))
         return {};
-    const auto bundled = QDir(config::GlobalConfig::instance()->webCursor()->cursor()->themesDir()).filePath(name);
-    return isThemeDirectory(bundled) ? bundled : QString();
+    const auto path = QDir(userThemesDir()).filePath(name);
+    return isThemeDirectory(path) ? path : QString();
 }
 
 void WebCursorManager::loadThemes() {
     QStringList themes;
-    const auto appendThemes = [&themes](const QString& root) {
-        const QDir dir(root);
-        for (const auto& name : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
-            if (isThemeDirectory(dir.filePath(name)) && !themes.contains(name))
-                themes.append(name);
-    };
-    appendThemes(config::GlobalConfig::instance()->webCursor()->cursor()->themesDir());
+    const QDir dir(userThemesDir());
+    for (const auto& name : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+        if (isThemeDirectory(dir.filePath(name)))
+            themes.append(name);
+
     if (themes == m_themeList)
         return;
     m_themeList = themes;

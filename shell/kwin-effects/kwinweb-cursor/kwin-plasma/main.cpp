@@ -74,10 +74,6 @@ bool KwinCursorEffect::isBlacklisted() const {
 }
 
 GLTexture* KwinCursorEffect::ensureCursorTexture() {
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
-    }
     if (!m_html || !m_html->isEnabled() || m_isIdleHidden)
         return nullptr;
 
@@ -86,6 +82,7 @@ GLTexture* KwinCursorEffect::ensureCursorTexture() {
         m_html->view()->Focus();
         first_focus_done = true;
     }
+    m_html->update();
 
     int w = m_html->width();
     int h = m_html->height();
@@ -160,19 +157,13 @@ bool KwinCursorEffect::checkFullScreen() const {
 
 void KwinCursorEffect::slotWindowStateChanged(EffectWindow* w) {
     Q_UNUSED(w);
-    if (!checkFullScreen()) {
-        if (m_isIdleHidden) {
-            m_isIdleHidden = false;
-            if (m_html)
-                m_html->setEnabled(true);
-            effects->addRepaintFull();
-        }
-    } else {
-        m_isIdleHidden = true;
-        if (m_html)
-            m_html->setEnabled(false);
-        effects->addRepaintFull();
-    }
+    const bool isFullScreen = checkFullScreen();
+    if (isFullScreen == m_isIdleHidden)
+        return;
+    m_isIdleHidden = isFullScreen;
+    if (m_html)
+        m_html->setEnabled(!isFullScreen);
+    effects->addRepaintFull();
 }
 
 } // namespace KWin

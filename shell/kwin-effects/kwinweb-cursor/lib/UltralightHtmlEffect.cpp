@@ -26,6 +26,7 @@ UltralightHtmlEffect::~UltralightHtmlEffect() {
 
 // initialize
 bool UltralightHtmlEffect::initialize(const ConfigValues& uconfig, const JSONConf& data) {
+    qDebug() << "[UltralightHtmlDebug] initialize called with width:" << uconfig.width << "height:" << uconfig.sdk;
     html_value_ = { .width_ = uconfig.width,
         .height_ = uconfig.height,
         .stride_ = 0,
@@ -96,7 +97,9 @@ bool UltralightHtmlEffect::load(const std::string& path) {
         qDebug() << "[UltralightCursorEffect] Failed to open file:" << QString::fromStdString(path);
         return false;
     }
-    const std::string fileUrl = QUrl::fromLocalFile(QString::fromStdString(path)).toString().toStdString();
+    std::filesystem::path p(path);
+    std::string folderName = p.parent_path().filename().string();
+    std::string fileUrl = "file:///" + folderName + "/index.html";
     is_loaded_ = false;
     qDebug() << "[UltralightCursorEffect] load request"
              << " | htmlPath:" << QString::fromStdString(path) << " | fileUrl:" << QString::fromStdString(fileUrl);
