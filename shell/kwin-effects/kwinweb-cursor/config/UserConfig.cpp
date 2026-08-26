@@ -89,9 +89,11 @@ bool UserConfig::load() {
             // Default to schema's system themes dir when the key is missing,
             // so we don't fall through to the GenericDataLocation fallback below
             // just because the field was omitted from the JSON.
-            data_["themesDir"] = cursor.value(QStringLiteral("themesDir"))
-                                     .toString(QStringLiteral("/usr/share/caelestia/webcursor"))
-                                     .toStdString();
+            data_["themesDir"] =
+                cursor.value(QStringLiteral("themesDir"))
+                    .toString(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                                      QStringLiteral("/caelestia/webcursor")))
+                    .toStdString();
             for (const auto& item : cursor.value(QStringLiteral("blacklist")).toArray())
                 if (!item.toString().isEmpty())
                     values.blacklist.push_back(item.toString().toStdString());
@@ -109,7 +111,7 @@ bool UserConfig::load() {
 
     const auto requestedTheme = QString::fromStdString(data_["selectTheme"]);
     const auto customRoot = data_["themesDir"].empty()
-                                ? QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) +
+                                ? QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
                                       QStringLiteral("/caelestia/webcursor")
                                 : QString::fromStdString(data_["themesDir"]);
     const auto customTheme = QDir(customRoot).filePath(requestedTheme);
@@ -118,15 +120,12 @@ bool UserConfig::load() {
     const auto themeDir =
         QFileInfo::exists(QDir(customTheme).filePath(QStringLiteral("index.html"))) ? customTheme : bundledTheme;
     values.html = QDir(themeDir).filePath(QStringLiteral("index.html")).toStdString();
-    // Resources remain installed alongside the bundled effect; custom themes only
-    // replace the HTML directory, never the Ultralight runtime resources.
+
     values.sdk = bundledDir.string();
     g_htmlInitialPath = fs::path(themeDir.toStdString());
     return QFileInfo::exists(QString::fromStdString(values.html));
 }
 
-// The KWin plugin is deliberately read-only. Nexus owns shell.json persistence
-// through WebCursorConfig, so no secondary UserConfig file can be created.
 bool UserConfig::save() {
     return false;
 }

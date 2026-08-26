@@ -197,6 +197,28 @@ void RootConfig::saveToFile() {
     m_cooldownTimer->start();
 }
 
+bool RootConfig::saveToFileSync() {
+    if (m_filePath.isEmpty())
+        return false;
+
+    QDir().mkpath(QFileInfo(m_filePath).absolutePath());
+
+    QFile file(m_filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qCWarning(lcConfig, "%s",
+            qUtf8Printable(QStringLiteral("Failed to write %1: %2").arg(m_filePath, file.errorString())));
+        return false;
+    }
+
+    auto json = toJsonObject();
+    file.write(QJsonDocument(json).toJson(QJsonDocument::Indented));
+    file.close();
+
+    updateWatch();
+    m_lastSignature = fileSignature();
+    return true;
+}
+
 std::optional<QString> RootConfig::reloadFromFile() {
     m_lastSignature = fileSignature();
 

@@ -101,7 +101,6 @@ Singleton {
         }
     }
 
-    // ---- Theme details (synchronous read of CursorData.json) ----
     function getThemeDetails(name: string): var {
         const details = { iconPath: "", author: qsTr("Unknown"), describe: "", minWidth: 128, minHeight: 128 };
         const path = root.themePath(name);
@@ -230,11 +229,12 @@ Singleton {
         root.statusMessage = qsTr("Reloaded successfully");
     }
 
-    // ---- Enable / disable ----
     function enable(): void {
         GlobalConfig.webCursor.cursor.enabled = true;
-        kwinToggleProc.command = ["kwriteconfig6", "--file", "kwinrc", "--group", "Plugins",
-            "--key", "ultralightwebcursorEnabled", "true"];
+        kwinToggleProc.command = ["sh", "-c",
+            'busctl --user call org.kde.KWin /Effects org.kde.kwin.Effects loadEffect s ultralightwebcursor 2>/dev/null; ' +
+            'busctl --user call org.kde.KWin /UltralightCursor org.kde.kwin.KWin.KwinCursorEffect enable 2>/dev/null; ' +
+            'true'];
         kwinToggleProc.running = true;
         root.save();
         root.statusMessage = qsTr("Enabled");
@@ -242,8 +242,9 @@ Singleton {
 
     function disable(): void {
         GlobalConfig.webCursor.cursor.enabled = false;
-        kwinToggleProc.command = ["kwriteconfig6", "--file", "kwinrc", "--group", "Plugins",
-            "--key", "ultralightwebcursorEnabled", "false"];
+        kwinToggleProc.command = ["sh", "-c",
+            'busctl --user call org.kde.KWin /UltralightCursor org.kde.kwin.KWin.KwinCursorEffect disable 2>/dev/null; ' +
+            'true'];
         kwinToggleProc.running = true;
         root.save();
         root.statusMessage = qsTr("Disabled");
@@ -272,6 +273,9 @@ Singleton {
     }
 
     // ---- Apply size / config changes to KWin ----
+    // Only reloadHtml: /KWin reconfigure makes KWin re-read kwinrc and
+    // unload/reload effect plugins, which destroys and re-creates the
+    // Ultralight renderer and crashes KWin.
     function save(): void {
         reconfigureProc.running = true;
         root.statusMessage = qsTr("Saved");
@@ -280,8 +284,7 @@ Singleton {
     Process {
         id: reconfigureProc
         command: ["sh", "-c",
-            'qdbus6 org.kde.KWin /UltralightCursor org.kde.kwin.KWin.UltralightCursorEffect.reloadHtml 2>/dev/null; ' +
-            'qdbus6 org.kde.KWin /KWin org.kde.KWin.reconfigure 2>/dev/null; ' +
+            'busctl --user call org.kde.KWin /UltralightCursor org.kde.kwin.KWin.KwinCursorEffect reloadHtml 2>/dev/null; ' +
             'true']
     }
 

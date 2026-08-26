@@ -12,21 +12,30 @@ class WebCursorMain : public ConfigObject {
     Q_OBJECT
     QML_ANONYMOUS
 
-    CONFIG_GLOBAL_PROPERTY(bool, enabled, true)
-    CONFIG_GLOBAL_PROPERTY(int, width, 128)
-    CONFIG_GLOBAL_PROPERTY(int, height, 128)
-    CONFIG_GLOBAL_PROPERTY(QString, selectTheme, QStringLiteral("variant4-ciallo"))
-    CONFIG_GLOBAL_PROPERTY(QStringList, blacklist)
-    // User-installed themes are deliberately kept outside the system KWin data
-    // directory, which may be read-only.
-    CONFIG_GLOBAL_PROPERTY(QString, themesDir, QStringLiteral("/usr/share/caelestia/webcursor"))
-    CONFIG_GLOBAL_PROPERTY(QString, configPath,
+    CONFIG_PROPERTY(bool, enabled, true)
+    CONFIG_PROPERTY(int, width, 128)
+    CONFIG_PROPERTY(int, height, 128)
+    CONFIG_PROPERTY(QString, selectTheme, QStringLiteral("variant4-ciallo"))
+    CONFIG_PROPERTY(QStringList, blacklist)
+    CONFIG_PROPERTY(QString, themesDir,
+        QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                QStringLiteral("/caelestia/webcursor")))
+    CONFIG_PROPERTY(QString, configPath,
         QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
                 QStringLiteral("/caelestia/shell.json")))
 
 public:
     explicit WebCursorMain(QObject* parent = nullptr)
-        : ConfigObject(parent) {}
+        : ConfigObject(parent) {
+        set_enabled(true);
+        set_width(128);
+        set_height(128);
+        set_selectTheme(QStringLiteral("variant4-ciallo"));
+        set_themesDir(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                              QStringLiteral("/caelestia/webcursor")));
+        set_configPath(QString(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                               QStringLiteral("/caelestia/shell.json")));
+    }
 };
 
 class WebCursorConfig : public ConfigObject {

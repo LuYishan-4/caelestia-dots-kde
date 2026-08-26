@@ -2,7 +2,7 @@ name: Update Submodules
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # Runs every Sunday at Midnight
+    - cron: "0 0 * * 0" # Runs every Sunday at Midnight
   workflow_dispatch:
 
 jobs:

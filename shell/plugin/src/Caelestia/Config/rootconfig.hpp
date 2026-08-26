@@ -18,6 +18,9 @@ public:
 
     void setupFileBackend(const QString& path, const QString& screen = {});
     void saveToFile();
+    // Writes the file synchronously (no debounce). Needed when a consumer reads
+    // the file right after saving, e.g. the KWin effect reloading shell.json.
+    bool saveToFileSync();
     // Returns nullopt if retrying, empty string on success, error message on failure.
     [[nodiscard]] std::optional<QString> reloadFromFile();
 

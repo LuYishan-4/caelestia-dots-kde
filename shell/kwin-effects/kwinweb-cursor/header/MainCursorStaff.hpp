@@ -32,30 +32,9 @@ public:
         return QRectF(basePos.x() - m_html->hotspotX(), basePos.y() - m_html->hotspotY(), w, h);
     }
 
-public:
-    virtual void enable() {
-        if (m_html)
-            m_html->setEnabled(true);
-    }
-
-    virtual void disable() {
-        if (m_html)
-            m_html->setEnabled(false);
-    }
-
-    virtual void reloadHtml() {
-        UltralightWebCursorM::UserConfig::instance()->load();
-        UltralightWebCursorM::CursorJSON::instance()->load(
-            std::filesystem::path(UserConfigimp.html).parent_path().string());
-        m_blacklist.setBlacklist(UltralightWebCursorM::UserConfig::instance()->getBlacklist());
-        if (m_html)
-            m_html->reload(UserConfigimp, CursorJSONImp);
-    }
-
 protected:
     template <typename MouseProviderType> bool initializeCore() {
-        static bool isPermanentlyDisabled = false;
-        if (isPermanentlyDisabled)
+        if (m_permanentlyDisabled)
             return false;
         UltralightWebCursorM::CrashHandler::registerHandler();
         try {
@@ -68,30 +47,31 @@ protected:
             m_mouseProvider->initialize();
 
             if (!m_html || !m_mouseProvider) {
-                isPermanentlyDisabled = true;
+                m_permanentlyDisabled = true;
                 return false;
             }
 
             if (!m_html->initialize(UserConfigimp, CursorJSONImp)) {
                 m_html.reset();
                 m_mouseProvider.reset();
-                isPermanentlyDisabled = true;
+                m_permanentlyDisabled = true;
                 return false;
             }
 
             m_blacklist.setBlacklist(UltralightWebCursorM::UserConfig::instance()->getBlacklist());
             return true;
         } catch (const std::exception& e) {
-            isPermanentlyDisabled = true;
+            m_permanentlyDisabled = true;
             return false;
         } catch (...) {
-            isPermanentlyDisabled = true;
+            m_permanentlyDisabled = true;
             return false;
         }
     }
 
     virtual bool checkFullScreen() const { return false; }
 
+    bool m_permanentlyDisabled = false;
     bool m_isIdleHidden = false;
     std::unique_ptr<UltralightWebCursorM::UltralightHtmlEffect> m_html;
     std::unique_ptr<UltralightWebCursorM::IMouseProvider> m_mouseProvider;

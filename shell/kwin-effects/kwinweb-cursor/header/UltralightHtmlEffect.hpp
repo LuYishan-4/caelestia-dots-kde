@@ -33,6 +33,8 @@ public:
 
     bool resize(const int& width, const int& height);
 
+    static ultralight::RefPtr<ultralight::Renderer> sharedRenderer();
+
     const uint8_t* pixels() const;
     unsigned int textureId() const;
 
@@ -42,9 +44,15 @@ public:
 
     int stride() const { return html_value_.stride_; }
 
-    int hotspotX() const { return html_value_.hotspot_x_; }
+    int hotspotX() const {
+        // return html_value_.hotspot_x_;
+        return html_value_.width_ / 2;
+    }
 
-    int hotspotY() const { return html_value_.hotspot_y_; }
+    int hotspotY() const {
+        // return html_value_.hotspot_y_;
+        return html_value_.height_ / 2;
+    }
 
     void setEnabled(bool enabled);
 
@@ -82,7 +90,9 @@ private:
 
     bool new_frame_ = false;
 
-    bool platform_initialized_ = false;
+    bool renderer_initialized_ = false;
+
+    inline static bool platform_initialized_ = false;
 
     std::vector<uint8_t> pixel_buffer_;
 

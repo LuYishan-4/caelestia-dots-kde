@@ -8,24 +8,13 @@ import Caelestia.Config
 import Caelestia.Services
 import qs.components
 import qs.components.controls
+import qs.services
 import qs.modules.nexus.common
 
 PageBase {
     id: root
     title: qsTr("Web Cursor")
     isSubPage: true
-
-    Item {
-        FolderDialog {
-            id: themeUploadDialog
-            title: qsTr("Choose a cursor theme folder")
-            onAccepted: {
-                const path = selectedFolder.toLocalFile();
-                const name = path.split("/").filter(p => p.length > 0).pop();
-                WebCursorManager.uploadTheme(path, name);
-            }
-        }
-    }
 
     ScrollView {
         anchors.fill: parent
@@ -36,6 +25,14 @@ PageBase {
             width: root.cappedWidth
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: Tokens.spacing.extraSmall / 2
+            FolderDialog {
+                id: themeUploadDialog
+                title: qsTr("Choose a cursor theme folder")
+                onAccepted: WebCursorManager.uploadTheme(
+                    typeof selectedFolder === "string"
+                        ? selectedFolder
+                        : selectedFolder.toString().replace(/^file:\/\//, ""))
+            }
 
             ToggleRow {
                 Layout.fillWidth: true
@@ -45,8 +42,14 @@ PageBase {
                 checked: Config.webCursor.cursor.enabled
                 onToggled: checked ? WebCursorManager.enable() : WebCursorManager.disable()
             }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Tokens.spacing.medium
+                spacing: Tokens.spacing.small
 
-            SectionHeader { Layout.topMargin: Tokens.spacing.medium; Layout.fillWidth: true; text: qsTr("Cursor Theme") }
+                SectionHeader { Layout.fillWidth: true; text: qsTr("Cursor Theme") }
+                IconButton { icon: "add"; type: IconButton.Tonal; onClicked: themeUploadDialog.open() }
+            }
 
             ConnectedRect {
                 Layout.fillWidth: true
@@ -60,42 +63,20 @@ PageBase {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 0
-                        StyledText { text: qsTr("Current theme"); font: Tokens.font.body.small }
-                        StyledText {
-                            text: WebCursorManager.currentTheme.length > 0 ? WebCursorManager.currentTheme : qsTr("None selected")
-                            color: Colours.palette.m3onSurfaceVariant
-                            font: Tokens.font.label.small
-                        }
+                        StyledText { text: qsTr("Current theme"); font: Tokens.font.label.medium; color: Colours.palette.m3onSurfaceVariant }
+                        StyledText { text: WebCursorManager.currentTheme; font: Tokens.font.body.large; elide: Text.ElideRight }
                     }
-                    IconButton { icon: "folder_open"; type: IconButton.Text; onClicked: themeUploadDialog.open() }
                     IconButton { icon: "refresh"; type: IconButton.Text; onClicked: WebCursorManager.reload() }
                 }
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                Layout.topMargin: Tokens.spacing.small
-                visible: WebCursorManager.themeList.length === 0
-                text: qsTr("No themes installed yet. Use the folder icon above to add one.")
-                color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.label.small
-                wrapMode: Text.WordWrap
-                horizontalAlignment: Text.AlignHCenter
             }
 
             Repeater {
                 model: WebCursorManager.themeList
                 delegate: ConnectedRect {
-                    id: themeCard
                     required property string modelData
                     readonly property var details: WebCursorManager.getThemeDetails(modelData)
-                    readonly property bool isActive: WebCursorManager.currentTheme === modelData
-
                     Layout.fillWidth: true
                     implicitHeight: themeRow.implicitHeight + Tokens.padding.medium * 2
-                    border.width: isActive ? 2 : 0
-                    border.color: Colours.palette.m3primary
-
                     RowLayout {
                         id: themeRow
                         anchors.fill: parent
@@ -103,57 +84,34 @@ PageBase {
                         anchors.leftMargin: Tokens.padding.largeIncreased
                         anchors.rightMargin: Tokens.padding.largeIncreased
                         spacing: Tokens.spacing.medium
+                        Image {
+                            id: themeIcon
+                            readonly property real baseSize: Tokens.padding.large * 3
+                            readonly property real sourceRatio: sourceSize.height > 0
+                                ? sourceSize.width / sourceSize.height : 1
+                            readonly property real iconScale: Math.min(1, sourceRatio)
+                            Layout.preferredWidth: baseSize * iconScale
+                            Layout.preferredHeight: baseSize
+                            Layout.alignment: Qt.AlignVCenter
 
-                        Rectangle {
-                            Layout.preferredWidth: Tokens.padding.large * 2
-                            Layout.preferredHeight: width
-                            radius: Tokens.radius.medium
-                            color: Colours.palette.m3surfaceVariant
-                            clip: true
-                            Image {
-                                anchors.fill: parent
-                                anchors.margins: 4
-                                source: themeCard.details.iconPath
-                                fillMode: Image.PreserveAspectFit
-                                visible: status === Image.Ready
-                            }
+                            sourceSize.width: baseSize * 2
+                            sourceSize.height: baseSize * 2
+                            source: details.iconPath || ""
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            visible: status === Image.Ready
+                            cache: false
                         }
-
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 2
-                            RowLayout {
-                                spacing: Tokens.spacing.small
-                                StyledText { text: themeCard.modelData; font: Tokens.font.body.medium }
-                                Rectangle {
-                                    visible: themeCard.isActive
-                                    radius: height / 2
-                                    color: Colours.palette.m3primaryContainer
-                                    implicitWidth: activeLabel.implicitWidth + Tokens.padding.small * 2
-                                    implicitHeight: activeLabel.implicitHeight + 4
-                                    StyledText { id: activeLabel; anchors.centerIn: parent; text: qsTr("Active"); font: Tokens.font.label.small; color: Colours.palette.m3onPrimaryContainer }
-                                }
-                            }
-                            StyledText { Layout.fillWidth: true; text: themeCard.details.describe || qsTr("No description provided"); color: Colours.palette.m3onSurfaceVariant; font: Tokens.font.label.small; elide: Text.ElideRight }
-                            StyledText { text: qsTr("By %1 · minimum %2 × %3").arg(themeCard.details.author).arg(themeCard.details.minWidth).arg(themeCard.details.minHeight); color: Colours.palette.m3onSurfaceVariant; font: Tokens.font.label.small }
+                            spacing: Tokens.spacing.extraSmall / 2
+                            StyledText { text: modelData; font: Tokens.font.body.medium; elide: Text.ElideRight }
+                            StyledText { Layout.fillWidth: true; text: details.describe || qsTr("No description provided"); color: Colours.palette.m3onSurfaceVariant; font: Tokens.font.label.medium; elide: Text.ElideRight }
+                            StyledText { text: qsTr("By %1 · minimum %2 × %3").arg(details.author).arg(details.minWidth).arg(details.minHeight); color: Colours.palette.m3onSurfaceVariant; font: Tokens.font.label.small }
                         }
-
-                        IconButton {
-                            icon: themeCard.isActive ? "check" : "play_arrow"
-                            type: IconButton.Text
-                            onClicked: WebCursorManager.useTheme(themeCard.modelData)
-                        }
-                        IconButton {
-                            icon: "folder_open"
-                            type: IconButton.Text
-                            onClicked: WebCursorManager.openThemeFolder(themeCard.modelData)
-                        }
-                        IconButton {
-                            visible: WebCursorManager.isUserTheme(themeCard.modelData)
-                            icon: "delete"
-                            type: IconButton.Text
-                            onClicked: WebCursorManager.removeTheme(themeCard.modelData)
-                        }
+                        IconButton { icon: WebCursorManager.currentTheme === modelData ? "check" : "play_arrow"; type: IconButton.Text; onClicked: WebCursorManager.useTheme(modelData) }
+                        IconButton { icon: "folder_open"; type: IconButton.Text; onClicked: WebCursorManager.openThemeFolder(modelData) }
+                        IconButton { visible: WebCursorManager.isUserTheme(modelData); icon: "delete"; type: IconButton.Text; onClicked: WebCursorManager.removeTheme(modelData) }
                     }
                 }
             }
@@ -218,7 +176,7 @@ PageBase {
                 visible: WebCursorManager.statusMessage.length > 0
                 text: WebCursorManager.statusMessage
                 color: Colours.palette.m3onSurfaceVariant
-                font: Tokens.font.label.small
+                font: Tokens.font.label.medium
                 wrapMode: Text.WordWrap
             }
         }

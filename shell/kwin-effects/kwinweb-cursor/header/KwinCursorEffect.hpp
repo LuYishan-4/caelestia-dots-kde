@@ -24,14 +24,15 @@ public:
         LogicalOutput* screen) override;
 
     bool isActive() const override;
+    void reconfigure(ReconfigureFlags flags) override;
 
     int requestedEffectChainPosition() const override { return 99; }
 
     static bool supported();
 public Q_SLOTS:
-    void enable() override;
-    void disable() override;
-    void reloadHtml() override;
+    void enable();
+    void disable();
+    void reloadHtml();
 
 private:
     unsigned int m_lastGpuTexId = 0;
@@ -39,7 +40,12 @@ private:
     bool isBlacklisted() const;
     GLTexture* ensureCursorTexture();
     void slotWindowStateChanged(EffectWindow* w);
+    void startIdleTimer();
+    void slotIdleTimeout();
     std::unique_ptr<GLTexture> m_cursorTexture;
+    QTimer m_idleTimer;
+    bool m_autoHidden = false;
+    bool m_firstFocusDone = false;
 };
 
 } // namespace KWin

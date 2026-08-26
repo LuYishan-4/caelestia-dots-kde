@@ -3,8 +3,6 @@
 #include "../Config/config.hpp"
 #include "../Config/webcursorconfig.hpp"
 
-#include <QDBusConnection>
-#include <QDBusInterface>
 #include <QDesktopServices>
 #include <QDir>
 #include <QDirIterator>
@@ -28,11 +26,12 @@ bool isThemeDirectory(const QString& path) {
 }
 
 QString systemThemesDir() {
-    return QStringLiteral("/usr/share/caelestia/webcursor/themes");
+    return QStringLiteral("/usr/share/caelestia/webcursor");
 }
 
 QString userThemesDir() {
-    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + QStringLiteral("/webcursor/themes");
+    return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+           QStringLiteral("/caelestia/webcursor");
 }
 
 void ensureLinkedThemesDir() {
@@ -54,11 +53,29 @@ void ensureLinkedThemesDir() {
         const QString linkPath = QDir(userDir).filePath(name);
         const QFileInfo linkInfo(linkPath);
 
-        if (linkInfo.exists() || linkInfo.isSymLink())
+        // Re-point stale links (e.g. after a package update replaced the dir)
+        if (linkInfo.isSymLink()) {
+            if (QFileInfo(linkInfo.symLinkTarget()).canonicalFilePath() == QFileInfo(sysThemePath).canonicalFilePath())
+                continue;
+            QFile::remove(linkPath);
+        } else if (linkInfo.exists()) {
             continue;
+        }
 
         QFile::link(sysThemePath, linkPath);
     }
+}
+
+bool linkThemeToSystem(const QString& themeName) {
+    if (themeName.isEmpty() || themeName.contains(QLatin1Char('/')) || themeName.contains(QLatin1Char('\\')))
+        return false;
+
+    const QString target = QDir(systemThemesDir()).filePath(themeName);
+    const QString source = QDir(userThemesDir()).filePath(themeName);
+
+    const QString script = QStringLiteral("ln -sfn '%1' '%2'").arg(source, target);
+    const int rc = QProcess::execute(QStringLiteral("pkexec"), { QStringLiteral("sh"), QStringLiteral("-c"), script });
+    return rc == 0;
 }
 
 bool copyDirectory(const QString& source, const QString& destination) {
@@ -86,6 +103,11 @@ bool copyDirectory(const QString& source, const QString& destination) {
 
 WebCursorManager::WebCursorManager(QObject* parent)
     : QObject(parent) {
+    auto* cursor = cursorConfig();
+    connect(cursor, &config::WebCursorMain::selectThemeChanged, this, &WebCursorManager::currentThemeChanged);
+    cursor->set_themesDir(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) +
+                          QStringLiteral("/caelestia/webcursor"));
+    config::GlobalConfig::instance()->save();
     ensureLinkedThemesDir();
     loadThemes();
 }
@@ -130,6 +152,7 @@ void WebCursorManager::loadThemes() {
 }
 
 void WebCursorManager::save() {
+    config::GlobalConfig::instance()->saveToFileSync();
     reconfigureKWin();
     setStatusMessage(tr("Saved"));
 }
@@ -151,10 +174,14 @@ bool WebCursorManager::uploadTheme(const QString& path) {
         setStatusMessage(tr("Invalid source directory"));
         return false;
     }
-    const QString themesPath = config::GlobalConfig::instance()->webCursor()->cursor()->themesDir();
-    const QDir destinationRoot(themesPath);
+    const QDir destinationRoot(userThemesDir());
     const QDir destination = destinationRoot.filePath(source.dirName());
     if (destination.exists()) {
+        // Never wipe a system theme (symlink) via upload.
+        if (destination.isRoot() || QFileInfo(destination.path()).isSymLink()) {
+            setStatusMessage(tr("Cannot overwrite a bundled theme"));
+            return false;
+        }
         if (!QDir(destination.absolutePath()).removeRecursively()) {
             setStatusMessage(tr("Failed to clear existing theme"));
             return false;
@@ -182,6 +209,10 @@ bool WebCursorManager::uploadTheme(const QString& path) {
         }
     }
     loadThemes();
+    if (!linkThemeToSystem(source.dirName())) {
+        setStatusMessage(tr("Theme installed, but linking to system directory failed (run with elevated rights once)"));
+        return true;
+    }
     setStatusMessage(tr("Theme installed"));
     return true;
 }
@@ -197,20 +228,27 @@ void WebCursorManager::useTheme(const QString& name) {
 }
 
 bool WebCursorManager::removeTheme(const QString& name) {
-    const auto path = QDir(config::GlobalConfig::instance()->webCursor()->cursor()->themesDir()).filePath(name);
-    if (!isThemeDirectory(path) || !QDir(path).removeRecursively()) {
+    const auto path = QDir(userThemesDir()).filePath(name);
+    // Only themes that live in the user dir (real dirs, not symlinks) can be removed.
+    if (!isThemeDirectory(path) || QFileInfo(path).isSymLink() || !QDir(path).removeRecursively()) {
         setStatusMessage(tr("Only user-installed themes can be removed"));
         return false;
     }
     if (cursorConfig()->selectTheme() == name)
         useTheme(QStringLiteral("variant4-ciallo"));
     loadThemes();
+    if (QFileInfo(QDir(systemThemesDir()).filePath(name)).isSymLink()) {
+        const QString target = QDir(systemThemesDir()).filePath(name);
+        QProcess::execute(QStringLiteral("pkexec"),
+            { QStringLiteral("sh"), QStringLiteral("-c"), QStringLiteral("rm -f '%1'").arg(target) });
+    }
     setStatusMessage(tr("Theme removed"));
     return true;
 }
 
 bool WebCursorManager::isUserTheme(const QString& name) const {
-    return isThemeDirectory(QDir(config::GlobalConfig::instance()->webCursor()->cursor()->themesDir()).filePath(name));
+    const auto path = QDir(userThemesDir()).filePath(name);
+    return isThemeDirectory(path) && !QFileInfo(path).isSymLink();
 }
 
 void WebCursorManager::openThemeFolder(const QString& name) {
@@ -262,6 +300,14 @@ void WebCursorManager::enable() {
     QProcess::execute(QStringLiteral("kwriteconfig6"),
         { QStringLiteral("--file"), QStringLiteral("kwinrc"), QStringLiteral("--group"), QStringLiteral("Plugins"),
             QStringLiteral("--key"), QStringLiteral("ultralightwebcursorEnabled"), QStringLiteral("true") });
+    QProcess::startDetached(QStringLiteral("busctl"),
+        { QStringLiteral("--user"), QStringLiteral("call"), QStringLiteral("org.kde.KWin"), QStringLiteral("/Effects"),
+            QStringLiteral("org.kde.kwin.Effects"), QStringLiteral("loadEffect"), QStringLiteral("s"),
+            QStringLiteral("ultralightwebcursor") });
+    QProcess::startDetached(
+        QStringLiteral("busctl"), { QStringLiteral("--user"), QStringLiteral("call"), QStringLiteral("org.kde.KWin"),
+                                      QStringLiteral("/UltralightCursor"),
+                                      QStringLiteral("org.kde.kwin.KWin.KwinCursorEffect"), QStringLiteral("enable") });
     save();
     setStatusMessage(tr("Enabled"));
 }
@@ -271,17 +317,19 @@ void WebCursorManager::disable() {
     QProcess::execute(QStringLiteral("kwriteconfig6"),
         { QStringLiteral("--file"), QStringLiteral("kwinrc"), QStringLiteral("--group"), QStringLiteral("Plugins"),
             QStringLiteral("--key"), QStringLiteral("ultralightwebcursorEnabled"), QStringLiteral("false") });
+    QProcess::startDetached(QStringLiteral("busctl"),
+        { QStringLiteral("--user"), QStringLiteral("call"), QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/UltralightCursor"), QStringLiteral("org.kde.kwin.KWin.KwinCursorEffect"),
+            QStringLiteral("disable") });
     save();
     setStatusMessage(tr("Disabled"));
 }
 
 void WebCursorManager::reconfigureKWin() {
-    QDBusInterface effect(QStringLiteral("org.kde.KWin"), QStringLiteral("/UltralightCursor"),
-        QStringLiteral("org.kde.kwin.KWin.UltralightCursorEffect"), QDBusConnection::sessionBus());
-    effect.call(QStringLiteral("reloadHtml"));
-    QDBusInterface kwin(QStringLiteral("org.kde.KWin"), QStringLiteral("/KWin"), QStringLiteral("org.kde.KWin"),
-        QDBusConnection::sessionBus());
-    kwin.call(QStringLiteral("reconfigure"));
+    QProcess::startDetached(QStringLiteral("busctl"),
+        { QStringLiteral("--user"), QStringLiteral("call"), QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/UltralightCursor"), QStringLiteral("org.kde.kwin.KWin.KwinCursorEffect"),
+            QStringLiteral("reloadHtml") });
 }
 
 } // namespace caelestia::services

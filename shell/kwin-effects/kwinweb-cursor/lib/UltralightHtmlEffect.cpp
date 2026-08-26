@@ -17,11 +17,12 @@ namespace UltralightWebCursorM {
 UltralightHtmlEffect::UltralightHtmlEffect() {}
 
 UltralightHtmlEffect::~UltralightHtmlEffect() {
-    // std::cout << "[Ultralight] destroy\n";
+    if (view_)
+        view_->set_load_listener(nullptr);
+    webcall = nullptr;
     listener_.reset();
     view_ = nullptr;
     renderer_ = nullptr;
-    webcall = nullptr;
 }
 
 // initialize
@@ -59,6 +60,9 @@ bool UltralightHtmlEffect::initialize(const ConfigValues& uconfig, const JSONCon
             ultralight::GetPlatformFileSystem(ultralight::String(html_value_.m_permanentSdkPath.c_str())));
         platform_initialized_ = true;
     }
+    renderer_ = sharedRenderer();
+    if (!renderer_)
+        return false;
 
     if (std::filesystem::exists(html_value_.html_path_))
         html_time_ = std::filesystem::last_write_time(html_value_.html_path_);
@@ -66,12 +70,18 @@ bool UltralightHtmlEffect::initialize(const ConfigValues& uconfig, const JSONCon
     return true;
 }
 
+ultralight::RefPtr<ultralight::Renderer> UltralightHtmlEffect::sharedRenderer() {
+    static ultralight::RefPtr<ultralight::Renderer> s_renderer = ultralight::Renderer::Create();
+    return s_renderer;
+}
+
 bool UltralightHtmlEffect::ensureInitialized() {
-    if (renderer_ && view_)
+    if ((renderer_ && view_) || renderer_initialized_)
         return true;
     qDebug() << "[UltralightCursorEffect] init4" << html_value_.html_path_.c_str()
              << html_value_.m_permanentSdkPath.c_str();
-    renderer_ = ultralight::Renderer::Create();
+    if (!renderer_)
+        renderer_ = sharedRenderer();
     if (!renderer_)
         return false;
 
@@ -88,10 +98,13 @@ bool UltralightHtmlEffect::ensureInitialized() {
     view_->set_load_listener(listener_.get());
     webcall = std::make_shared<WebCall>();
     webcall->view_ = view_;
+    renderer_initialized_ = true;
     return load(html_value_.html_path_);
 }
 
 bool UltralightHtmlEffect::load(const std::string& path) {
+    if (!view_)
+        return false;
     std::ifstream file(path);
     if (!file) {
         qDebug() << "[UltralightCursorEffect] Failed to open file:" << QString::fromStdString(path);
@@ -109,7 +122,9 @@ bool UltralightHtmlEffect::load(const std::string& path) {
 }
 
 bool UltralightHtmlEffect::resize(const int& width, const int& height) {
-    if (width > html_value_.minwidth || height > html_value_.minheight)
+    if (!view_)
+        return false;
+    if (width < html_value_.minwidth || height < html_value_.minheight)
         return false;
     view_->Resize(width, height);
     return true;
@@ -125,6 +140,8 @@ void UltralightHtmlEffect::reload(const ConfigValues& uconfig, const JSONConf& d
         .hotspot_y_ = data.hotspotY,
         .m_permanentSdkPath = uconfig.sdk,
         .html_path_ = uconfig.html };
+    if (!view_)
+        return;
     UltralightHtmlEffect::load(html_value_.html_path_);
     UltralightHtmlEffect::resize(html_value_.width_, html_value_.height_);
 }
@@ -144,7 +161,6 @@ void UltralightHtmlEffect::update() {
         return;
     if (!renderer_ || !view_)
         return;
-
     if (!view_->needs_paint())
         view_->set_needs_paint(true);
 
