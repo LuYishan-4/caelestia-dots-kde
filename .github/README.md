@@ -126,7 +126,7 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | Contributor | PRs |
 | --- | ---: |
 | [WinTone01](https://github.com/WinTone01) | 60 |
-| [aroaxinping](https://github.com/aroaxinping) | 5 |
+| [aroaxinping](https://github.com/aroaxinping) | 6 |
 | [Vinax89](https://github.com/Vinax89) | 5 |
 | [jialfaro](https://github.com/jialfaro) | 2 |
 | [SalihYzts](https://github.com/SalihYzts) | 2 |
