@@ -159,7 +159,7 @@ ItemList {
             }
 
             AnimLoader {
-                sourceComp: Nmcli.connectingSsid() === network.modelData.ssid ? loadingComp : iconComp
+                sourceComp: Nmcli.connectingSsid === network.modelData?.ssid ? loadingComp : iconComp
 
                 Component {
                     id: iconComp

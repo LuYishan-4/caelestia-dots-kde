@@ -154,6 +154,7 @@ void WorkspaceTrackerEffect::onDesktopChanging(
     KWin::VirtualDesktop* desktop, QPointF offset, KWin::EffectWindow* with, KWin::LogicalOutput* output)
 {
     Q_UNUSED(with)
+    m_lastChangingOutput = output;
     if (desktop && m_socket->state() == QLocalSocket::ConnectedState) {
         sendPayload(desktop->x11DesktopNumber(), static_cast<float>(offset.x()), static_cast<float>(offset.y()), output);
     }
@@ -161,7 +162,8 @@ void WorkspaceTrackerEffect::onDesktopChanging(
 
 void WorkspaceTrackerEffect::onDesktopChangingCancelled()
 {
-    sendPayload(0, 0.0f, 0.0f, nullptr);
+    sendPayload(0, 0.0f, 0.0f, m_lastChangingOutput);
+    m_lastChangingOutput = nullptr;
 }
 
 void WorkspaceTrackerEffect::onDesktopChanged(
@@ -169,6 +171,7 @@ void WorkspaceTrackerEffect::onDesktopChanged(
 {
     Q_UNUSED(oldDesktop)
     Q_UNUSED(with)
+    m_lastChangingOutput = nullptr;
     if (newDesktop && m_socket->state() == QLocalSocket::ConnectedState) {
         sendPayload(newDesktop->x11DesktopNumber(), 0.0f, 0.0f, output);
     }

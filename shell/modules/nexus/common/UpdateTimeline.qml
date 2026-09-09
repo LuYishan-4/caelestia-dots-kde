@@ -15,8 +15,6 @@ Item {
     required property var entries
     property string selectedId: ""
 
-    signal entryClicked(string entryId, string entryState)
-
     // Commit rows (dev branch) carry an author/subject/type chip and need
     // extra vertical room; plain release rows (main branch) stay compact so
     // the two channels remain visually distinct at a glance.
@@ -46,6 +44,8 @@ Item {
         chore: { label: qsTr("chore"), color: Colours.palette.m3outline },
         revert: { label: qsTr("revert"), color: Colours.palette.m3error }
     })
+
+    signal entryClicked(string entryId, string entryState)
 
     function commitType(subject) {
         const match = /^(\w+)(\([^)]*\))?!?:\s*/.exec(subject || "");
@@ -81,7 +81,7 @@ Item {
             readonly property bool isAvailable: modelData.state === "available"
             readonly property bool isPast: modelData.state === "past"
             readonly property bool isSelected: root.selectedId === modelData.id
-            readonly property bool isClickable: (isAvailable || isPast) && modelData.id !== "##current##"
+            readonly property bool isClickable: (isAvailable || isPast || isCurrent) && modelData.id !== "##current##"
             readonly property bool isMerge: !!modelData.isMerge
             readonly property bool isRelease: !!modelData.isRelease
             // Conventional-commit prefix (feat/fix/…) parsed from the subject —

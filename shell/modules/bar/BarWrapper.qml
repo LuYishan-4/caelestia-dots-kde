@@ -37,7 +37,25 @@ Item {
             return Qt.rect(ox, oy, contentWidth, screen.height);
         return Qt.rect(ox + screen.width - contentWidth, oy, contentWidth, screen.height);
     }
-    readonly property bool dodging: dodgeEnabled && Hypr.hasWindowOverlapping(screen.name, dodgeRect.x, dodgeRect.y, dodgeRect.width, dodgeRect.height, Config.bar.dodgeFocusedOnly)
+    // Touch the tracked QML properties here so QML re-evaluates this binding
+    // whenever window data, focus, or workspace changes — hasWindowOverlapping()
+    // is a plain JS function and QML does not track what it reads internally.
+    readonly property var _dodgeWatchWindowList: (typeof KWinActiveWindowBridge !== "undefined") ? KWinActiveWindowBridge.windowList : null
+    readonly property var _dodgeWatchActiveWindow: (typeof KWinActiveWindowBridge !== "undefined") ? KWinActiveWindowBridge.activeWindow : null
+    readonly property int _dodgeWatchActiveId: (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeId : -1
+    // activeByOutput tracks per-screen workspace changes independently — needed
+    // so switching ws on an unfocused screen still re-evaluates dodge on that bar.
+    readonly property var _dodgeWatchActiveByOutput: (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeByOutput : null
+    readonly property bool dodging: {
+        // Reading these tracked props here makes QML invalidate this binding
+        // when windowList, activeWindow, activeId, or per-screen workspace changes.
+        void _dodgeWatchWindowList;
+        void _dodgeWatchActiveWindow;
+        void _dodgeWatchActiveId;
+        void _dodgeWatchActiveByOutput;
+        return dodgeEnabled && Hypr.hasWindowOverlapping(screen.name, dodgeRect.x, dodgeRect.y, dodgeRect.width, dodgeRect.height, Config.bar.dodgeFocusedOnly);
+    }
+
     // Treat a dodging bar as non-persistent: it stays out of the way but is
     // still reachable through the hover edge and the usual toggles.
     readonly property bool keptOpen: Config.bar.persistent && !dodging

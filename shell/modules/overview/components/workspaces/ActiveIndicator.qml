@@ -13,6 +13,7 @@ StyledRect {
     required property int activeWsId
     required property Repeater workspaces
     required property Item mask
+    property string screenName: ""
 
     readonly property int currentWsIdx: {
         let i = activeWsId - 1;
@@ -24,7 +25,7 @@ StyledRect {
 
     property var currentItem: workspaces.count > 0 ? workspaces.itemAt(currentWsIdx) : null
     readonly property int indicatorSize: currentItem ? (currentItem as Workspace).indicatorSize : 40
-    property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+    property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? (KWinWorkspaceState.swipeOffsetByOutput?.[screenName] ?? KWinWorkspaceState.swipeOffset) : 0.0
     // isSwiping stays true for a short settle period after swipeOffset returns to 0
     // to let the SmoothedAnimation reach its target before EAnim kicks back in.
     property bool isSwiping: false

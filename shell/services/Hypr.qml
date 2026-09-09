@@ -231,29 +231,52 @@ Singleton {
             return false;
 
         const wins = KWinActiveWindowBridge.windowList || [];
-        const activeWsId = (typeof KWinWorkspaceState !== "undefined") ? KWinWorkspaceState.activeId : -1;
-        const activeAddr = focusedOnly ? String(KWinActiveWindowBridge.activeWindow?.address ?? "") : "";
+        const activeWindow = KWinActiveWindowBridge.activeWindow;
+        const activeAddr = activeWindow ? String(activeWindow.address ?? "") : "";
 
-        // Nothing focused means nothing to dodge, rather than everything.
-        if (focusedOnly && !activeAddr)
-            return false;
+        // Resolve the workspace currently visible on this specific screen.
+        // activeByOutput is populated by the workspace-tracker KWin effect and
+        // gives each screen's desktop independently. Fall back to the global
+        // activeId (which follows the focused output) when the effect hasn't
+        // connected yet — imperfect for per-monitor setups but safe.
+        let screenWsId = -1;
+        if (typeof KWinWorkspaceState !== "undefined") {
+            const byOutput = KWinWorkspaceState.activeByOutput;
+            if (byOutput && byOutput[screenName] !== undefined)
+                screenWsId = byOutput[screenName];
+            else
+                screenWsId = KWinWorkspaceState.activeId;
+        }
+
+        // If dodging only focused windows, only apply that filter on the screen
+        // that currently has focus. On other screens, fall back to checking all
+        // visible windows — a maximized window on an inactive screen should still
+        // trigger the dodge there.
+        const isActiveScreen = screenName && activeWindow && activeWindow.output === screenName;
+        const applyFocusedOnly = focusedOnly && isActiveScreen && activeAddr.length > 0;
 
         for (let i = 0; i < wins.length; i++) {
             const win = wins[i];
             if (win.minimized === true)
                 continue;
-            if (focusedOnly && String(win.address) !== activeAddr)
+            // Skip windows on a different workspace than what this screen is
+            // currently showing. Sticky windows (workspace.id === -1) are visible
+            // on all desktops and are never skipped.
+            const winWsId = win.workspace?.id ?? -1;
+            if (screenWsId !== -1 && winWsId !== -1 && winWsId !== screenWsId)
                 continue;
-            if (screenName && win.output !== screenName)
+            if (applyFocusedOnly && String(win.address) !== activeAddr)
                 continue;
-            if (activeWsId !== -1 && win.workspace?.id !== activeWsId)
-                continue;
-            // Touching edges are not an overlap, hence the strict comparisons.
+            // AABB intersection: dodgeRect is in absolute multi-monitor coordinates,
+            // exactly matching the coordinates KWin reports for window geometry.
+            // A window that doesn't physically cover this bar's strip cannot affect it.
             if (win.x < x + width && win.x + win.width > x && win.y < y + height && win.y + win.height > y)
                 return true;
         }
         return false;
     }
+
+
 
     function dispatch(request: string): void {
         const isKDE = typeof KWinActiveWindowBridge !== "undefined";

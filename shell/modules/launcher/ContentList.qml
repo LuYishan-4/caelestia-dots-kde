@@ -9,6 +9,7 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
+import qs.modules.launcher.services
 
 Item {
     id: root

@@ -257,7 +257,7 @@ Item {
     ListView {
         id: listView
 
-        property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+        property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? (KWinWorkspaceState.swipeOffsetByOutput?.[root.screen.name] ?? KWinWorkspaceState.swipeOffset) : 0.0
 
         property real targetContentX: (currentIndex + rawSwipeOffset) * width
 

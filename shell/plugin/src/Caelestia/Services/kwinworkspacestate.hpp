@@ -40,6 +40,7 @@ class KWinWorkspaceState : public QObject
     Q_PROPERTY(QVariantList workspaces READ workspaces NOTIFY workspacesChanged)
     Q_PROPERTY(uint rows READ rows NOTIFY rowsChanged)
     Q_PROPERTY(double swipeOffset READ swipeOffset NOTIFY swipeOffsetChanged)
+    Q_PROPERTY(QVariantMap swipeOffsetByOutput READ swipeOffsetByOutput NOTIFY swipeOffsetByOutputChanged)
     Q_PROPERTY(bool showingDesktop READ showingDesktop NOTIFY showingDesktopChanged)
     QML_ELEMENT
     QML_SINGLETON
@@ -57,6 +58,7 @@ public:
     QVariantList workspaces() const;
     uint rows() const;
     double swipeOffset() const;
+    QVariantMap swipeOffsetByOutput() const;
     bool showingDesktop() const;
 
     /**
@@ -82,6 +84,7 @@ signals:
     void workspacesChanged();
     void rowsChanged();
     void swipeOffsetChanged();
+    void swipeOffsetByOutputChanged();
     void showingDesktopChanged();
 
 private slots:
@@ -111,6 +114,7 @@ private:
     int m_perOutputSwitchAvailable = -1;
     uint m_rows = 1;
     double m_swipeOffset = 0.0;
+    QVariantMap m_swipeOffsetByOutput;
     bool m_showingDesktop = false;
     ::QLocalServer* m_trackerServer = nullptr;
 };

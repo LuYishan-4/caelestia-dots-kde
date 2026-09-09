@@ -29,11 +29,24 @@ fi
 PACKAGE_GROUP="${PACKAGE_GROUP:-all}"
 
 CORE_PACKAGES=(
-    cmake ninja ccache qt6-tools
-    wl-clipboard cliphist wl-clip-persist inotify-tools app2unit wireplumber trash-cli jq aubio lm_sensors
-    libpipewire glibc qt6-declarative gcc-libs qt6-base qt6-declarative qt6-wayland libqalculate kpipewire kglobalaccel kglobalacceld libsecret ksshaskpass
-    networkmanager-qt vulkan-headers
-    ffmpeg
+    # Build tools & compilers
+    cmake ninja ccache qt6-tools extra-cmake-modules gcc-libs glibc
+
+    # CLI & System utilities
+    wl-clipboard cliphist wl-clip-persist inotify-tools app2unit wireplumber trash-cli jq
+
+    # Audio, Sensors & Hardware
+    aubio lm_sensors libpipewire pulseaudio-qt libpulse
+
+    # Qt6 Framework & Tools
+    qt6-base qt6-declarative qt6-wayland qt6-shadertools
+
+    # KDE 6 Frameworks & KWin
+    kglobalaccel kglobalacceld kguiaddons kwindowsystem
+    kcoreaddons kconfig networkmanager-qt kpipewire kwin
+
+    # Media, Calculation & Security
+    ffmpeg libqalculate libsecret ksshaskpass libx11 vulkan-headers
 )
 
 SHELL_PACKAGES=(
@@ -42,12 +55,13 @@ SHELL_PACKAGES=(
 )
 
 THEME_PACKAGES=(
-    adw-gtk-theme ttf-jetbrains-mono-nerd ttf-material-symbols-variable ttf-rubik-vf ttf-cascadia-code-nerd
-    noto-fonts noto-fonts-cjk noto-fonts-emoji
+    adw-gtk-theme ttf-jetbrains-mono-nerd ttf-material-symbols-variable
+    ttf-rubik-vf ttf-cascadia-code-nerd noto-fonts noto-fonts-cjk noto-fonts-emoji
 )
 
 UTILITY_PACKAGES=(
-    swappy ddcutil networkmanager imagemagick tesseract tesseract-data-eng satty spectacle xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
+    swappy ddcutil networkmanager imagemagick tesseract tesseract-data-eng
+    satty spectacle xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
 )
 
 # Build final package list based on selected group

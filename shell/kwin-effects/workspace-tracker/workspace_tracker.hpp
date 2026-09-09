@@ -76,6 +76,7 @@ private:
     static KWin::LogicalOutput* findOutput(const QString& name);
 
     QLocalSocket* m_socket;
+    QPointer<KWin::LogicalOutput> m_lastChangingOutput;
 };
 
 } // namespace caelestia

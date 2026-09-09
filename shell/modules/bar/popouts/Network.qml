@@ -45,12 +45,29 @@ ColumnLayout {
     spacing: Tokens.spacing.medium * scaleOffset
     width: Math.max(400 * scaleOffset, _isSidebarOpen ? (Tokens.sizes.sidebar.width * scaleOffset) - Tokens.padding.extraLargeIncreased : 0)
 
-    StyledText {
-        Layout.topMargin: Tokens.padding.medium * root.scaleOffset
+    RowLayout {
+        Layout.topMargin: Tokens.padding.small * root.scaleOffset
         Layout.leftMargin: Tokens.padding.small * root.scaleOffset
-        text: qsTr("Network")
-        font.weight: 500
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+        Layout.rightMargin: Tokens.padding.small * root.scaleOffset
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.small * root.scaleOffset
+
+        StyledText {
+            Layout.fillWidth: true
+            text: qsTr("Network")
+            font.weight: 500
+            font.pointSize: Tokens.font.title.small.pointSize * root.fontScale
+        }
+
+        IconButton {
+            icon: "settings"
+            font: Tokens.font.icon.medium
+            type: IconButton.Tonal
+            isRound: true
+            inactiveColour: Colours.tPalette.m3surfaceContainerHigh
+            inactiveOnColour: Colours.palette.m3onSurfaceVariant
+            onClicked: root.popouts.detachRequested("network")
+        }
     }
 
     StyledRect {
@@ -107,14 +124,15 @@ ColumnLayout {
             }).slice(0, 8)
         }
 
-        ListRow {
+        Item {
             id: networkItem
 
             required property Nmcli.AccessPoint modelData
-            readonly property bool isConnecting: Nmcli.connectingSsid() === modelData.ssid
+            readonly property bool isConnecting: Nmcli.connectingSsid === modelData?.ssid
             readonly property bool loading: networkItem.isConnecting
 
-            rowScale: root.scaleOffset
+            Layout.fillWidth: true
+            implicitHeight: networkRow.implicitHeight
             visible: root.view === "wireless"
 
             StateLayer {
@@ -146,45 +164,52 @@ ColumnLayout {
                 }
             }
 
-            MaterialIcon {
-                text: Icons.getNetworkIcon(networkItem.modelData.strength)
-                color: networkItem.modelData.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
-                fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-            }
+            ListRow {
+                id: networkRow
 
-            MaterialIcon {
-                visible: networkItem.modelData.isSecure
-                text: "lock"
-                fontStyle.pointSize: Tokens.font.icon.small.pointSize * root.fontScale
-            }
+                anchors.fill: parent
+                rowScale: root.scaleOffset
 
-            StyledText {
-                Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.fillWidth: true
-                text: networkItem.modelData.ssid
-                elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-                color: networkItem.modelData.active ? Colours.palette.m3primary : Colours.palette.m3onSurface
-            }
-
-            Item {
-                Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
-                Layout.preferredHeight: width
-                visible: networkItem.modelData.active || networkItem.loading
-
-                CircularIndicator {
-                    anchors.fill: parent
-                    running: networkItem.loading
+                MaterialIcon {
+                    text: Icons.getNetworkIcon(networkItem.modelData.strength)
+                    color: networkItem.modelData.active ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
                 }
 
                 MaterialIcon {
-                    anchors.centerIn: parent
-                    animate: true
-                    text: networkItem.modelData.active ? "link_off" : "link"
-                    color: networkItem.modelData.active ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
-                    fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-                    opacity: networkItem.loading ? 0 : 1
+                    visible: networkItem.modelData.isSecure
+                    text: "lock"
+                    fontStyle.pointSize: Tokens.font.icon.small.pointSize * root.fontScale
+                }
+
+                StyledText {
+                    Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                    Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                    Layout.fillWidth: true
+                    text: networkItem.modelData.ssid
+                    elide: Text.ElideRight
+                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    color: networkItem.modelData.active ? Colours.palette.m3primary : Colours.palette.m3onSurface
+                }
+
+                Item {
+                    Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
+                    Layout.preferredHeight: width
+                    visible: networkItem.modelData.active || networkItem.loading
+
+                    CircularIndicator {
+                        anchors.fill: parent
+                        running: networkItem.loading
+                    }
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        animate: true
+                        text: networkItem.modelData.active ? "link_off" : "link"
+                        color: networkItem.modelData.active ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                        fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
+                        opacity: networkItem.loading ? 0 : 1
+                    }
                 }
             }
         }
@@ -247,99 +272,103 @@ ColumnLayout {
     }
 
     // VPN section
-    StyledText {
+    Section {
         visible: root.view === "wireless"
+        Layout.fillWidth: true
+        Layout.topMargin: visible ? Tokens.padding.small * root.scaleOffset : 0
+        title: qsTr("VPN")
+        expanded: false
 
-        Layout.topMargin: visible ? Tokens.spacing.small * root.scaleOffset : 0
-        Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
-        text: qsTr("VPN")
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-    }
-
-    StyledText {
-        visible: root.view === "wireless"
-
-        Layout.topMargin: visible ? Tokens.spacing.extraSmall * root.scaleOffset : 0
-        Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
-        text: qsTr("%1 profiles available").arg(Nmcli.vpnConnections.length)
-        color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
-    }
-
-    Repeater {
-        visible: root.view === "wireless"
-        model: ScriptModel {
-            values: [...Nmcli.vpnConnections].slice(0, 8)
+        StyledText {
+            visible: root.view === "wireless"
+            Layout.topMargin: visible ? Tokens.spacing.extraSmall * root.scaleOffset : 0
+            Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+            text: qsTr("%1 profiles available").arg(Nmcli.vpnConnections.length)
+            color: Colours.palette.m3onSurfaceVariant
+            font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
         }
 
-        ListRow {
-            id: vpnItem
-
-            required property var modelData
-            readonly property bool loading: Nmcli.vpnPendingConnection === modelData.name
-
-            rowScale: root.scaleOffset
-            visible: root.view === "wireless"
-
-            StateLayer {
-                anchors.fill: parent
-                radius: Tokens.rounding.medium * root.scaleOffset
-                disabled: vpnItem.loading
-
-                onClicked: {
-                    if (vpnItem.modelData.connected) {
-                        Nmcli.disconnectVpn(vpnItem.modelData.name, () => {});
-                    } else {
-                        Nmcli.connectVpn(vpnItem.modelData.name, () => {});
-                    }
-                }
-            }
-
-            MaterialIcon {
-                text: "vpn_key"
-                color: vpnItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
-                fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-            }
-
-            StyledText {
-                Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.fillWidth: true
-                text: vpnItem.modelData.name
-                elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-                color: vpnItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
+        Repeater {
+            model: ScriptModel {
+                values: [...Nmcli.vpnConnections].slice(0, 8)
             }
 
             Item {
-                Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
-                Layout.preferredHeight: width
-                visible: vpnItem.modelData.connected || vpnItem.loading
+                id: vpnItem
 
-                CircularIndicator {
+                required property var modelData
+                readonly property bool loading: Nmcli.vpnPendingConnection === modelData?.name
+
+                Layout.fillWidth: true
+                implicitHeight: vpnRow.implicitHeight
+                visible: root.view === "wireless"
+
+                StateLayer {
                     anchors.fill: parent
-                    running: vpnItem.loading
+                    radius: Tokens.rounding.medium * root.scaleOffset
+                    disabled: vpnItem.loading
+
+                    onClicked: {
+                        if (vpnItem.modelData?.connected) {
+                            Nmcli.disconnectVpn(vpnItem.modelData.name, () => {});
+                        } else if (vpnItem.modelData?.name) {
+                            Nmcli.connectVpn(vpnItem.modelData.name, () => {});
+                        }
+                    }
                 }
 
-                MaterialIcon {
-                    anchors.centerIn: parent
-                    animate: true
-                    text: vpnItem.modelData.connected ? "link_off" : "link"
-                    color: vpnItem.modelData.connected ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
-                    fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-                    opacity: vpnItem.loading ? 0 : 1
+                ListRow {
+                    id: vpnRow
+
+                    anchors.fill: parent
+                    rowScale: root.scaleOffset
+
+                    MaterialIcon {
+                        text: "vpn_key"
+                        color: vpnItem.modelData?.connected ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                        fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
+                    }
+
+                    StyledText {
+                        Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                        Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                        Layout.fillWidth: true
+                        text: vpnItem.modelData?.name ?? ""
+                        elide: Text.ElideRight
+                        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                        color: vpnItem.modelData?.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
+                    }
+
+                    Item {
+                        Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
+                        Layout.preferredHeight: width
+                        visible: (vpnItem.modelData?.connected ?? false) || vpnItem.loading
+
+                        CircularIndicator {
+                            anchors.fill: parent
+                            running: vpnItem.loading
+                        }
+
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            animate: true
+                            text: vpnItem.modelData?.connected ? "link_off" : "link"
+                            color: vpnItem.modelData?.connected ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                            fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
+                            opacity: vpnItem.loading ? 0 : 1
+                        }
+                    }
                 }
             }
         }
-    }
 
-    StyledText {
-        visible: root.view === "wireless" && Nmcli.vpnConnections.length === 0
-
-        Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
-        text: qsTr("No VPN profiles found")
-        color: Colours.palette.m3onSurfaceVariant
-        font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        StyledText {
+            visible: root.view === "wireless" && Nmcli.vpnConnections.length === 0
+            Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+            text: qsTr("No VPN profiles found")
+            color: Colours.palette.m3onSurfaceVariant
+            font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+        }
     }
 
     // Ethernet section
@@ -372,13 +401,14 @@ ColumnLayout {
             }).slice(0, 8)
         }
 
-        ListRow {
+        Item {
             id: ethernetItem
 
             required property var modelData
             readonly property bool loading: false
 
-            rowScale: root.scaleOffset
+            Layout.fillWidth: true
+            implicitHeight: ethernetRow.implicitHeight
             visible: root.view === "ethernet"
 
             StateLayer {
@@ -395,77 +425,84 @@ ColumnLayout {
                 }
             }
 
-            MaterialIcon {
-                text: "cable"
-                color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
-                fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-            }
+            ListRow {
+                id: ethernetRow
 
-            StyledText {
-                Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
-                Layout.fillWidth: true
-                text: ethernetItem.modelData.interface || qsTr("Unknown")
-                elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-                color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
-            }
-
-            Item {
-                Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
-                Layout.preferredHeight: width
-                visible: ethernetItem.modelData.connected || ethernetItem.loading
-
-                CircularIndicator {
-                    anchors.fill: parent
-                    running: ethernetItem.loading
-                }
+                anchors.fill: parent
+                rowScale: root.scaleOffset
 
                 MaterialIcon {
-                    anchors.centerIn: parent
-                    animate: true
-                    text: ethernetItem.modelData.connected ? "link_off" : "link"
-                    color: ethernetItem.modelData.connected ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                    text: "cable"
+                    color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                     fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
-                    opacity: ethernetItem.loading ? 0 : 1
+                }
+
+                StyledText {
+                    Layout.leftMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                    Layout.rightMargin: Tokens.spacing.extraSmall * root.scaleOffset
+                    Layout.fillWidth: true
+                    text: ethernetItem.modelData.interface || qsTr("Unknown")
+                    elide: Text.ElideRight
+                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                    color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
+                }
+
+                Item {
+                    Layout.preferredWidth: Tokens.font.icon.medium.pointSize * root.scaleOffset
+                    Layout.preferredHeight: width
+                    visible: ethernetItem.modelData.connected || ethernetItem.loading
+
+                    CircularIndicator {
+                        anchors.fill: parent
+                        running: ethernetItem.loading
+                    }
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        animate: true
+                        text: ethernetItem.modelData.connected ? "link_off" : "link"
+                        color: ethernetItem.modelData.connected ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                        fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
+                        opacity: ethernetItem.loading ? 0 : 1
+                    }
                 }
             }
         }
     }
 
     // Connection details (IP / subnet / gateway / DNS / MAC) for the active device
-    StyledText {
+    Section {
         visible: root.activeDetails.visible
-        Layout.topMargin: Tokens.padding.medium * root.scaleOffset
-        Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
-        text: qsTr("Connection details")
-        font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
-    }
+        Layout.fillWidth: true
+        Layout.topMargin: visible ? Tokens.padding.medium * root.scaleOffset : 0
+        title: qsTr("Connection details")
+        expanded: false
 
-    Repeater {
-        model: root.activeDetails.rows
+        Repeater {
+            model: root.activeDetails.rows
 
-        RowLayout {
-            required property var modelData
+            RowLayout {
+                required property var modelData
 
-            visible: modelData.value !== ""
+                visible: modelData.value !== ""
 
-            Layout.fillWidth: true
-            Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
-            spacing: Tokens.spacing.small * root.scaleOffset
-
-            StyledText {
-                text: modelData.label
-                font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
-            }
-
-            StyledText {
                 Layout.fillWidth: true
-                horizontalAlignment: Text.AlignRight
-                text: modelData.value
-                color: Colours.palette.m3onSurfaceVariant
-                elide: Text.ElideRight
-                font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                Layout.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+                spacing: Tokens.spacing.small * root.scaleOffset
+
+                StyledText {
+                    text: modelData.label
+                    font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignRight
+                    text: modelData.value
+                    color: Colours.palette.m3onSurfaceVariant
+                    elide: Text.ElideRight
+                    font.pointSize: Tokens.font.body.small.pointSize * root.fontScale
+                }
             }
         }
     }
@@ -499,6 +536,87 @@ ColumnLayout {
         }
 
         target: root.popouts
+    }
+
+    component Section: ColumnLayout {
+        id: section
+
+        required property string title
+        property bool expanded: false
+        default property alias content: contentColumn.data
+
+        Layout.fillWidth: true
+        spacing: Tokens.spacing.extraSmall * root.scaleOffset
+
+        Item {
+            id: sectionHeader
+
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.max(titleRow.implicitHeight + Tokens.padding.small * 2 * root.scaleOffset, 36 * root.scaleOffset)
+
+            RowLayout {
+                id: titleRow
+
+                anchors.fill: parent
+                anchors.rightMargin: Tokens.padding.extraSmall * root.scaleOffset
+                spacing: Tokens.spacing.small * root.scaleOffset
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: section.title
+                    font.weight: Font.Medium
+                    font.pointSize: Tokens.font.body.medium.pointSize * root.fontScale
+                }
+
+                MaterialIcon {
+                    text: "expand_more"
+                    rotation: section.expanded ? 180 : 0
+                    color: Colours.palette.m3onSurfaceVariant
+                    fontStyle.pointSize: Tokens.font.icon.medium.pointSize * root.fontScale
+
+                    Behavior on rotation {
+                        Anim {
+                            type: Anim.StandardSmall
+                        }
+                    }
+                }
+            }
+
+            StateLayer {
+                anchors.fill: parent
+                radius: Tokens.rounding.medium * root.scaleOffset
+                showHoverBackground: false
+                onClicked: section.expanded = !section.expanded
+            }
+        }
+
+        Item {
+            id: contentWrapper
+
+            Layout.fillWidth: true
+            Layout.preferredHeight: section.expanded ? (contentColumn.implicitHeight + Tokens.spacing.extraSmall * root.scaleOffset) : 0
+            implicitHeight: Layout.preferredHeight
+            clip: true
+
+            Behavior on Layout.preferredHeight {
+                Anim {}
+            }
+
+            ColumnLayout {
+                id: contentColumn
+
+                width: parent.width
+                y: Tokens.spacing.extraSmall * root.scaleOffset
+                spacing: Tokens.spacing.extraSmall * root.scaleOffset
+                opacity: section.expanded ? 1.0 : 0.0
+
+                Behavior on opacity {
+                    Anim {
+                        type: Anim.DefaultEffects
+                    }
+                }
+            }
+        }
     }
 
     component Toggle: RowLayout {

@@ -32,9 +32,28 @@ INSTALL_DARKLY="${INSTALL_DARKLY:-true}"
 PACKAGE_GROUP="${PACKAGE_GROUP:-all}"
 
 CORE_PACKAGES=(
-    cmake ninja-build ccache qt6-qttools-devel
-    wl-clipboard cliphist wl-clip-persist inotify-tools wireplumber trash-cli jq aubio lm_sensors lm_sensors-devel
-    pipewire-devel glibc qt6-qtdeclarative qt6-qtdeclarative-devel qt6-qtwayland qt6-qtwayland-devel kf6-kglobalaccel-devel qt6-qtbase-private-devel qt6-qtsvg qt6-qtsvg-devel qt6-qtshadertools-devel libgcc qt6-qtbase libqalculate libqalculate-devel aubio-devel kf6-kpipewire kf6-kpipewire-devel kf6-kwindowsystem-devel kf6-networkmanager-qt-devel libsecret vulkan-headers ksshaskpass
+    # Build tools & compilers
+    cmake ninja-build ccache qt6-qttools-devel extra-cmake-modules libgcc glibc
+
+    # CLI & System utilities
+    wl-clipboard cliphist wl-clip-persist inotify-tools wireplumber trash-cli jq
+
+    # Audio, Sensors & Hardware
+    aubio aubio-devel lm_sensors lm_sensors-devel pipewire-devel
+    pulseaudio-qt-qt6-devel pulseaudio-libs-devel
+
+    # Qt6 Framework & Tools
+    qt6-qtbase qt6-qtbase-private-devel qt6-qtdeclarative qt6-qtdeclarative-devel
+    qt6-qtwayland qt6-qtwayland-devel qt6-qtsvg qt6-qtsvg-devel qt6-qtshadertools-devel
+
+    # KDE 6 Frameworks & KWin
+    kf6-kglobalaccel-devel kf6-kwindowsystem-devel kf6-kguiaddons-devel
+    kf6-kcoreaddons-devel kwin-devel kf6-kconfig-devel
+    kf6-networkmanager-qt-devel kf6-kpipewire kf6-kpipewire-devel
+    libepoxy-devel libdrm-devel
+
+    # Media, Calculation & Security
+    libqalculate libqalculate-devel libsecret vulkan-headers ksshaskpass libX11-devel
 )
 
 SHELL_PACKAGES=(
@@ -42,11 +61,14 @@ SHELL_PACKAGES=(
 )
 
 THEME_PACKAGES=(
-    adw-gtk3-theme google-rubik-fonts google-noto-sans-fonts google-noto-sans-cjk-fonts google-noto-emoji-fonts
+    adw-gtk3-theme google-rubik-fonts google-noto-sans-fonts
+    google-noto-sans-cjk-fonts google-noto-emoji-fonts
 )
 
 UTILITY_PACKAGES=(
-    fuzzel swappy ddcutil NetworkManager ImageMagick tesseract tesseract-langpack-eng spectacle gpu-screen-recorder slurp grim xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
+    fuzzel swappy ddcutil NetworkManager ImageMagick
+    tesseract tesseract-langpack-eng spectacle gpu-screen-recorder
+    slurp grim xdg-utils sassc bat ripgrep lazygit xdg-user-dirs
 )
 
 # Packages known to need copr or manual fallback
@@ -320,7 +342,7 @@ if ! command -v caelestia >/dev/null 2>&1; then
                 sudo ln -sf "$HOME/.local/bin/caelestia" /usr/local/bin/caelestia || true
             fi
         fi
-        
+
         # Install fish completions if fish is present
         mkdir -p ~/.config/fish/completions/
         cp ./completions/caelestia.fish ~/.config/fish/completions/ 2>/dev/null || true

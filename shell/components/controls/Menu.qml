@@ -183,7 +183,7 @@ MouseArea {
                         required property MenuItem modelData
                         readonly property bool active: modelData === root?.active
 
-                        visible: modelData.visible
+                        visible: modelData?.visible ?? false
 
                         Layout.fillWidth: true
                         implicitWidth: menuOptionRow.implicitWidth + Tokens.padding.medium * 2

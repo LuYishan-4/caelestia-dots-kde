@@ -8,7 +8,7 @@
 
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793d1?logo=arch-linux&logoColor=white&style=flat-square)](https://archlinux.org)
 [![Fedora](https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=white&style=flat-square)](https://fedoraproject.org)
-[![Debian](https://img.shields.io/badge/Debian-A81D33?logo=debian&logoColor=white&style=flat-square)](https://debian.org)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu_Rolling-E95420?logo=ubuntu&logoColor=white&style=flat-square)](https://ubuntu.com)
 [![KDE Plasma](https://img.shields.io/badge/Plasma_6-1D99F3?logo=kde&logoColor=white&style=flat-square)](https://kde.org/plasma-desktop)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-86dbce?style=flat-square)](LICENSE)
 [![Crowdin](https://badges.crowdin.net/caelestia-kde/localized.svg)](https://crowdin.com/project/caelestia-kde)
@@ -23,7 +23,7 @@ A community port of the [Caelestia Hyprland dotfiles](https://github.com/caelest
 
 ## Installation
 
-**Requirements:** Arch-based distro, Fedora, or Debian · KDE Plasma 6.0+
+**Requirements:** Arch-based distro, Fedora, or Ubuntu (Rolling) · KDE Plasma 6.0+
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ladybug-me/caelestia-dots-kde/main/install.sh | sh
@@ -93,7 +93,7 @@ Use the built-in keyboard shortcut manager present in Caelestia Settings.
 <details>
 <summary><b>Greeter animations</b></summary>
 
-Replace `morning.gif`, `afternoon.gif`, `evening.gif`, and `night.gif` in `~/.config/quickshell/caelestia/assets/`. Then restart the shell through Quick toggles panel.
+Right click on the widget to customize and select your desired media files for different times of the day. Or enable slideshow, change the greeting text and icon, and much more.
 
 </details>
 

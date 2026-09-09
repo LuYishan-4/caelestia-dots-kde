@@ -18,7 +18,8 @@ This document catalogs known failure modes, error conditions, and edge cases dis
 8. [KDE & Plasma Specific Issues](#8-kde--plasma-specific-issues)
 9. [Post-Install Issues](#9-post-install-issues)
 10. [Uninstall Issues](#10-uninstall-issues)
-11. [Diagnostic Commands Reference](#11-diagnostic-commands-reference)
+11. [Update Issues](#11-update-issues)
+12. [Diagnostic Commands Reference](#12-diagnostic-commands-reference)
 
 ---
 
@@ -550,7 +551,34 @@ These are **cosmetic** — the shell works without them, but certain features (s
 
 ---
 
-## 11. Diagnostic Commands Reference
+## 11. Update Issues
+
+### 11.1 Fixing caelestia updater (Recommended)
+
+By deleting the build cache and the update checker cache:
+
+```bash
+rm -rf ~/.config/caelestia-update/repo ~/.cache/caelestia-update-repo
+```
+
+**Note:** This will have the updater clone the repo again which takes time according to your internet speed. Hence, the logs might seem stuck or tell you to restart the process, but just wait for it to finish.
+
+### 11.2 Using update.sh
+
+You can simply run `bash update.sh` in the cloned repo folder (~/caelestia-dots-kde) to update to latest version.
+
+### 11.3 Install latest version from repo
+
+Run the following command to simply install the latest shell using installer.
+```bash
+curl -fsSL https://raw.githubusercontent.com/ladybug-me/caelestia-dots-kde/main/install.sh | sh
+```
+
+- If it gives an error due to already present `~/caelestia-dots-kde` directory in your pc, then remove that directory first and then run the above command. **Make sure to copy the `backups/` folder somewhere and then put it back here after installation completes.**
+
+---
+
+## 12. Diagnostic Commands Reference
 
 ### System State Checks
 

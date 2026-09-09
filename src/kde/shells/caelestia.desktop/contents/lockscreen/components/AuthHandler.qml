@@ -22,6 +22,7 @@ Item {
     property bool localGraceLocked: false
     readonly property bool graceLocked: localGraceLocked || Boolean(activeAuthenticator && activeAuthenticator.graceLocked)
     property string authMessage: ""
+    property string pendingPassword: ""
 
     property int lockoutSecondsRemaining: 0
     readonly property int lockoutMinutesRemaining: Math.ceil(lockoutSecondsRemaining / 60)
@@ -121,14 +122,30 @@ Item {
         root.messageChanged(root.authMessage);
     }
 
+    function ensureAuthenticating() {
+        if (root.graceLocked || root.isAuthenticating || (activeAuthenticator && activeAuthenticator.busy)) return;
+        if (activeAuthenticator && typeof activeAuthenticator.startAuthenticating === "function") {
+            activeAuthenticator.startAuthenticating();
+        }
+    }
+
     function startLogin(pass) {
         if (!pass || pass.length === 0 || root.isAuthenticating || root.graceLocked) return;
         root.clearAuthMessage();
         root.isAuthenticating = true;
         root.localGraceLocked = false;
         authTimeoutTimer.restart();
-        if (activeAuthenticator && typeof activeAuthenticator.respond === "function") {
-            activeAuthenticator.respond(pass);
+
+        if (activeAuthenticator) {
+            var hasPrompt = Boolean(activeAuthenticator.promptForSecret || activeAuthenticator.prompt);
+            if (typeof activeAuthenticator.respond === "function" && hasPrompt) {
+                activeAuthenticator.respond(pass);
+            } else {
+                root.pendingPassword = pass;
+                if (typeof activeAuthenticator.startAuthenticating === "function") {
+                    activeAuthenticator.startAuthenticating();
+                }
+            }
         }
     }
 
@@ -146,13 +163,21 @@ Item {
 
     Timer {
         id: authTimeoutTimer
+
         interval: root.timeoutInterval
         repeat: false
         onTriggered: {
             if (root.isAuthenticating || root.localGraceLocked) {
                 root.isAuthenticating = false;
                 root.localGraceLocked = false;
+                root.pendingPassword = "";
                 root.clearPasswordRequested();
+                if (activeAuthenticator && typeof activeAuthenticator.cancel === "function") {
+                    activeAuthenticator.cancel();
+                }
+                if (activeAuthenticator && typeof activeAuthenticator.startAuthenticating === "function") {
+                    activeAuthenticator.startAuthenticating();
+                }
                 if (!root.authMessage) {
                     root.handleMessage(i18ndc("plasma_shell_org.kde.plasma.desktop", "@info:status", "Authentication timed out"));
                 }
@@ -162,6 +187,7 @@ Item {
 
     Timer {
         id: notificationRemoveTimer
+
         interval: root.notificationDismissInterval
         onTriggered: {
             root.clearAuthMessage();
@@ -170,6 +196,7 @@ Item {
 
     Timer {
         id: graceLockTimer
+
         interval: root.graceLockInterval
         repeat: false
         onTriggered: {
@@ -183,6 +210,7 @@ Item {
 
     Timer {
         id: fallbackUnlockTimer
+
         interval: 2000
         repeat: false
         onTriggered: {
@@ -196,6 +224,7 @@ Item {
 
     Timer {
         id: lockoutCountdownTimer
+
         interval: 1000
         repeat: true
         running: root.lockoutSecondsRemaining > 0
@@ -207,11 +236,9 @@ Item {
     }
 
     Connections {
-        target: activeAuthenticator
-        ignoreUnknownSignals: true
-
         function onFailed(kind, auth) {
             authTimeoutTimer.stop();
+            root.pendingPassword = "";
 
             if (kind !== 0) {
                 if (kind & ScreenLocker.Authenticator.Fingerprint) {
@@ -245,6 +272,7 @@ Item {
             if (kind & ScreenLocker.Authenticator.Fingerprint) {
                 root.fprintTries++;
                 if (root.fprintTries >= root.maxFprintTries) {
+                    root.pendingPassword = "";
                     root.handleMessage(i18ndc("plasma_shell_org.kde.plasma.desktop",
                         "@info:status", "Maximum fingerprint attempts reached. Please use password."));
                 } else if (auth && auth.errorMessage) {
@@ -256,6 +284,7 @@ Item {
         function onSucceeded() {
             root.isAuthenticating = false;
             root.localGraceLocked = false;
+            root.pendingPassword = "";
             root.lockoutSecondsRemaining = 0;
             authTimeoutTimer.stop();
             graceLockTimer.stop();
@@ -282,13 +311,32 @@ Item {
             if (activeAuthenticator && activeAuthenticator.prompt) {
                 root.handleMessage(activeAuthenticator.prompt);
             }
+            if (root.pendingPassword) {
+                var pass = root.pendingPassword;
+                root.pendingPassword = "";
+                root.isAuthenticating = true;
+                authTimeoutTimer.restart();
+                if (activeAuthenticator && typeof activeAuthenticator.respond === "function") {
+                    activeAuthenticator.respond(pass);
+                }
+            }
         }
 
         function onPromptForSecretChanged(msg) {
             fallbackUnlockTimer.stop();
             root.localGraceLocked = false;
-            root.isAuthenticating = false;
             authTimeoutTimer.stop();
+            if (root.pendingPassword) {
+                var pass = root.pendingPassword;
+                root.pendingPassword = "";
+                root.isAuthenticating = true;
+                authTimeoutTimer.restart();
+                if (activeAuthenticator && typeof activeAuthenticator.respond === "function") {
+                    activeAuthenticator.respond(pass);
+                }
+                return;
+            }
+            root.isAuthenticating = false;
             root.focusSecretRequested();
         }
 
@@ -331,5 +379,8 @@ Item {
                 root.focusSecretRequested();
             }
         }
+
+        target: activeAuthenticator
+        ignoreUnknownSignals: true
     }
 }

@@ -4,6 +4,7 @@
 #include <qobject.h>
 #include <qprocess.h>
 #include <qqmlintegration.h>
+#include <qset.h>
 #include <qstring.h>
 #include <qvariant.h>
 
@@ -41,6 +42,7 @@ public:
     [[nodiscard]] QVariantList pinnedItems() const;
 
     Q_INVOKABLE void reload();
+    [[nodiscard]] Q_INVOKABLE bool isImageCached(int id) const;
     Q_INVOKABLE void decodeImage(int id, const QString& outPath);
     Q_INVOKABLE void clearHistory();
 
@@ -79,6 +81,7 @@ private:
     QVariantList m_pinnedItems;
     QString m_pinDir;
     int m_nextPinId = 1;
+    QSet<int> m_activeDecodes;
 };
 
 } // namespace caelestia::services

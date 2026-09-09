@@ -75,6 +75,10 @@ QtObject {
         return imageCacheDir + "/" + clipId + ".png";
     }
 
+    function isImageCached(clipId: int): bool {
+        return ClipboardManager.isImageCached(clipId);
+    }
+
     /// favouriteClips stored cliphist ids, which do not survive rotation or a
     /// Clear History — the star silently became a dangling reference and the
     /// dead ids piled up in the config. Convert whatever is still resolvable

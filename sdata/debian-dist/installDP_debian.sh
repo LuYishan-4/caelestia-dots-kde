@@ -48,13 +48,28 @@ INSTALL_DARKLY="${INSTALL_DARKLY:-true}"
 PACKAGE_GROUP="${PACKAGE_GROUP:-all}"
 
 CORE_PACKAGES=(
-    cmake ninja-build ccache g++ build-essential qt6-l10n-tools qt6-tools-dev
-    wl-clipboard cliphist inotify-tools wireplumber trash-cli jq yq
-    libaubio-dev aubio-tools lm-sensors libsensors-dev
-    libpipewire-0.3-dev pipewire libc6
-    qt6-base-dev qt6-base-private-dev qt6-declarative-dev qml6-module-qtquick qt6-wayland qt6-wayland-dev qt6-svg-dev qt6-shadertools-dev
-    libkf6globalaccel-dev libkf6windowsystem-dev libkf6networkmanagerqt-dev libkpipewire-dev libsecret-1-dev ksshaskpass
-    ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libqalculate-dev qalc libvulkan-dev
+    # Build tools & compilers
+    cmake ninja-build ccache g++ build-essential qt6-l10n-tools qt6-tools-dev extra-cmake-modules
+
+    # CLI & System utilities
+    wl-clipboard cliphist inotify-tools wireplumber trash-cli jq yq libc6
+
+    # Audio, Sensors & Hardware
+    libaubio-dev aubio-tools lm-sensors libsensors-dev libpipewire-0.3-dev pipewire
+
+    # Qt6 Framework & Tools
+    qt6-base-dev qt6-base-private-dev qt6-declarative-dev qml6-module-qtquick qt6-wayland qt6-wayland-dev
+    qt6-svg-dev qt6-shadertools-dev
+
+    # KDE 6 Frameworks & KWin
+    libkf6globalaccel-dev libkf6windowsystem-dev libkf6guiaddons-dev
+    libkf6coreaddons-dev kwin-dev libkf6pulseaudioqt-dev libpulse-dev
+    libkf6config-dev libkf6networkmanagerqt-dev libkpipewire-dev
+    libepoxy-dev libdrm-dev
+
+    # Media, Calculation & Security
+    ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+    libqalculate-dev qalc libvulkan-dev libsecret-1-dev ksshaskpass libx11-dev
 )
 
 SHELL_PACKAGES=(
@@ -66,24 +81,26 @@ THEME_PACKAGES=(
 )
 
 UTILITY_PACKAGES=(
-    fuzzel swappy ddcutil network-manager imagemagick tesseract-ocr tesseract-ocr-eng kde-spectacle slurp grim xdg-utils sassc python3-venv uv konsave
+    fuzzel swappy ddcutil network-manager imagemagick
+    tesseract-ocr tesseract-ocr-eng kde-spectacle slurp grim
+    xdg-utils sassc python3-venv uv konsave
 )
 
 # Packages that need manual build or script fallback on Debian if apt package missing
 FALLBACK_PKGS=(
-    quickshell starship cava app2unit gpu-screen-recorder wl-clip-persist satty adw-gtk3 uv konsave
+    quickshell starship cava app2unit gpu-screen-recorder cliphist wl-clip-persist satty adw-gtk3 uv konsave
 )
 
 # Build final package list based on selected group
 PACKAGES=()
 FALLBACK_TARGETS=()
 case "$PACKAGE_GROUP" in
-    core)   PACKAGES=("${CORE_PACKAGES[@]}");   FALLBACK_TARGETS=("cava" "app2unit") ;;
+    core)   PACKAGES=("${CORE_PACKAGES[@]}");   FALLBACK_TARGETS=("cava" "app2unit" "cliphist") ;;
     shell)  PACKAGES=("${SHELL_PACKAGES[@]}");  FALLBACK_TARGETS=("quickshell" "starship") ;;
     themes) PACKAGES=("${THEME_PACKAGES[@]}");  FALLBACK_TARGETS=("adw-gtk3") ;;
-    utils)  PACKAGES=("${UTILITY_PACKAGES[@]}"); FALLBACK_TARGETS=("gpu-screen-recorder" "wl-clip-persist" "satty" "uv" "konsave") ;;
+    utils)  PACKAGES=("${UTILITY_PACKAGES[@]}"); FALLBACK_TARGETS=("gpu-screen-recorder" "cliphist" "wl-clip-persist" "satty" "uv" "konsave") ;;
     all|*)  PACKAGES=("${CORE_PACKAGES[@]}" "${SHELL_PACKAGES[@]}" "${THEME_PACKAGES[@]}" "${UTILITY_PACKAGES[@]}")
-            FALLBACK_TARGETS=("quickshell" "starship" "cava" "app2unit" "gpu-screen-recorder" "wl-clip-persist" "satty" "adw-gtk3" "uv" "konsave") ;;
+            FALLBACK_TARGETS=("quickshell" "starship" "cava" "app2unit" "gpu-screen-recorder" "cliphist" "wl-clip-persist" "satty" "adw-gtk3" "uv" "konsave") ;;
 esac
 
 log "Installing packages (group: $PACKAGE_GROUP)..."
@@ -173,11 +190,11 @@ for pkg in "${FALLBACK_TARGETS[@]}"; do
             ;;
         app2unit)
             tmpdir="$(mktemp -d)"
-            sudo apt-get install -y make || true
+            sudo apt-get install -y make scdoc || true
             if git clone --depth 1 https://github.com/Vladimir-csp/app2unit "$tmpdir"; then
                 (
                     cd "$tmpdir" || exit 1
-                    sudo make install
+                    sudo make install 2>/dev/null || sudo make install-bin
                 ) || { err "Manual build for $pkg failed."; FAILED_PKGS+=("$pkg"); }
             else
                 err "Failed to clone $pkg."
@@ -207,8 +224,40 @@ for pkg in "${FALLBACK_TARGETS[@]}"; do
                 FAILED_PKGS+=("$pkg")
             fi
             ;;
+        cliphist)
+            log "Downloading cliphist binary from GitHub releases..."
+            ARCH="$(uname -m)"
+            case "$ARCH" in
+                x86_64)    CARCH="linux-amd64" ;;
+                aarch64)   CARCH="linux-arm64" ;;
+                armv7l)    CARCH="linux-arm" ;;
+                i386|i686) CARCH="linux-386" ;;
+                *)         CARCH="linux-amd64" ;;
+            esac
+            LATEST_URL="$(curl -fsSL https://api.github.com/repos/sentriz/cliphist/releases/latest | grep -o "\"https://[^\"]*${CARCH}\"" | tr -d "\"" | head -n1)"
+            if [ -n "$LATEST_URL" ]; then
+                tmpbin="$(mktemp)"
+                if curl -fsSL "$LATEST_URL" -o "$tmpbin"; then
+                    sudo install -m 755 "$tmpbin" /usr/local/bin/cliphist
+                    log "cliphist installed successfully to /usr/local/bin."
+                else
+                    err "Failed to download cliphist."
+                    FAILED_PKGS+=("$pkg")
+                fi
+                rm -f "$tmpbin"
+            else
+                err "Could not resolve cliphist release URL."
+                FAILED_PKGS+=("$pkg")
+            fi
+            ;;
         wl-clip-persist)
-            sudo apt-get install -y build-essential cargo git libwayland-dev || true
+            sudo apt-get install -y build-essential curl git libwayland-dev || true
+            # Ensure Rust >= 1.85 (required for edition 2024)
+            if ! command -v cargo >/dev/null 2>&1 || [ "$(rustc --version 2>/dev/null | awk '{print $2}' | cut -d. -f2 || echo 0)" -lt 85 ]; then
+                log "Modern Rust toolchain (>= 1.85) required. Installing via rustup..."
+                curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal || true # ci:allow-curl-pipe
+                export PATH="$HOME/.cargo/bin:$PATH"
+            fi
             if command -v cargo >/dev/null 2>&1; then
                 tmpdir="$(mktemp -d)"
                 if git clone --depth 1 https://github.com/Linus789/wl-clip-persist "$tmpdir"; then
@@ -380,7 +429,7 @@ if ! command -v caelestia >/dev/null 2>&1; then
                 sudo ln -sf "$HOME/.local/bin/caelestia" /usr/local/bin/caelestia || true
             fi
         fi
-        
+
         # Install fish completions if fish is present
         mkdir -p ~/.config/fish/completions/
         cp ./completions/caelestia.fish ~/.config/fish/completions/ 2>/dev/null || true

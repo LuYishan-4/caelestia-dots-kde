@@ -23,10 +23,38 @@ Item {
     readonly property int textSize: Math.round(effectiveThickness * 0.32)
 
     readonly property string windowTitle: {
-        const hr = new Date().getHours();
-        const msg = hr < 12 ? "Good Morning" : hr < 18 ? "Good Afternoon" : hr < 22 ? "Good Evening" : "Good Night";
         const username = Quickshell.env("USER") || "User";
         const formattedUser = username.charAt(0).toUpperCase() + username.slice(1);
+
+        const mode = Config.bar.greeter.mode;
+        if (mode === "slideshow" && (Config.bar.greeter.slideshowText || "").length > 0) {
+            const raw = Config.bar.greeter.slideshowText;
+            if (raw.includes("{user}")) {
+                return raw.replace(/{user}/g, formattedUser);
+            }
+            return raw;
+        }
+
+        const hr = Time.hours;
+        const mStart = Config.bar.greeter.morningStart;
+        const aStart = Config.bar.greeter.afternoonStart;
+        const eStart = Config.bar.greeter.eveningStart;
+        const nStart = Config.bar.greeter.nightStart;
+
+        let msg = Config.bar.greeter.nightText || "Good Night";
+        if (hr >= mStart && hr < aStart) {
+            msg = Config.bar.greeter.morningText || "Good Morning";
+        } else if (hr >= aStart && hr < eStart) {
+            msg = Config.bar.greeter.afternoonText || "Good Afternoon";
+        } else if (hr >= eStart && hr < nStart) {
+            msg = Config.bar.greeter.eveningText || "Good Evening";
+        } else {
+            msg = Config.bar.greeter.nightText || "Good Night";
+        }
+
+        if (msg.includes("{user}")) {
+            return msg.replace(/{user}/g, formattedUser);
+        }
         return `${msg}, ${formattedUser}!`;
     }
 
@@ -46,26 +74,35 @@ Item {
     implicitWidth: bar.isHorizontal ? (icon.implicitWidth + current.width + current.anchors.leftMargin) : Math.max(icon.implicitWidth, current.width)
     implicitHeight: bar.isHorizontal ? Math.max(icon.implicitHeight, current.height) : (icon.implicitHeight + current.height + current.anchors.topMargin)
 
-    Loader {
+    MouseArea {
         anchors.fill: parent
-        active: !Config.bar.activeWindow.showOnHover
+        cursorShape: Qt.PointingHandCursor
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-        sourceComponent: MouseArea {
-            cursorShape: Qt.PointingHandCursor
-            hoverEnabled: true
-            onPositionChanged: {
-                const popouts = root.bar.popouts;
-                if (popouts.hasCurrent && popouts.currentName !== "activewindow")
+        onPositionChanged: {
+            if (root.bar.popouts.hasCurrent && root.bar.popouts.currentName === "greetercontext") return;
+            const popouts = root.bar.popouts;
+            if (popouts.hasCurrent && popouts.currentName !== "greeter" && popouts.currentName !== "activewindow")
+                popouts.hasCurrent = false;
+        }
+        onClicked: mouse => {
+            const popouts = root.bar.popouts;
+            if (mouse.button === Qt.RightButton) {
+                popouts.currentName = "greetercontext";
+                popouts.currentCenter = bar.isHorizontal ? root.mapToItem(null, root.implicitWidth / 2, 0).x : (root.mapToItem(null, 0, root.implicitHeight / 2).y ?? 0);
+                popouts.hasCurrent = true;
+            } else if (mouse.button === Qt.LeftButton) {
+                if (!Config.bar.greeter.showOnHover) {
+                    if (popouts.hasCurrent && (popouts.currentName === "greeter" || popouts.currentName === "activewindow")) {
+                        popouts.hasCurrent = false;
+                    } else {
+                        popouts.currentName = "greeter";
+                        popouts.currentCenter = bar.isHorizontal ? root.mapToItem(null, root.implicitWidth / 2, 0).x : (root.mapToItem(null, 0, root.implicitHeight / 2).y ?? 0);
+                        popouts.hasCurrent = true;
+                    }
+                } else if (popouts.hasCurrent && popouts.currentName === "greetercontext") {
                     popouts.hasCurrent = false;
-            }
-            onClicked: {
-                const popouts = root.bar.popouts;
-                if (popouts.hasCurrent) {
-                    popouts.hasCurrent = false;
-                } else {
-                    popouts.currentName = "activewindow";
-                    popouts.currentCenter = bar.isHorizontal ? root.mapToItem(null, root.implicitWidth / 2, 0).x : root.mapToItem(null, 0, root.implicitHeight / 2).y;
-                    popouts.hasCurrent = true;
                 }
             }
         }
@@ -79,7 +116,9 @@ Item {
 
         fontStyle: Tokens.font.icon.builders.small.size(root.iconSize).build()
         animate: true
-        text: "waving_hand"
+        text: (Config.bar.greeter.mode === "slideshow" && (Config.bar.greeter.slideshowIcon || "").length > 0)
+            ? Config.bar.greeter.slideshowIcon
+            : "waving_hand"
         color: root.colour
     }
 
@@ -95,7 +134,7 @@ Item {
         id: metrics
 
         text: root.windowTitle
-        font: root.Tokens.font.body.builders.small.letterSpacing(1.4).build()
+        font: Tokens.font.body.builders.small.letterSpacing(1.4).build()
 
         onTextChanged: {
             const next = root.current === text1 ? text2 : text1;
@@ -129,7 +168,7 @@ Item {
         height: bar.isHorizontal ? styledText.implicitHeight : styledText.implicitWidth
 
         anchors.horizontalCenter: bar.isHorizontal ? undefined : icon.horizontalCenter
-        anchors.verticalCenter: bar.isHorizontal ? icon.verticalCenter : undefined
+        anchors.verticalCenter: bar.isHorizontal ? parent.verticalCenter : undefined
         anchors.top: bar.isHorizontal ? undefined : icon.bottom
         anchors.topMargin: bar.isHorizontal ? 0 : Tokens.spacing.small
         anchors.left: bar.isHorizontal ? icon.right : undefined
@@ -147,7 +186,7 @@ Item {
             font.family: metrics.font.family
             color: root.colour
 
-            rotation: bar.isHorizontal ? 0 : (root.Config.bar.activeWindow.inverted ? 270 : 90)
+            rotation: bar.isHorizontal ? 0 : (Config.bar.greeter.inverted ? 270 : 90)
         }
 
         Behavior on opacity {

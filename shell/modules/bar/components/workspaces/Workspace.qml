@@ -115,7 +115,7 @@ GridLayout {
             property int swipeStartWsId: -1
             property bool generatedShapeThisSwipe: false
 
-            property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+            property real rawSwipeOffset: typeof KWinWorkspaceState !== "undefined" ? (KWinWorkspaceState.swipeOffsetByOutput?.[root.screenName] ?? KWinWorkspaceState.swipeOffset) : 0.0
             property real lastRawSwipeOffset: 0.0
             property bool isSwiping: false
 

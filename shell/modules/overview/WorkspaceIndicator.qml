@@ -19,7 +19,7 @@ Item {
     property int maxWidth: 1000
     readonly property real requiredWidth: (count + 1) * 200 + count * Tokens.spacing.small
     readonly property real scaleFactor: requiredWidth > maxWidth ? maxWidth / requiredWidth : 1.0
-    property real swipeOffset: typeof KWinWorkspaceState !== "undefined" ? KWinWorkspaceState.swipeOffset : 0.0
+    property real swipeOffset: typeof KWinWorkspaceState !== "undefined" ? (KWinWorkspaceState.swipeOffsetByOutput?.[screenName] ?? KWinWorkspaceState.swipeOffset) : 0.0
     property bool isSwiping: false
     property var closingWindows: []
     readonly property var occupied: {
@@ -108,6 +108,7 @@ Item {
                 activeWsId: root.activeWsId
                 workspaces: workspaces
                 mask: layout
+                screenName: root.screenName
             }
         }
         GridLayout {

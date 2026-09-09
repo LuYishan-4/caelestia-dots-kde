@@ -22,10 +22,6 @@ import "components"
 Item {
     id: lockScreenUi
 
-    ServiceRef { service: Cpu }
-    ServiceRef { service: Memory }
-    ServiceRef { service: Storage }
-
     readonly property real lockHeight: Math.min(width, height)
     readonly property real lockLong: lockHeight * 0.7 * (16.0 / 9.0)
     readonly property real lockShort: lockHeight * 0.7
@@ -41,7 +37,7 @@ Item {
     property bool hideNotifs: false
     property bool enableFprint: true
     property int maxFprintTries: 3
-    property int fprintTries: 0
+    readonly property alias fprintTries: authHandler.fprintTries
     property int profilePicShape: 13
     property bool rotateProfilePic: false
     property bool syncWallpaper: true
@@ -59,23 +55,6 @@ Item {
     readonly property real bgRadius: 42 * (lockHeight / 1080)
     readonly property real bgMargin: 16 * (lockHeight / 1080)
     readonly property real cardRadius: bgRadius - bgMargin
-    function getLuminance(c) {
-        if (!c || (c.r === 0 && c.g === 0 && c.b === 0)) return 0;
-        return Math.sqrt(0.299 * (c.r * c.r) + 0.587 * (c.g * c.g) + 0.114 * (c.b * c.b));
-    }
-
-    function alterColour(c, a, layer) {
-        if (!c) return Qt.rgba(0.15, 0.15, 0.15, a);
-        var luminance = getLuminance(c);
-        if (luminance === 0) return Qt.rgba(0.12, 0.12, 0.12, a);
-        // Brightness elevation offset for frosted widgets over blur (matches Caelestia alterColour)
-        var offset = 0.3 * (1 - 0.7) * 1.5;
-        var scale = (luminance + offset) / luminance;
-        var r = Math.max(0, Math.min(1, c.r * scale));
-        var g = Math.max(0, Math.min(1, c.g * scale));
-        var b = Math.max(0, Math.min(1, c.b * scale));
-        return Qt.rgba(r, g, b, a);
-    }
 
     readonly property color clCardBg: alterColour(clSurfaceContainer, 0.60, 1)
     readonly property color clCardBgHigh: alterColour(clSurfaceContainerHigh, 0.60, 1)
@@ -107,8 +86,80 @@ Item {
     property string authMessage: ""
     property bool ready: false
 
+    // Fetch system info via the external helper script instead of an inline
+    // python3 -c one-liner. Inline shell-command concatenation runs pre-auth
+    // and is a security concern flagged in review.
+    // Qt.resolvedUrl resolves relative to this QML file's installed location,
+    // giving the correct absolute path regardless of where the shell is installed.
+    readonly property string sysinfoScriptPath: {
+        var url = Qt.resolvedUrl("scripts/sysinfo.py").toString();
+        // Strip "file://" prefix (url is always file:///absolute/path on Linux)
+        return url.startsWith("file://") ? url.slice(7) : url;
+    }
+
+    readonly property int liveCpu: Math.round((Cpu.percentage ?? 0) * 100)
+    readonly property int liveTemp: Math.round(Cpu.temperature ?? 0)
+    readonly property int liveRam: Math.round((Memory.percentage ?? 0) * 100)
+    readonly property int liveDisk: Math.round((Storage.percentage ?? 0) * 100)
+    readonly property string ipcBin: "~/.local/bin/caelestia-shell-ipc"
+    property var liveMedia: ({})
+    property var liveNotifs: []
+    property double notifsClearedAt: 0
+    property bool isClearingNotifs: false
+    property var greetingInfo: getGreeting()
+
+    function getLuminance(c) {
+        if (!c || (c.r === 0 && c.g === 0 && c.b === 0)) return 0;
+        return Math.sqrt(0.299 * (c.r * c.r) + 0.587 * (c.g * c.g) + 0.114 * (c.b * c.b));
+    }
+
+    function alterColour(c, a, layer) {
+        if (!c) return Qt.rgba(0.15, 0.15, 0.15, a);
+        var luminance = getLuminance(c);
+        if (luminance === 0) return Qt.rgba(0.12, 0.12, 0.12, a);
+        // Brightness elevation offset for frosted widgets over blur (matches Caelestia alterColour)
+        var offset = 0.3 * (1 - 0.7) * 1.5;
+        var scale = (luminance + offset) / luminance;
+        var r = Math.max(0, Math.min(1, c.r * scale));
+        var g = Math.max(0, Math.min(1, c.g * scale));
+        var b = Math.max(0, Math.min(1, c.b * scale));
+        return Qt.rgba(r, g, b, a);
+    }
+
+    function getGreeting() {
+        var hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) return { greeting: qsTr("Good morning"), icon: "sunny", iconColor: lockScreenUi.clPrimary };
+        if (hour >= 12 && hour < 17) return { greeting: qsTr("Good afternoon"), icon: "light_mode", iconColor: lockScreenUi.clPrimary };
+        if (hour >= 17 && hour < 22) return { greeting: qsTr("Good evening"), icon: "routine", iconColor: lockScreenUi.clSecondary };
+        return { greeting: qsTr("Good night"), icon: "bedtime", iconColor: lockScreenUi.clPrimary };
+    }
+
+    function handleMessage(msg) { authHandler.handleMessage(msg); }
+
+    function startLogin(pass) {
+        msgExitAnim.stop();
+        msgAppearAnim.stop();
+        msgFlashAnim.stop();
+        errorText.visible = false;
+        portraitErrorText.visible = false;
+        errorText.opacity = 0;
+        portraitErrorText.opacity = 0;
+        lockScreenUi.authMessage = "";
+        authHandler.startLogin(pass);
+    }
+
+    function ensureAuthenticating() {
+        authHandler.ensureAuthenticating();
+    }
+
+    ServiceRef { service: Cpu }
+    ServiceRef { service: Memory }
+    ServiceRef { service: Storage }
+    ServiceRef { service: Weather }
+
     Timer {
         id: readyTimer
+
         interval: 50
         running: true
         onTriggered: lockScreenUi.ready = true
@@ -119,10 +170,12 @@ Item {
     // between the light and dark palette variants.
     Plasma5Support.DataSource {
         id: schemeLoader
+
         engine: "executable"
         connectedSources: ["cat ~/.local/state/caelestia/scheme.json 2>/dev/null"]
         onNewData: (source, data) => {
             var stdout = data["stdout"] || "";
+            disconnectSource(source);
             if (!stdout) return;
             try {
                 var d = JSON.parse(stdout);
@@ -161,17 +214,19 @@ Item {
     // Respects the useTwelveHourClock setting set via Nexus settings.
     Plasma5Support.DataSource {
         id: configLoader
+
         engine: "executable"
         connectedSources: ["cat ~/.config/caelestia/shell.json 2>/dev/null"]
         onNewData: (source, data) => {
             var stdout = data["stdout"] || "";
+            disconnectSource(source);
             if (!stdout) return;
             try {
                 var cfg = JSON.parse(stdout);
                 var svc = cfg.services || {};
                 if (typeof svc.useTwelveHourClock === "boolean")
                     lockScreenUi.use12h = svc.useTwelveHourClock;
-                
+
                 if (typeof cfg.caelestiaMode === "boolean")
                     lockScreenUi.isCaelestiaMode = cfg.caelestiaMode;
                 else if (typeof svc.caelestiaMode === "boolean")
@@ -214,24 +269,16 @@ Item {
         }
     }
 
-    // Fetch system info via the external helper script instead of an inline
-    // python3 -c one-liner. Inline shell-command concatenation runs pre-auth
-    // and is a security concern flagged in review.
-    // Qt.resolvedUrl resolves relative to this QML file's installed location,
-    // giving the correct absolute path regardless of where the shell is installed.
-    readonly property string sysinfoScriptPath: {
-        var url = Qt.resolvedUrl("scripts/sysinfo.py").toString();
-        // Strip "file://" prefix (url is always file:///absolute/path on Linux)
-        return url.startsWith("file://") ? url.slice(7) : url;
-    }
-
     Plasma5Support.DataSource {
         id: fetchLoader
+
+        property var fetchInfo: null
+
         engine: "executable"
         connectedSources: ["python3 " + lockScreenUi.sysinfoScriptPath]
-        property var fetchInfo: null
         onNewData: (source, data) => {
             var stdout = data["stdout"] || "";
+            disconnectSource(source);
             if (!stdout) return;
             try {
                 fetchInfo = JSON.parse(stdout);
@@ -240,38 +287,12 @@ Item {
     }
 
     Plasma5Support.DataSource {
-        id: weatherLoader
-        engine: "executable"
-        connectedSources: ["curl -s 'wttr.in/?format=j1'"]
-        property var weatherInfo: null
-        onNewData: (source, data) => {
-            var stdout = data["stdout"] || "";
-            if (!stdout) return;
-            try {
-                weatherInfo = JSON.parse(stdout);
-            } catch(e) {}
-        }
-    }
-
-    Timer {
-        id: weatherTimer
-        interval: 600000
-        repeat: true
-        running: true
-        onTriggered: {
-            weatherLoader.disconnectSource("curl -s 'wttr.in/?format=j1'");
-            weatherLoader.connectSource("curl -s 'wttr.in/?format=j1'");
-        }
-    }
-
-    readonly property int liveCpu: Math.round((Cpu.percentage ?? 0) * 100)
-    readonly property int liveTemp: Math.round(Cpu.temperature ?? 0)
-    readonly property int liveRam: Math.round((Memory.percentage ?? 0) * 100)
-    readonly property int liveDisk: Math.round((Storage.percentage ?? 0) * 100)
-    property var liveMedia: ({})
-
-    Plasma5Support.DataSource {
         id: mprisSource
+
+        function poll() {
+            connectSource("python3 -c 'import json, subprocess, os; ipc = os.path.expanduser(\"" + lockScreenUi.ipcBin + "\"); get = lambda p: subprocess.run([ipc, \"call\", \"mpris\", \"getActive\", p], capture_output=True, text=True).stdout.strip(); t, a, u, s = get(\"trackTitle\"), get(\"trackArtist\"), get(\"trackArtUrl\"), get(\"playbackState\"); t = \"\" if t == \"No active player\" else t; print(json.dumps({\"title\": t, \"artist\": a, \"artUrl\": u, \"status\": \"Playing\" if s == \"1\" else \"Paused\"}))'");
+        }
+
         engine: "executable"
         connectedSources: []
         onNewData: (source, data) => {
@@ -285,13 +306,11 @@ Item {
                 }
             } catch(e) {}
         }
-        function poll() {
-            connectSource("python3 -c 'import json, subprocess; get = lambda p: subprocess.run([\"caelestia-shell-ipc\", \"call\", \"mpris\", \"getActive\", p], capture_output=True, text=True).stdout.strip(); t, a, u, s = get(\"trackTitle\"), get(\"trackArtist\"), get(\"trackArtUrl\"), get(\"playbackState\"); t = \"\" if t == \"No active player\" else t; print(json.dumps({\"title\": t, \"artist\": a, \"artUrl\": u, \"status\": \"Playing\" if s == \"1\" else \"Paused\"}))'");
-        }
     }
 
     Timer {
         id: mprisTimer
+
         interval: 2000
         repeat: true
         running: true
@@ -301,52 +320,59 @@ Item {
 
     Plasma5Support.DataSource {
         id: mediaActionSource
+
+        readonly property var actionCmds: ({
+            "previous":  lockScreenUi.ipcBin + " call mpris previous",
+            "playPause": lockScreenUi.ipcBin + " call mpris playPause",
+            "next":      lockScreenUi.ipcBin + " call mpris next"
+        })
+
+        function send(action) {
+            var cmd = actionCmds[action];
+            if (cmd) connectSource(cmd);
+        }
+
         engine: "executable"
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source);
             mprisSource.poll();
         }
-        // Fixed command strings — no concatenation. send() only ever receives one
-        // of three literal values from MediaCard signals (lines 448-450).
-        readonly property var actionCmds: ({
-            "previous":  "caelestia-shell-ipc call mpris previous",
-            "playPause": "caelestia-shell-ipc call mpris playPause",
-            "next":      "caelestia-shell-ipc call mpris next"
-        })
-        function send(action) {
-            var cmd = actionCmds[action];
-            if (cmd) connectSource(cmd);
-        }
     }
-
-    property var liveNotifs: []
-
-    property bool ignoreNotifs: false
 
     Plasma5Support.DataSource {
         id: notifLoader
+
+        function poll() {
+            connectSource("cat ~/.local/state/caelestia/notifs.json 2>/dev/null");
+        }
+
         engine: "executable"
         connectedSources: ["cat ~/.local/state/caelestia/notifs.json 2>/dev/null"]
         onNewData: (source, data) => {
             var stdout = data["stdout"] || "";
             disconnectSource(source);
             if (!stdout) return;
-            if (lockScreenUi.ignoreNotifs) return;
+            if (lockScreenUi.isClearingNotifs) return;
             try {
                 var arr = JSON.parse(stdout);
                 if (Array.isArray(arr)) {
+                    if (lockScreenUi.notifsClearedAt > 0) {
+                        arr = arr.filter(function(n) {
+                            if (!n || !n.time) return false;
+                            var t = new Date(n.time).getTime();
+                            return !isNaN(t) && t > lockScreenUi.notifsClearedAt;
+                        });
+                    }
                     lockScreenUi.liveNotifs = arr;
                 }
             } catch(e) {}
-        }
-        function poll() {
-            connectSource("cat ~/.local/state/caelestia/notifs.json 2>/dev/null");
         }
     }
 
     Timer {
         id: notifTimer
+
         interval: 3000
         repeat: true
         running: true
@@ -355,48 +381,38 @@ Item {
 
     Plasma5Support.DataSource {
         id: notifActionSource
+
+        function clearAll() {
+            lockScreenUi.notifsClearedAt = Date.now();
+            lockScreenUi.liveNotifs = [];
+            lockScreenUi.isClearingNotifs = true;
+            connectSource(lockScreenUi.ipcBin + " call notifs clear");
+        }
+
         engine: "executable"
         connectedSources: []
         onNewData: (source, data) => {
             disconnectSource(source);
+            lockScreenUi.isClearingNotifs = false;
             notifLoader.poll();
         }
-        function clearAll() {
-            connectSource("caelestia-shell-ipc call notifs clear");
-            lockScreenUi.liveNotifs = [];
-            lockScreenUi.ignoreNotifs = true;
-            ignoreTimer.restart();
-        }
     }
 
     Timer {
-        id: ignoreTimer
-        interval: 3500
-        onTriggered: lockScreenUi.ignoreNotifs = false;
-    }
-
-    property var greetingInfo: getGreeting()
-    function getGreeting() {
-        var hour = new Date().getHours();
-        if (hour >= 5 && hour < 12) return { greeting: qsTr("Good morning"), icon: "sunny", iconColor: lockScreenUi.clPrimary };
-        if (hour >= 12 && hour < 17) return { greeting: qsTr("Good afternoon"), icon: "light_mode", iconColor: lockScreenUi.clPrimary };
-        if (hour >= 17 && hour < 22) return { greeting: qsTr("Good evening"), icon: "routine", iconColor: lockScreenUi.clSecondary };
-        return { greeting: qsTr("Good night"), icon: "bedtime", iconColor: lockScreenUi.clPrimary };
-    }
-
-    Timer {
-        interval: 60000; running: true; repeat: true
+        interval: 60000
+        running: true
+        repeat: true
         onTriggered: lockScreenUi.greetingInfo = lockScreenUi.getGreeting()
     }
 
     AuthHandler {
         id: authHandler
+
         authenticatorTarget: (typeof authenticator !== "undefined") ? authenticator : null
-        fprintTries: lockScreenUi.fprintTries
+        maxFprintTries: lockScreenUi.maxFprintTries
         onShakeRequested: if (activePasswordPill) activePasswordPill.shake()
         onFocusSecretRequested: if (activePasswordPill) activePasswordPill.forceActiveFocus()
         onSucceeded: {
-            lockScreenUi.fprintTries = 0;
             Qt.quit();
         }
         onMessageChanged: msg => {
@@ -427,76 +443,90 @@ Item {
         }
     }
 
-    function handleMessage(msg) { authHandler.handleMessage(msg); }
-    function startLogin(pass) {
-        msgExitAnim.stop();
-        msgAppearAnim.stop();
-        msgFlashAnim.stop();
-        errorText.visible = false;
-        portraitErrorText.visible = false;
-        errorText.opacity = 0;
-        portraitErrorText.opacity = 0;
-        lockScreenUi.authMessage = "";
-        authHandler.startLogin(pass);
+    SessionManagement {
+        id: sessionManagement
     }
 
-    SessionManagement { id: sessionManagement }
-    KeyboardIndicator.KeyState { id: capsLockState; key: Qt.Key_CapsLock }
-    Connections { target: sessionManagement; function onAboutToSuspend() { root.clearPassword(); } }
+    KeyboardIndicator.KeyState {
+        id: capsLockState
+
+        key: Qt.Key_CapsLock
+    }
+
     Connections {
-        target: root
+        function onAboutToSuspend() { root.clearPassword(); }
+
+        target: sessionManagement
+    }
+
+    Connections {
         function onClearPassword() {
             if (passwordPill) passwordPill.clearPassword();
             if (portraitPasswordPill) portraitPasswordPill.clearPassword();
         }
+
+        target: root
     }
 
     // Error text: appear → flash → exit
     SequentialAnimation {
         id: msgAppearAnim
+
+        onFinished: msgFlashAnim.start()
+
         PropertyAction { target: errorText; property: "visible"; value: true }
         PropertyAction { target: portraitErrorText; property: "visible"; value: true }
+
         ParallelAnimation {
             NumberAnimation { target: errorText; property: "scale"; from: 0.7; to: 1; duration: 300; easing.type: Easing.OutCubic }
             NumberAnimation { target: errorText; property: "opacity"; from: 0; to: 1; duration: 300; easing.type: Easing.OutCubic }
             NumberAnimation { target: portraitErrorText; property: "scale"; from: 0.7; to: 1; duration: 300; easing.type: Easing.OutCubic }
             NumberAnimation { target: portraitErrorText; property: "opacity"; from: 0; to: 1; duration: 300; easing.type: Easing.OutCubic }
         }
-        onFinished: msgFlashAnim.start()
     }
+
     SequentialAnimation {
-        id: msgFlashAnim; loops: 2
+        id: msgFlashAnim
+
+        loops: 2
+
         ParallelAnimation {
             SequentialAnimation {
                 NumberAnimation { target: errorText; property: "opacity"; to: 0.3; duration: 150 }
                 NumberAnimation { target: errorText; property: "opacity"; to: 1; duration: 150 }
             }
+
             SequentialAnimation {
                 NumberAnimation { target: portraitErrorText; property: "opacity"; to: 0.3; duration: 150 }
                 NumberAnimation { target: portraitErrorText; property: "opacity"; to: 1; duration: 150 }
             }
         }
     }
+
     SequentialAnimation {
         id: msgExitAnim
-        ParallelAnimation {
-            NumberAnimation { target: errorText; property: "scale"; to: 0.7; duration: 400; easing.type: Easing.InOutQuad }
-            NumberAnimation { target: errorText; property: "opacity"; to: 0; duration: 400; easing.type: Easing.InOutQuad }
-            NumberAnimation { target: portraitErrorText; property: "scale"; to: 0.7; duration: 400; easing.type: Easing.InOutQuad }
-            NumberAnimation { target: portraitErrorText; property: "opacity"; to: 0; duration: 400; easing.type: Easing.InOutQuad }
-        }
-        PropertyAction { target: errorText; property: "visible"; value: false }
-        PropertyAction { target: portraitErrorText; property: "visible"; value: false }
+
         onFinished: {
             lockScreenUi.authMessage = "";
             if (typeof root !== "undefined" && typeof root.notification !== "undefined") {
                 root.notification = "";
             }
         }
+
+        ParallelAnimation {
+            NumberAnimation { target: errorText; property: "scale"; to: 0.7; duration: 400; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: errorText; property: "opacity"; to: 0; duration: 400; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: portraitErrorText; property: "scale"; to: 0.7; duration: 400; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: portraitErrorText; property: "opacity"; to: 0; duration: 400; easing.type: Easing.InOutQuad }
+        }
+
+        PropertyAction { target: errorText; property: "visible"; value: false }
+        PropertyAction { target: portraitErrorText; property: "visible"; value: false }
     }
 
     FastBlur {
         id: wallpaperBlur
+
         anchors.fill: parent
         source: wallpaper
         radius: 64
@@ -505,10 +535,14 @@ Item {
 
     Item {
         id: fullWallpaperBlurOverlay
+
         anchors.fill: parent
         visible: lockScreenUi.blurWallpaper
         opacity: visible ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 250 } }
+
+        Behavior on opacity {
+            NumberAnimation { duration: 250 }
+        }
 
         ShaderEffectSource {
             anchors.fill: parent
@@ -519,21 +553,34 @@ Item {
 
     FocusScope {
         id: lockScreenRoot
+
         anchors.fill: parent
         focus: true
         opacity: lockScreenUi.ready ? 1.0 : 0.0
+
+        Keys.onPressed: event => {
+            authHandler.ensureAuthenticating();
+            if (activePasswordPill) activePasswordPill.forceActiveFocus();
+            event.accepted = false;
+        }
+        Keys.onEscapePressed: {
+            authHandler.ensureAuthenticating();
+            root.clearPassword();
+        }
+
+        Component.onCompleted: authHandler.ensureAuthenticating()
 
         Behavior on opacity {
             NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
         }
 
-        Component.onCompleted: authenticator.startAuthenticating()
-
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.ArrowCursor
+            onPositionChanged: authHandler.ensureAuthenticating()
             onPressed: mouse => {
+                authHandler.ensureAuthenticating();
                 if (activePasswordPill) activePasswordPill.forceActiveFocus();
                 mouse.accepted = false;
             }
@@ -542,8 +589,11 @@ Item {
         // kscreenlocker may not hand focus to the greeter immediately
         Item {
             Timer {
-                interval: 300; repeat: true; running: true
                 property int n: 0
+
+                interval: 300
+                repeat: true
+                running: true
                 onTriggered: {
                     if (activePasswordPill) activePasswordPill.forceActiveFocus();
                     if (++n >= 10) repeat = false;
@@ -551,20 +601,9 @@ Item {
             }
         }
 
-        Keys.onPressed: event => {
-            if (activePasswordPill) activePasswordPill.forceActiveFocus();
-            event.accepted = false;
-        }
-        Keys.onEscapePressed: root.clearPassword()
-
         // ── Landscape Layout ──
         Item {
             id: landscapeContent
-            anchors.centerIn: parent
-            width: lockScreenUi.lockLong
-            height: lockScreenUi.lockShort
-            visible: !lockScreenUi.isPortrait
-            clip: true
 
             readonly property real innerHeight: height - 2 * lockScreenUi.bgMargin
             readonly property real colSpacing: 16 * lockScreenUi.centerScale
@@ -580,8 +619,15 @@ Item {
             readonly property real avatarMargin: innerHeight >= 680 ? Math.max(6, 8 * lockScreenUi.centerScale) : (innerHeight >= 560 ? 4 : 2)
             readonly property real centerItemMargin: innerHeight >= 680 ? Math.max(4, 6 * lockScreenUi.centerScale) : (innerHeight >= 560 ? 2 : 0)
 
+            anchors.centerIn: parent
+            width: lockScreenUi.lockLong
+            height: lockScreenUi.lockShort
+            visible: !lockScreenUi.isPortrait
+            clip: true
+
             Behavior on height {
                 enabled: lockScreenUi.ready
+
                 NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
             }
 
@@ -607,6 +653,7 @@ Item {
 
             Rectangle {
                 id: lockBg
+
                 anchors.fill: parent
                 color: "transparent"
                 border.color: Qt.rgba(lockScreenUi.clSurfaceVariantFg.r, lockScreenUi.clSurfaceVariantFg.g, lockScreenUi.clSurfaceVariantFg.b, 0.12)
@@ -616,6 +663,7 @@ Item {
 
             RowLayout {
                 id: landscapeLayout
+
                 anchors.fill: parent
                 anchors.margins: lockScreenUi.bgMargin
                 spacing: 40 * (lockScreenUi.lockHeight / 1080)
@@ -629,12 +677,12 @@ Item {
 
                     WeatherCard {
                         id: weatherCard
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.round(landscapeContent.leftCardPool * 0.18)
                         implicitHeight: Layout.preferredHeight
                         cardRadius: lockScreenUi.cardRadius
                         centerScale: lockScreenUi.centerScale
-                        weatherInfo: weatherLoader.weatherInfo
                         clSurfaceContainer: lockScreenUi.clCardBg
                         clSurfaceFg: lockScreenUi.clSurfaceFg
                         clSurfaceVariantFg: lockScreenUi.clSurfaceVariantFg
@@ -643,6 +691,7 @@ Item {
 
                     CaelestiafetchCard {
                         id: fetchCard
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.round(landscapeContent.leftCardPool * 0.35)
                         implicitHeight: Layout.preferredHeight
@@ -662,6 +711,7 @@ Item {
 
                     MediaCard {
                         id: mediaCard
+
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredHeight: Math.max(0, landscapeContent.leftCardPool - weatherCard.Layout.preferredHeight - fetchCard.Layout.preferredHeight)
@@ -683,6 +733,7 @@ Item {
                 // Center Column
                 Item {
                     id: centerColumnArea
+
                     Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
                     Layout.preferredWidth: lockScreenUi.centerWidth
                     Layout.fillWidth: false
@@ -690,6 +741,7 @@ Item {
 
                     ColumnLayout {
                         id: centerMainColumn
+
                         anchors.centerIn: parent
                         width: parent.width
                         spacing: landscapeContent.centerSpacing
@@ -735,6 +787,7 @@ Item {
 
                         PasswordPill {
                             id: passwordPill
+
                             Layout.alignment: Qt.AlignHCenter
                             centerScale: lockScreenUi.centerScale
                             centerWidth: lockScreenUi.centerWidth
@@ -777,16 +830,19 @@ Item {
                     // Status Messages (Caps Lock, Errors / Logs, Fingerprint)
                     Item {
                         id: landscapeStatusContainer
+
+                        readonly property bool hasStatus: (capsLockState.locked && !lockScreenUi.authMessage) || Boolean(lockScreenUi.authMessage) || lockScreenUi.hasFingerprint
+
                         anchors.top: centerMainColumn.bottom
                         anchors.topMargin: landscapeContent.innerHeight >= 680 ? 6 : 2
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: parent.width
-                        readonly property bool hasStatus: (capsLockState.locked && !lockScreenUi.authMessage) || Boolean(lockScreenUi.authMessage) || lockScreenUi.hasFingerprint
-                        visible: hasStatus
                         height: hasStatus ? Math.max(14, statusCol.implicitHeight) : 0
+                        visible: hasStatus
 
                         Column {
                             id: statusCol
+
                             anchors.top: parent.top
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: parent.width
@@ -794,6 +850,7 @@ Item {
 
                             Text {
                                 id: capsText
+
                                 width: parent.width
                                 horizontalAlignment: Text.AlignHCenter
                                 visible: capsLockState.locked && !lockScreenUi.authMessage
@@ -802,11 +859,15 @@ Item {
                                 color: lockScreenUi.clSurfaceVariantFg
                                 wrapMode: Text.WordWrap
                                 opacity: visible ? 1 : 0
-                                Behavior on opacity { NumberAnimation { duration: 300 } }
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 300 }
+                                }
                             }
 
                             Text {
                                 id: errorText
+
                                 width: parent.width
                                 horizontalAlignment: Text.AlignHCenter
                                 visible: false
@@ -814,11 +875,13 @@ Item {
                                 font { pixelSize: LockScreenConfig.sizeSmall; family: LockScreenConfig.fontBody }
                                 color: lockScreenUi.clError
                                 wrapMode: Text.WordWrap
-                                scale: 0.7; opacity: 0
+                                scale: 0.7
+                                opacity: 0
                             }
 
                             Text {
                                 id: fpHint
+
                                 width: parent.width
                                 horizontalAlignment: Text.AlignHCenter
                                 visible: lockScreenUi.hasFingerprint
@@ -840,6 +903,7 @@ Item {
 
                     ResourcesCard {
                         id: resourcesCard
+
                         Layout.fillWidth: true
                         Layout.preferredHeight: Math.round(landscapeContent.rightCardPool * 0.23)
                         implicitHeight: Layout.preferredHeight
@@ -899,6 +963,7 @@ Item {
         // with Layout.visible switching per isPortrait.
         Item {
             id: portraitContent
+
             anchors.centerIn: parent
             width: Math.min(parent.width * 0.9, lockScreenUi.lockShort)
             height: portraitLayout.implicitHeight + 64 * lockScreenUi.centerScale
@@ -907,6 +972,7 @@ Item {
 
             Behavior on height {
                 enabled: lockScreenUi.ready
+
                 NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
             }
 
@@ -932,6 +998,7 @@ Item {
 
             Rectangle {
                 id: portraitBg
+
                 anchors.fill: parent
                 color: "transparent"
                 border.color: Qt.rgba(lockScreenUi.clSurfaceVariantFg.r, lockScreenUi.clSurfaceVariantFg.g, lockScreenUi.clSurfaceVariantFg.b, 0.12)
@@ -941,6 +1008,7 @@ Item {
 
             ColumnLayout {
                 id: portraitLayout
+
                 anchors.centerIn: parent
                 width: parent.width - 48 * lockScreenUi.centerScale
                 spacing: 20 * lockScreenUi.centerScale
@@ -988,6 +1056,7 @@ Item {
 
                 PasswordPill {
                     id: portraitPasswordPill
+
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 8 * lockScreenUi.centerScale
                     Layout.bottomMargin: 8 * lockScreenUi.centerScale
@@ -1032,6 +1101,7 @@ Item {
                 // Status Messages (Caps Lock, Errors / Logs, Fingerprint)
                 Item {
                     id: portraitStatusContainer
+
                     Layout.alignment: Qt.AlignHCenter
                     Layout.fillWidth: true
                     Layout.preferredHeight: 64 * lockScreenUi.centerScale
@@ -1047,6 +1117,7 @@ Item {
 
                         Text {
                             id: portraitCapsText
+
                             width: parent.width
                             horizontalAlignment: Text.AlignHCenter
                             visible: capsLockState.locked && !lockScreenUi.authMessage
@@ -1055,11 +1126,15 @@ Item {
                             color: lockScreenUi.clSurfaceVariantFg
                             wrapMode: Text.WordWrap
                             opacity: visible ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: 300 } }
+
+                            Behavior on opacity {
+                                NumberAnimation { duration: 300 }
+                            }
                         }
 
                         Text {
                             id: portraitErrorText
+
                             width: parent.width
                             horizontalAlignment: Text.AlignHCenter
                             visible: false
@@ -1067,11 +1142,13 @@ Item {
                             font { pixelSize: LockScreenConfig.sizeSmall; family: LockScreenConfig.fontBody }
                             color: lockScreenUi.clError
                             wrapMode: Text.WordWrap
-                            scale: 0.7; opacity: 0
+                            scale: 0.7
+                            opacity: 0
                         }
 
                         Text {
                             id: portraitFpHint
+
                             width: parent.width
                             horizontalAlignment: Text.AlignHCenter
                             visible: lockScreenUi.hasFingerprint
@@ -1083,19 +1160,29 @@ Item {
                     }
                 }
             }
+
             RowLayout {
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: Kirigami.Units.smallSpacing }
                 spacing: Kirigami.Units.smallSpacing
 
                 PlasmaComponents3.ToolButton {
                     icon.name: "input-keyboard"
-                    PW.KeyboardLayoutSwitcher { id: kls; anchors.fill: parent; acceptedButtons: Qt.NoButton }
                     text: kls.layoutNames.longName
-                    onClicked: kls.keyboardLayout.switchToNextLayout()
                     visible: kls.hasMultipleKeyboardLayouts
                     Layout.fillHeight: true
+                    onClicked: kls.keyboardLayout.switchToNextLayout()
+
+                    PW.KeyboardLayoutSwitcher {
+                        id: kls
+
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                    }
                 }
-                Item { Layout.fillWidth: true }
+
+                Item {
+                    Layout.fillWidth: true
+                }
             }
         }
     }

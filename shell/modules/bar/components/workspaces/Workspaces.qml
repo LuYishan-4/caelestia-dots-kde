@@ -156,6 +156,7 @@ Item {
                     workspaces: workspaces
                     mask: layout
                     fullscreen: root.fullscreen
+                    screenName: root.screen.name
                 }
             }
             MouseArea {

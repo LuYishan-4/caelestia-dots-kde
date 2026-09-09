@@ -35,6 +35,8 @@ qml_module(caelestia-services
         memory.cpp
         diskinfo.cpp
         storage.cpp
+        weather.cpp
+        weather.hpp
         lyriccandidate.cpp
         lyrics.cpp
         sessionmanager.cpp

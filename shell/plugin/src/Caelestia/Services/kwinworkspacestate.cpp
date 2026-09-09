@@ -57,6 +57,10 @@ double KWinWorkspaceState::swipeOffset() const {
     return m_swipeOffset;
 }
 
+QVariantMap KWinWorkspaceState::swipeOffsetByOutput() const {
+    return m_swipeOffsetByOutput;
+}
+
 bool KWinWorkspaceState::showingDesktop() const {
     return m_showingDesktop;
 }
@@ -141,8 +145,6 @@ void KWinWorkspaceState::setupTrackerServer() {
                     quint32 magic = 0;
                     clientSocket->peek(reinterpret_cast<char*>(&magic), sizeof(magic));
 
-                    double newOffset = 0.0;
-
                     if (magic == kMagic) {
                         if (clientSocket->bytesAvailable() < static_cast<qint64>(sizeof(DesktopReport))) {
                             break; // wait for the rest of the record
@@ -152,22 +154,33 @@ void KWinWorkspaceState::setupTrackerServer() {
                         report.output[sizeof(report.output) - 1] = '\0';
 
                         const QString output = QString::fromUtf8(report.output);
-                        if (!output.isEmpty() && report.desktop > 0) {
-                            if (m_activeByOutput.value(output).toInt() != report.desktop) {
-                                m_activeByOutput.insert(output, report.desktop);
-                                emit activeByOutputChanged();
+                        const double offset = static_cast<double>(report.x);
+
+                        if (!output.isEmpty()) {
+                            if (report.desktop > 0) {
+                                if (m_activeByOutput.value(output).toInt() != report.desktop) {
+                                    m_activeByOutput.insert(output, report.desktop);
+                                    emit activeByOutputChanged();
+                                }
+                            }
+                            if (!qFuzzyCompare(m_swipeOffsetByOutput.value(output).toDouble() + 1.0, offset + 1.0)) {
+                                m_swipeOffsetByOutput.insert(output, offset);
+                                emit swipeOffsetByOutputChanged();
+                            }
+                        } else {
+                            if (!qFuzzyCompare(m_swipeOffset + 1.0, offset + 1.0)) {
+                                m_swipeOffset = offset;
+                                emit swipeOffsetChanged();
                             }
                         }
-                        newOffset = static_cast<double>(report.x);
                     } else {
                         LegacyTransition payload;
                         clientSocket->read(reinterpret_cast<char*>(&payload), sizeof(payload));
-                        newOffset = static_cast<double>(payload.x);
-                    }
-
-                    if (m_swipeOffset != newOffset) {
-                        m_swipeOffset = newOffset;
-                        emit swipeOffsetChanged();
+                        const double offset = static_cast<double>(payload.x);
+                        if (!qFuzzyCompare(m_swipeOffset + 1.0, offset + 1.0)) {
+                            m_swipeOffset = offset;
+                            emit swipeOffsetChanged();
+                        }
                     }
                 }
             });

@@ -59,6 +59,9 @@ Singleton {
         root.popupCount = 0;
         for (let i = 0; i < toClose.length; i++)
             toClose[i].close();
+        saveTimer.stop();
+        root.lastSavedState = "[]";
+        storage.setText("[]");
     }
 
     function serializeState(): string {

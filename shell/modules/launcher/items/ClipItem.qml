@@ -33,8 +33,11 @@ Item {
             Toaster.toast(qsTr("Copied to clipboard"), preview, "content_paste");
     }
 
-    Component.onCompleted: {
-        if (!root.modelData?.isImage) return;
+    function updateImage(): void {
+        if (!root.modelData?.isImage) {
+            imagePreview.imagePath = "";
+            return;
+        }
 
         // A pinned image has its own stored copy; nothing pre-warms it and no
         // imageReady will ever arrive for it.
@@ -43,14 +46,16 @@ Item {
             return;
         }
 
-        // Check whether the image was already pre-warmed during reload()
-        const cached = Clipboard.getImagePath(root.modelData.id);
-        // FileInfo is not available in QML directly; use a heuristic: if imagePath is
-        // already set by an earlier imageReady emission, we are done. Otherwise listen.
-        // The C++ backend emits imageReady for already-cached files too, so we will
-        // always receive the signal — but set eagerly in case it fires before onCompleted.
-        imagePreview.imagePath = cached;
+        // If already cached on disk, display immediately; otherwise wait for imageReady
+        if (Clipboard.isImageCached(root.modelData.id)) {
+            imagePreview.imagePath = Clipboard.getImagePath(root.modelData.id);
+        } else {
+            imagePreview.imagePath = "";
+        }
     }
+
+    onModelDataChanged: updateImage()
+    Component.onCompleted: updateImage()
 
     /// Listen for the imageReady signal from the C++ backend (forwarded via Clipboard singleton).
     /// This fires as soon as the decoded file is fully written — no timers needed.
@@ -102,11 +107,9 @@ Item {
             anchors.leftMargin: (root.modelData?.isImage ?? false) ? Tokens.spacing.medium : 0
             visible: root.modelData?.isImage ?? false
 
-            Image {
+            CachingImage {
                 anchors.fill: parent
-                asynchronous: true
-                fillMode: Image.PreserveAspectCrop
-                source: imagePreview.imagePath.length > 0 ? "file://" + imagePreview.imagePath : ""
+                path: imagePreview.imagePath
             }
         }
 
