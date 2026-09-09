@@ -130,9 +130,9 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 | [Vinax89](https://github.com/Vinax89) | 5 |
 | [jialfaro](https://github.com/jialfaro) | 2 |
 | [SalihYzts](https://github.com/SalihYzts) | 2 |
-| [0x0nYx](https://github.com/0x0nYx) | 1 |
-| [tomjod](https://github.com/tomjod) | 1 |
-| [Peace-W](https://github.com/Peace-W) | 1 |
+| [LuYishan-4](https://github.com/LuYishan-4) | 1 |
+| [jedrikjames](https://github.com/jedrikjames) | 1 |
+| [Klivan49](https://github.com/Klivan49) | 1 |
 
 </td>
 <td width="50%">
@@ -141,14 +141,14 @@ For detailed debug logs, enable Debug Mode in Nexus -> About -> Advanced, then r
 
 | Contributor | Issues |
 | --- | ---: |
-| [0x0nYx](https://github.com/0x0nYx) | 156 |
-| [Kyedae](https://github.com/Kyedae) | 17 |
-| [bubbleo0](https://github.com/bubbleo0) | 12 |
-| [RaceConditionWinner](https://github.com/RaceConditionWinner) | 10 |
-| [KhanhNguyen1603](https://github.com/KhanhNguyen1603) | 9 |
-| [francisco-tato](https://github.com/francisco-tato) | 7 |
-| [arceus4526](https://github.com/arceus4526) | 6 |
-| [RealNath](https://github.com/RealNath) | 6 |
+| [WinTone01](https://github.com/WinTone01) | 0 |
+| [aroaxinping](https://github.com/aroaxinping) | 0 |
+| [Vinax89](https://github.com/Vinax89) | 0 |
+| [jialfaro](https://github.com/jialfaro) | 0 |
+| [SalihYzts](https://github.com/SalihYzts) | 0 |
+| [LuYishan-4](https://github.com/LuYishan-4) | 0 |
+| [jedrikjames](https://github.com/jedrikjames) | 0 |
+| [Klivan49](https://github.com/Klivan49) | 0 |
 
 </td>
 </tr></table>
